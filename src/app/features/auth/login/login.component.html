@@ -1,0 +1,67 @@
+<div class="login-page">
+  <div class="login-card">
+    <!-- Brand area -->
+    <div class="brand-area">
+      <div class="brand-logo">
+        <span class="material-icons-round">bolt</span>
+      </div>
+      <h1 class="brand-name">PymeFlow<span class="brand-accent">EC</span></h1>
+      <p class="brand-tagline">Sistema de gestión empresarial</p>
+    </div>
+
+    <!-- Form -->
+    <div class="form-area">
+      <h2 class="form-title">Iniciar sesión</h2>
+      <p class="form-subtitle">Ingresa tus credenciales para acceder</p>
+
+      @if (error()) {
+        <div class="error-alert">
+          <span class="material-icons-round">error_outline</span>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Correo electrónico</mat-label>
+          <input matInput type="email" formControlName="email" placeholder="usuario@empresa.com" autocomplete="email">
+          <mat-icon matPrefix>mail_outline</mat-icon>
+          @if (form.get('email')?.touched && emailError) {
+            <mat-error>{{ emailError }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Contraseña</mat-label>
+          <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password">
+          <mat-icon matPrefix>lock_outline</mat-icon>
+          <button mat-icon-button matSuffix type="button" (click)="togglePassword()">
+            <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (form.get('password')?.touched && passwordError) {
+            <mat-error>{{ passwordError }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="forgot-link">
+          <a routerLink="/forgot-password">¿Olvidé mi contraseña?</a>
+        </div>
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          class="submit-btn"
+          [disabled]="loading()"
+        >
+          @if (loading()) {
+            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+            <span>Ingresando...</span>
+          } @else {
+            <span>Iniciar sesión</span>
+          }
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

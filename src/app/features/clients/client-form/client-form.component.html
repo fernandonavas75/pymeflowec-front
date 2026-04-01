@@ -1,0 +1,71 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/clients" mat-icon-button>
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza los datos del cliente' : 'Registra un nuevo cliente' }}</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else {
+    <div class="form-card">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <mat-form-field appearance="outline" class="col-span-2">
+            <mat-label>Nombre completo *</mat-label>
+            <input matInput formControlName="full_name">
+            @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
+              <mat-error>Mínimo 3 caracteres</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Identificación (RUC/CI) *</mat-label>
+            <input matInput formControlName="identification" placeholder="1234567890">
+            @if (form.get('identification')?.touched && form.get('identification')?.invalid) {
+              <mat-error>Ingresa un número válido (10-13 dígitos)</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Teléfono</mat-label>
+            <input matInput formControlName="phone" placeholder="0987654321">
+            @if (form.get('phone')?.touched && form.get('phone')?.invalid) {
+              <mat-error>Ingresa un teléfono válido (10 dígitos)</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="col-span-2">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email">
+            @if (form.get('email')?.touched && form.get('email')?.invalid) {
+              <mat-error>Ingresa un email válido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="col-span-2">
+            <mat-label>Dirección</mat-label>
+            <textarea matInput formControlName="address" rows="2"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <a routerLink="/clients" mat-stroked-button>Cancelar</a>
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) {
+              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
+            } @else {
+              {{ isEdit ? 'Guardar cambios' : 'Crear cliente' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

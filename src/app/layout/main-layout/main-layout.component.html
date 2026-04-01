@@ -1,0 +1,11 @@
+<div class="layout-container">
+  <app-sidebar
+    [collapsed]="sidebarCollapsed()"
+    (toggleCollapse)="toggleSidebar()"
+  />
+  <main class="main-content" [class.expanded]="sidebarCollapsed()">
+    <div class="page-wrapper">
+      <router-outlet />
+    </div>
+  </main>
+</div>

@@ -1,0 +1,75 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/users" mat-icon-button>
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else {
+    <div class="form-card" style="max-width: 600px">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-4">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre completo *</mat-label>
+            <input matInput formControlName="full_name">
+            @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
+              <mat-error>Mínimo 3 caracteres</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Email *</mat-label>
+            <input matInput type="email" formControlName="email">
+            @if (form.get('email')?.touched && form.get('email')?.invalid) {
+              <mat-error>Ingresa un email válido</mat-error>
+            }
+          </mat-form-field>
+
+          @if (!isEdit) {
+            <mat-form-field appearance="outline">
+              <mat-label>Contraseña *</mat-label>
+              <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password">
+              <button mat-icon-button matSuffix type="button" (click)="togglePassword()">
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (form.get('password')?.touched && form.get('password')?.invalid) {
+                <mat-error>Mínimo 6 caracteres</mat-error>
+              }
+            </mat-form-field>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Rol *</mat-label>
+            <mat-select formControlName="role_id">
+              @for (role of roles; track role.value) {
+                <mat-option [value]="role.value">{{ role.label }}</mat-option>
+              }
+            </mat-select>
+            @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {
+              <mat-error>Selecciona un rol</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <a routerLink="/users" mat-stroked-button>Cancelar</a>
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) {
+              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
+            } @else {
+              {{ isEdit ? 'Guardar cambios' : 'Crear usuario' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

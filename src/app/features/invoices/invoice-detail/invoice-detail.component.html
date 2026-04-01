@@ -1,0 +1,130 @@
+<div class="page-container">
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else if (invoice()) {
+    <div class="page-header">
+      <a routerLink="/invoices" mat-icon-button>
+        <mat-icon>arrow_back</mat-icon>
+      </a>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Factura {{ invoice()!.invoice_number }}</h1>
+        <p class="text-sm text-gray-500 mt-1">Emitida el {{ formatDate(invoice()!.issue_date) }}</p>
+      </div>
+      <div class="ml-auto">
+        <app-status-badge [status]="invoice()!.status" type="invoice" />
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <!-- Main content -->
+      <div class="xl:col-span-2 flex flex-col gap-6">
+        <!-- Info -->
+        <div class="form-card">
+          <h3 class="section-title">Información de la factura</h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p class="text-gray-500 mb-1">Número de factura</p>
+              <p class="font-mono font-bold text-indigo-600">{{ invoice()!.invoice_number }}</p>
+            </div>
+            <div>
+              <p class="text-gray-500 mb-1">Estado</p>
+              <app-status-badge [status]="invoice()!.status" type="invoice" />
+            </div>
+            <div>
+              <p class="text-gray-500 mb-1">Fecha de emisión</p>
+              <p class="font-semibold text-gray-900">{{ formatDate(invoice()!.issue_date) }}</p>
+            </div>
+            @if (invoice()!.order) {
+              <div>
+                <p class="text-gray-500 mb-1">Pedido relacionado</p>
+                <a [routerLink]="['/orders', invoice()!.order_id]" class="text-indigo-600 font-medium hover:underline">
+                  #{{ invoice()!.order_id.slice(-8).toUpperCase() }}
+                </a>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Line items -->
+        <div class="form-card">
+          <h3 class="section-title">Detalle de la factura</h3>
+          @if (invoice()!.details && invoice()!.details!.length > 0) {
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-100">
+                  <th class="text-left py-2 text-gray-500 font-medium">Producto</th>
+                  <th class="text-center py-2 text-gray-500 font-medium">Cantidad</th>
+                  <th class="text-right py-2 text-gray-500 font-medium">P. Unitario</th>
+                  <th class="text-right py-2 text-gray-500 font-medium">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (detail of invoice()!.details; track detail.id) {
+                  <tr class="border-b border-gray-50">
+                    <td class="py-3 font-medium text-gray-900">{{ detail.product?.name || 'Producto' }}</td>
+                    <td class="py-3 text-center">{{ detail.quantity }}</td>
+                    <td class="py-3 text-right text-gray-600">${{ detail.unit_price | number:'1.2-2' }}</td>
+                    <td class="py-3 text-right font-semibold">${{ detail.subtotal | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="text-gray-400 text-sm py-4">Sin detalles de factura</p>
+          }
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="flex flex-col gap-6">
+        <!-- Totals -->
+        <div class="form-card">
+          <h3 class="section-title">Totales</h3>
+          <div class="space-y-3 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-600">Subtotal</span>
+              <span class="font-medium">${{ invoice()!.subtotal | number:'1.2-2' }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-600">IVA</span>
+              <span class="font-medium">${{ invoice()!.tax | number:'1.2-2' }}</span>
+            </div>
+            <div class="border-t border-gray-200 pt-3 flex justify-between">
+              <span class="font-bold text-gray-900">Total</span>
+              <span class="font-bold text-xl text-indigo-600">${{ invoice()!.total | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-card">
+          <h3 class="section-title">Acciones</h3>
+          <div class="flex flex-col gap-2" [class.opacity-50]="actionLoading()">
+            @if (invoice()!.status === 'issued' || invoice()!.status === 'overdue') {
+              <button mat-flat-button color="primary" (click)="markPaid()" [disabled]="actionLoading()">
+                <mat-icon>check_circle</mat-icon> Marcar como pagada
+              </button>
+            }
+            @if (invoice()!.status === 'issued') {
+              <button mat-stroked-button color="warn" (click)="markOverdue()" [disabled]="actionLoading()">
+                <mat-icon>schedule</mat-icon> Marcar como vencida
+              </button>
+            }
+            @if (invoice()!.status !== 'cancelled' && invoice()!.status !== 'paid') {
+              <button mat-stroked-button color="warn" (click)="cancelInvoice()" [disabled]="actionLoading()">
+                <mat-icon>cancel</mat-icon> Cancelar factura
+              </button>
+            }
+            @if (invoice()!.status === 'paid' || invoice()!.status === 'cancelled') {
+              <div class="text-center text-gray-400 text-sm py-4">
+                Sin acciones disponibles
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

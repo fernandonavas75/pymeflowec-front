@@ -1,0 +1,123 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Productos</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona el catálogo de productos</p>
+    </div>
+    @if (canEdit()) {
+      <a routerLink="/products/new" mat-flat-button color="primary" class="flex items-center gap-2">
+        <mat-icon>add</mat-icon>
+        Nuevo producto
+      </a>
+    }
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar productos</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [formControl]="searchCtrl" placeholder="Nombre, categoría...">
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="status-filter">
+      <mat-label>Estado</mat-label>
+      <mat-select [formControl]="statusCtrl">
+        <mat-option value="">Todos</mat-option>
+        <mat-option value="active">Activos</mat-option>
+        <mat-option value="inactive">Inactivos</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <!-- Table -->
+  <div class="table-container">
+    @if (loading()) {
+      <div class="loading-overlay">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton h-4 w-32"></div>
+            <div class="skeleton h-4 w-24"></div>
+            <div class="skeleton h-4 w-16"></div>
+            <div class="skeleton h-4 w-20"></div>
+            <div class="skeleton h-6 w-20 rounded-full"></div>
+            <div class="skeleton h-8 w-24"></div>
+          </div>
+        }
+      </div>
+    } @else {
+      <table mat-table [dataSource]="products()" class="w-full">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="font-medium text-gray-900">{{ p.name }}</div>
+            @if (p.description) {
+              <div class="text-xs text-gray-400 truncate max-w-48">{{ p.description }}</div>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="category">
+          <th mat-header-cell *matHeaderCellDef>Categoría</th>
+          <td mat-cell *matCellDef="let p">{{ p.category || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="stock">
+          <th mat-header-cell *matHeaderCellDef>Stock</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="flex items-center gap-2">
+              <span [class.text-red-600]="p.stock < 5" [class.font-semibold]="p.stock < 5">{{ p.stock }}</span>
+              @if (p.stock < 5) {
+                <span class="badge bg-red-100 text-red-700 text-xs">Bajo</span>
+              }
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="unit_price">
+          <th mat-header-cell *matHeaderCellDef>Precio</th>
+          <td mat-cell *matCellDef="let p" class="font-semibold">
+            ${{ p.unit_price | number:'1.2-2' }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let p">
+            <app-status-badge [status]="p.status" type="product" />
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <div class="flex items-center gap-1">
+              @if (canEdit()) {
+                <a [routerLink]="['/products', p.id, 'edit']" mat-icon-button matTooltip="Editar">
+                  <mat-icon class="text-gray-400">edit</mat-icon>
+                </a>
+                <button mat-icon-button [matTooltip]="p.status === 'active' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(p)">
+                  <mat-icon [class.text-green-500]="p.status === 'active'" [class.text-gray-400]="p.status !== 'active'">
+                    {{ p.status === 'active' ? 'toggle_on' : 'toggle_off' }}
+                  </mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Eliminar" (click)="deleteProduct(p)">
+                  <mat-icon class="text-red-400">delete</mat-icon>
+                </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">
+            No se encontraron productos
+          </td>
+        </tr>
+      </table>
+
+      <mat-paginator
+        [length]="total()"
+        [pageSize]="limit()"
+        [pageSizeOptions]="[10, 20, 50]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons
+      />
+    }
+  </div>
+</div>

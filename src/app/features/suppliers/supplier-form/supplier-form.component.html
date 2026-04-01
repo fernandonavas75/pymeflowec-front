@@ -1,0 +1,68 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/suppliers" mat-icon-button>
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar proveedor' : 'Nuevo proveedor' }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza los datos del proveedor' : 'Registra un nuevo proveedor' }}</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else {
+    <div class="form-card">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-grid">
+          <mat-form-field appearance="outline" class="col-span-2">
+            <mat-label>Razón Social *</mat-label>
+            <input matInput formControlName="business_name">
+            @if (form.get('business_name')?.touched && form.get('business_name')?.invalid) {
+              <mat-error>La razón social es requerida</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre de contacto</mat-label>
+            <input matInput formControlName="contact_name">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Teléfono</mat-label>
+            <input matInput formControlName="phone" placeholder="0987654321">
+            @if (form.get('phone')?.touched && form.get('phone')?.invalid) {
+              <mat-error>Ingresa un teléfono válido (10 dígitos)</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="col-span-2">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email">
+            @if (form.get('email')?.touched && form.get('email')?.invalid) {
+              <mat-error>Ingresa un email válido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="col-span-2">
+            <mat-label>Dirección</mat-label>
+            <textarea matInput formControlName="address" rows="2"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="form-actions">
+          <a routerLink="/suppliers" mat-stroked-button>Cancelar</a>
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) {
+              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
+            } @else {
+              {{ isEdit ? 'Guardar cambios' : 'Crear proveedor' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

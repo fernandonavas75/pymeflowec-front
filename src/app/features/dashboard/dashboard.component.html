@@ -1,0 +1,192 @@
+<div class="dashboard-page">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">
+        {{ greeting }}, {{ firstName }}!
+      </h1>
+      <p class="text-sm text-gray-500 mt-1">
+        Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}
+        @if (isRefreshing) {
+          <span class="material-icons-round text-indigo-500 text-base align-middle ml-1 spin">sync</span>
+        }
+      </p>
+    </div>
+    <div class="header-org">
+      <span class="text-sm text-gray-500">Organización:</span>
+      <span class="text-sm font-semibold text-gray-700">{{ authService.currentUser()?.organization?.name }}</span>
+    </div>
+  </div>
+
+  @if (loading) {
+    <!-- Skeleton loading -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="bg-white rounded-xl p-6 border border-gray-100 skeleton h-28"></div>
+      }
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white rounded-xl p-6 border border-gray-100 skeleton h-80"></div>
+      <div class="bg-white rounded-xl p-6 border border-gray-100 skeleton h-80"></div>
+    </div>
+  } @else if (data) {
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div class="card-animate card-animate-delay-1">
+        <app-stat-card
+          title="Total Pedidos"
+          [value]="data.totalOrders"
+          subtitle="Todos los tiempos"
+          icon="shopping_cart"
+          color="indigo"
+        />
+      </div>
+      <div class="card-animate card-animate-delay-2">
+        <app-stat-card
+          title="Pedidos Pendientes"
+          [value]="data.pendingOrders"
+          subtitle="Requieren atención"
+          icon="pending_actions"
+          color="yellow"
+          [trend]="data.pendingOrders > 10 ? 'up' : 'neutral'"
+        />
+      </div>
+      <div class="card-animate card-animate-delay-3">
+        <app-stat-card
+          title="Ingresos (Cobrado)"
+          [value]="'$' + data.totalRevenue.toFixed(2)"
+          subtitle="Facturas pagadas"
+          icon="attach_money"
+          color="green"
+          trend="up"
+        />
+      </div>
+      <div class="card-animate card-animate-delay-4">
+        <app-stat-card
+          title="Clientes Activos"
+          [value]="data.totalClients"
+          subtitle="En el sistema"
+          icon="people"
+          color="blue"
+        />
+      </div>
+    </div>
+
+    @if (data.lowStockProducts > 0) {
+      <div class="alert-warning mb-4">
+        <span class="material-icons-round">warning_amber</span>
+        <span><strong>{{ data.lowStockProducts }}</strong> producto(s) con stock bajo (menos de 5 unidades)</span>
+        <a routerLink="/products" class="alert-link">Ver productos</a>
+      </div>
+    }
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div class="chart-card">
+        <h3 class="chart-title">Pedidos por estado</h3>
+        <apx-chart
+          [series]="donutChartOptions.series!"
+          [chart]="donutChartOptions.chart!"
+          [labels]="donutChartOptions.labels!"
+          [colors]="donutChartOptions.colors!"
+          [legend]="donutChartOptions.legend!"
+          [plotOptions]="donutChartOptions.plotOptions!"
+          [dataLabels]="donutChartOptions.dataLabels!"
+          [responsive]="donutChartOptions.responsive!"
+        />
+      </div>
+      <div class="chart-card">
+        <h3 class="chart-title">Pedidos - Últimos 7 días</h3>
+        <apx-chart
+          [series]="barChartOptions.series!"
+          [chart]="barChartOptions.chart!"
+          [xaxis]="barChartOptions.xaxis!"
+          [yaxis]="barChartOptions.yaxis!"
+          [colors]="barChartOptions.colors!"
+          [fill]="barChartOptions.fill!"
+          [stroke]="barChartOptions.stroke!"
+          [dataLabels]="barChartOptions.dataLabels!"
+          [grid]="barChartOptions.grid!"
+          [tooltip]="barChartOptions.tooltip!"
+        />
+      </div>
+    </div>
+
+    <!-- Tables -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <!-- Recent Orders -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="table-title">Pedidos recientes</h3>
+          <a routerLink="/orders" class="see-all-link">Ver todos</a>
+        </div>
+        <table mat-table [dataSource]="data.recentOrders" class="w-full">
+          <ng-container matColumnDef="id">
+            <th mat-header-cell *matHeaderCellDef>ID</th>
+            <td mat-cell *matCellDef="let order">
+              <span class="font-mono text-xs text-gray-500">#{{ order.id.slice(-6).toUpperCase() }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="client">
+            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <td mat-cell *matCellDef="let order">{{ order.client?.full_name || 'N/A' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let order">{{ formatDate(order.created_at) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let order">
+              <app-status-badge [status]="order.status" type="order" />
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let order" class="font-semibold">{{ formatCurrency(order.total) }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="ordersColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: ordersColumns;" class="cursor-pointer" [routerLink]="['/orders', row.id]"></tr>
+        </table>
+        @if (data.recentOrders.length === 0) {
+          <div class="empty-state">No hay pedidos recientes</div>
+        }
+      </div>
+
+      <!-- Recent Invoices -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="table-title">Facturas recientes</h3>
+          <a routerLink="/invoices" class="see-all-link">Ver todas</a>
+        </div>
+        <table mat-table [dataSource]="data.recentInvoices" class="w-full">
+          <ng-container matColumnDef="number">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let inv">
+              <span class="font-mono text-xs">{{ inv.invoice_number }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let inv">{{ formatDate(inv.issue_date) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let inv" class="font-semibold">{{ formatCurrency(inv.total) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let inv">
+              <app-status-badge [status]="inv.status" type="invoice" />
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="invoicesColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: invoicesColumns;" class="cursor-pointer" [routerLink]="['/invoices', row.id]"></tr>
+        </table>
+        @if (data.recentInvoices.length === 0) {
+          <div class="empty-state">No hay facturas recientes</div>
+        }
+      </div>
+    </div>
+  }
+</div>

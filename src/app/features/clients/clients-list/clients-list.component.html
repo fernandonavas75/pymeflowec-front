@@ -1,0 +1,102 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Clientes</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona la cartera de clientes</p>
+    </div>
+    <a routerLink="/clients/new" mat-flat-button color="primary" class="flex items-center gap-2">
+      <mat-icon>person_add</mat-icon>
+      Nuevo cliente
+    </a>
+  </div>
+
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar clientes</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [formControl]="searchCtrl" placeholder="Nombre, identificación...">
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="status-filter">
+      <mat-label>Estado</mat-label>
+      <mat-select [formControl]="statusCtrl">
+        <mat-option value="">Todos</mat-option>
+        <mat-option value="active">Activos</mat-option>
+        <mat-option value="inactive">Inactivos</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <div class="table-container">
+    @if (loading()) {
+      <div class="loading-overlay">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton h-4 w-32"></div>
+            <div class="skeleton h-4 w-24"></div>
+            <div class="skeleton h-4 w-36"></div>
+            <div class="skeleton h-4 w-24"></div>
+            <div class="skeleton h-6 w-20 rounded-full"></div>
+            <div class="skeleton h-8 w-24"></div>
+          </div>
+        }
+      </div>
+    } @else {
+      <table mat-table [dataSource]="clients()" class="w-full">
+        <ng-container matColumnDef="full_name">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let c" class="font-medium">{{ c.full_name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="identification">
+          <th mat-header-cell *matHeaderCellDef>Identificación</th>
+          <td mat-cell *matCellDef="let c" class="font-mono text-sm">{{ c.identification }}</td>
+        </ng-container>
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let c">{{ c.email || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>Teléfono</th>
+          <td mat-cell *matCellDef="let c">{{ c.phone || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let c">
+            <app-status-badge [status]="c.status" type="user" />
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let c">
+            <div class="flex items-center gap-1">
+              <a [routerLink]="['/clients', c.id, 'edit']" mat-icon-button matTooltip="Editar">
+                <mat-icon class="text-gray-400">edit</mat-icon>
+              </a>
+              <button mat-icon-button [matTooltip]="c.status === 'active' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(c)">
+                <mat-icon [class.text-green-500]="c.status === 'active'" [class.text-gray-400]="c.status !== 'active'">
+                  {{ c.status === 'active' ? 'toggle_on' : 'toggle_off' }}
+                </mat-icon>
+              </button>
+              <button mat-icon-button matTooltip="Eliminar" (click)="deleteClient(c)">
+                <mat-icon class="text-red-400">delete</mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">
+            No se encontraron clientes
+          </td>
+        </tr>
+      </table>
+      <mat-paginator
+        [length]="total()"
+        [pageSize]="limit()"
+        [pageSizeOptions]="[10, 20, 50]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons
+      />
+    }
+  </div>
+</div>

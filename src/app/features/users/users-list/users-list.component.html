@@ -1,0 +1,95 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Usuarios</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona los usuarios del sistema</p>
+    </div>
+    <a routerLink="/users/new" mat-flat-button color="primary" class="flex items-center gap-2">
+      <mat-icon>person_add</mat-icon>
+      Nuevo usuario
+    </a>
+  </div>
+
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar usuarios</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [formControl]="searchCtrl" placeholder="Nombre o email...">
+    </mat-form-field>
+  </div>
+
+  <div class="table-container">
+    @if (loading()) {
+      <div class="loading-overlay">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton h-4 w-32"></div>
+            <div class="skeleton h-4 w-40"></div>
+            <div class="skeleton h-4 w-24"></div>
+            <div class="skeleton h-6 w-20 rounded-full"></div>
+            <div class="skeleton h-8 w-24"></div>
+          </div>
+        }
+      </div>
+    } @else {
+      <table mat-table [dataSource]="users()" class="w-full">
+        <ng-container matColumnDef="full_name">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let u">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
+                {{ getInitials(u.full_name) }}
+              </div>
+              <span class="font-medium text-gray-900">{{ u.full_name }}</span>
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let u" class="text-gray-600">{{ u.email }}</td>
+        </ng-container>
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Rol</th>
+          <td mat-cell *matCellDef="let u">
+            <span class="badge bg-indigo-50 text-indigo-700 capitalize">{{ u.role?.name || '—' }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let u">
+            <app-status-badge [status]="u.status" type="user" />
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let u">
+            <div class="flex items-center gap-1">
+              <a [routerLink]="['/users', u.id, 'edit']" mat-icon-button matTooltip="Editar">
+                <mat-icon class="text-gray-400">edit</mat-icon>
+              </a>
+              <button mat-icon-button [matTooltip]="u.status === 'active' ? 'Desactivar' : 'Activar'" (click)="confirmToggle(u)">
+                <mat-icon [class.text-green-500]="u.status === 'active'" [class.text-gray-400]="u.status !== 'active'">
+                  {{ u.status === 'active' ? 'toggle_on' : 'toggle_off' }}
+                </mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">
+            No se encontraron usuarios
+          </td>
+        </tr>
+      </table>
+      <mat-paginator
+        [length]="total()"
+        [pageSize]="limit()"
+        [pageSizeOptions]="[10, 20, 50]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons
+      />
+    }
+  </div>
+</div>
