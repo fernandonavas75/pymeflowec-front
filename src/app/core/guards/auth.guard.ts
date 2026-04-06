@@ -13,6 +13,10 @@ export const authGuard: CanActivateFn = () => {
     return false;
   }
 
+  if (authService.currentUser()) {
+    return true;
+  }
+
   return authService.me().pipe(
     map(() => true),
     catchError(() => {

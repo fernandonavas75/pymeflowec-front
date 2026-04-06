@@ -23,17 +23,35 @@ $theme: mat.define-light-theme((
 
 @include mat.all-component-themes($theme);
 
-// Global reset and font
-* {
+// Global reset (preflight desactivado en tailwind.config para evitar conflictos
+// con Angular Material; mantenemos aquí los resets esenciales)
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 html, body {
   height: 100%;
   margin: 0;
+  padding: 0;
   font-family: 'Inter', sans-serif;
   background-color: #f8fafc;
   color: #1e293b;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+}
+
+// CDK overlay debe estar por encima de todo el layout
+.cdk-overlay-container {
+  z-index: 1050 !important;
 }
 
 // Custom scrollbar
@@ -61,14 +79,8 @@ html, body {
 }
 
 @keyframes pageEnter {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 // Table row hover animations
@@ -82,14 +94,8 @@ html, body {
 
 // Card entrance animations
 @keyframes cardEntrance {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .card-animate {

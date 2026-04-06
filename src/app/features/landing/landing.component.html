@@ -1,0 +1,240 @@
+<div class="landing">
+
+  <!-- ── NAVBAR ────────────────────────────────────── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a routerLink="/" class="nav-brand">
+        <span class="brand-icon material-icons-round">bolt</span>
+        <span class="brand-text">PymeFlow<span class="accent">EC</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-link">Características</a>
+        <a href="#modules" class="nav-link">Módulos</a>
+        <a href="#how" class="nav-link">¿Cómo funciona?</a>
+      </div>
+      <div class="nav-actions">
+        <a routerLink="/login" class="btn-ghost">Iniciar sesión</a>
+        <a routerLink="/register" class="btn-primary">Comenzar gratis</a>
+      </div>
+      <!-- mobile toggle placeholder -->
+    </div>
+  </nav>
+
+  <!-- ── HERO ──────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <div class="hero-grid"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="material-icons-round">auto_awesome</span>
+        Sistema ERP moderno para PYMEs ecuatorianas
+      </div>
+      <h1 class="hero-title">
+        Gestiona tu empresa
+        <span class="hero-gradient">sin complicaciones</span>
+      </h1>
+      <p class="hero-subtitle">
+        PymeFlowEC centraliza tu inventario, facturación electrónica SRI, ventas
+        y contabilidad en una sola plataforma. Diseñado para PYMEs ecuatorianas.
+      </p>
+      <div class="hero-actions">
+        <a routerLink="/register" class="btn-hero-primary">
+          <span class="material-icons-round">rocket_launch</span>
+          Registrar empresa gratis
+        </a>
+        <a routerLink="/login" class="btn-hero-ghost">
+          <span class="material-icons-round">login</span>
+          Iniciar sesión
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value">500+</span>
+          <span class="stat-label">PYMEs activas</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value">99.9%</span>
+          <span class="stat-label">Uptime garantizado</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-value">SRI</span>
+          <span class="stat-label">Integrado y certificado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard mockup -->
+    <div class="hero-mockup">
+      <div class="mockup-card">
+        <div class="mockup-header">
+          <div class="mockup-dot red"></div>
+          <div class="mockup-dot yellow"></div>
+          <div class="mockup-dot green"></div>
+          <span class="mockup-title">Dashboard · PymeFlowEC</span>
+        </div>
+        <div class="mockup-body">
+          <div class="mockup-sidebar">
+            <div class="mockup-nav-item active"></div>
+            <div class="mockup-nav-item"></div>
+            <div class="mockup-nav-item"></div>
+            <div class="mockup-nav-item"></div>
+            <div class="mockup-nav-item"></div>
+          </div>
+          <div class="mockup-main">
+            <div class="mockup-kpi-row">
+              <div class="mockup-kpi kpi-blue">
+                <div class="kpi-label"></div>
+                <div class="kpi-value"></div>
+              </div>
+              <div class="mockup-kpi kpi-green">
+                <div class="kpi-label"></div>
+                <div class="kpi-value"></div>
+              </div>
+              <div class="mockup-kpi kpi-purple">
+                <div class="kpi-label"></div>
+                <div class="kpi-value"></div>
+              </div>
+            </div>
+            <div class="mockup-chart-row">
+              <div class="mockup-chart">
+                <div class="chart-bars">
+                  <div class="chart-bar" style="height:40%"></div>
+                  <div class="chart-bar" style="height:65%"></div>
+                  <div class="chart-bar" style="height:50%"></div>
+                  <div class="chart-bar" style="height:80%"></div>
+                  <div class="chart-bar" style="height:60%"></div>
+                  <div class="chart-bar active" style="height:90%"></div>
+                  <div class="chart-bar" style="height:70%"></div>
+                </div>
+              </div>
+              <div class="mockup-list">
+                <div class="list-item"></div>
+                <div class="list-item"></div>
+                <div class="list-item"></div>
+                <div class="list-item"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURES ──────────────────────────────────── -->
+  <section id="features" class="features">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-badge">Características</span>
+        <h2 class="section-title">Todo lo que tu PYME necesita</h2>
+        <p class="section-subtitle">
+          Herramientas empresariales de nivel profesional, accesibles desde cualquier dispositivo.
+        </p>
+      </div>
+      <div class="features-grid">
+        @for (f of features; track f.title) {
+          <div class="feature-card">
+            <div class="feature-icon">
+              <span class="material-icons-round">{{ f.icon }}</span>
+            </div>
+            <h3 class="feature-title">{{ f.title }}</h3>
+            <p class="feature-desc">{{ f.description }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MODULES ────────────────────────────────────── -->
+  @if (modules().length > 0) {
+    <section id="modules" class="modules">
+      <div class="section-inner">
+        <div class="section-header">
+          <span class="section-badge modules-badge">Módulos</span>
+          <h2 class="section-title">Activa solo lo que necesitas</h2>
+          <p class="section-subtitle">
+            Solicita los módulos de tu interés al registrarte. El superadmin los aprobará y
+            tu empresa empezará a funcionar con lo exacto que requieres.
+          </p>
+        </div>
+        <div class="modules-grid">
+          @for (mod of modules(); track mod.id) {
+            <div class="module-card" [class.module-default]="mod.is_default">
+              <div class="module-icon-wrap">
+                <span class="material-icons-round">{{ getModuleIcon(mod.code) }}</span>
+              </div>
+              @if (mod.is_default) {
+                <span class="module-badge">Incluido</span>
+              }
+              <h3 class="module-name">{{ mod.name }}</h3>
+              @if (mod.description) {
+                <p class="module-desc">{{ mod.description }}</p>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <!-- ── HOW IT WORKS ───────────────────────────────── -->
+  <section id="how" class="how">
+    <div class="section-inner">
+      <div class="section-header">
+        <span class="section-badge how-badge">Proceso</span>
+        <h2 class="section-title">Listo en 3 pasos simples</h2>
+      </div>
+      <div class="steps-grid">
+        @for (step of steps; track step.number) {
+          <div class="step-card">
+            <div class="step-number">{{ step.number }}</div>
+            <div class="step-icon-wrap">
+              <span class="material-icons-round">{{ step.icon }}</span>
+            </div>
+            <h3 class="step-title">{{ step.title }}</h3>
+            <p class="step-desc">{{ step.description }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA ──────────────────────────────────────── -->
+  <section class="cta">
+    <div class="cta-inner">
+      <div class="cta-orb cta-orb-1"></div>
+      <div class="cta-orb cta-orb-2"></div>
+      <h2 class="cta-title">¿Listo para digitalizar tu empresa?</h2>
+      <p class="cta-subtitle">
+        Únete a cientos de PYMEs ecuatorianas que ya gestionan su negocio con PymeFlowEC.
+        Registro gratuito, sin tarjeta de crédito.
+      </p>
+      <a routerLink="/register" class="btn-cta">
+        <span class="material-icons-round">arrow_forward</span>
+        Crear cuenta gratis
+      </a>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ─────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <span class="material-icons-round brand-icon-sm">bolt</span>
+        <span class="brand-text-sm">PymeFlow<span class="accent">EC</span></span>
+      </div>
+      <p class="footer-copy">
+        © {{ currentYear }} PymeFlowEC — Sistema ERP para PYMEs ecuatorianas
+      </p>
+      <div class="footer-links">
+        <a routerLink="/login">Iniciar sesión</a>
+        <a routerLink="/register">Registrarse</a>
+      </div>
+    </div>
+  </footer>
+
+</div>

@@ -1,42 +1,51 @@
 <aside class="sidebar" [class.collapsed]="collapsed()">
-  <!-- Logo area -->
+
+  <!-- Logo -->
   <div class="sidebar-header">
     @if (!collapsed()) {
       <div class="logo-full">
-        <span class="logo-icon">
-          <mat-icon>bolt</mat-icon>
-        </span>
+        <span class="logo-icon"><mat-icon>bolt</mat-icon></span>
         <span class="logo-text">PymeFlow<span class="logo-accent">EC</span></span>
       </div>
     } @else {
-      <div class="logo-icon-only">
-        <mat-icon>bolt</mat-icon>
-      </div>
+      <div class="logo-icon-only"><mat-icon>bolt</mat-icon></div>
     }
-    <button class="collapse-btn" (click)="onToggle()" [matTooltip]="collapsed() ? 'Expandir' : 'Colapsar'">
+    <button class="collapse-btn" (click)="onToggle()"
+            [matTooltip]="collapsed() ? 'Expandir' : 'Colapsar'" matTooltipPosition="right">
       <mat-icon>{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
     </button>
   </div>
 
-  <!-- Navigation -->
+  <!-- Navegación -->
   <nav class="sidebar-nav">
-    @for (item of visibleNavItems; track item.route) {
-      <a
-        [routerLink]="item.route"
-        routerLinkActive="active"
-        class="nav-item"
-        [matTooltip]="collapsed() ? item.label : ''"
-        matTooltipPosition="right"
-      >
-        <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-        @if (!collapsed()) {
-          <span class="nav-label">{{ item.label }}</span>
-        }
-      </a>
+
+    <!-- Dashboard (siempre visible) -->
+    <a routerLink="/dashboard" routerLinkActive="active" class="nav-item"
+       [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
+      <mat-icon class="nav-icon">dashboard</mat-icon>
+      @if (!collapsed()) { <span class="nav-label">Dashboard</span> }
+    </a>
+
+    <!-- Grupos con permisos -->
+    @for (group of visibleNavGroups; track group.label) {
+      @if (!collapsed()) {
+        <div class="nav-group-label">{{ group.label }}</div>
+      } @else {
+        <div class="nav-group-divider"></div>
+      }
+
+      @for (item of group.items; track item.route) {
+        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
+           [matTooltip]="collapsed() ? item.label : ''" matTooltipPosition="right">
+          <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+          @if (!collapsed()) { <span class="nav-label">{{ item.label }}</span> }
+        </a>
+      }
     }
+
   </nav>
 
-  <!-- User info at bottom -->
+  <!-- Footer con usuario -->
   <div class="sidebar-footer">
     <div class="user-info">
       <div class="user-avatar">{{ userInitials }}</div>
@@ -47,11 +56,11 @@
         </div>
       }
     </div>
-    <button class="logout-btn" (click)="logout()" [matTooltip]="collapsed() ? 'Cerrar sesión' : ''" matTooltipPosition="right">
+    <button class="logout-btn" (click)="logout()"
+            [matTooltip]="collapsed() ? 'Cerrar sesión' : ''" matTooltipPosition="right">
       <mat-icon>logout</mat-icon>
-      @if (!collapsed()) {
-        <span>Salir</span>
-      }
+      @if (!collapsed()) { <span>Salir</span> }
     </button>
   </div>
+
 </aside>

@@ -128,6 +128,10 @@ export class OrderDetailComponent implements OnInit {
     });
   }
 
+  formatId(id: string | number): string {
+    return `${id}`.slice(-8).toUpperCase();
+  }
+
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
   }

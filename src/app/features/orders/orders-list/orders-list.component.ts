@@ -76,6 +76,10 @@ export class OrdersListComponent implements OnInit {
     this.loadOrders();
   }
 
+  formatId(id: string | number): string {
+    return `${id}`.slice(-6).toUpperCase();
+  }
+
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' });
   }

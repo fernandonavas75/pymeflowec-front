@@ -3,7 +3,7 @@
     [collapsed]="sidebarCollapsed()"
     (toggleCollapse)="toggleSidebar()"
   />
-  <main class="main-content" [class.expanded]="sidebarCollapsed()">
+  <main class="main-content" [class.expanded]="sidebarCollapsed()" cdkScrollable>
     <div class="page-wrapper">
       <router-outlet />
     </div>

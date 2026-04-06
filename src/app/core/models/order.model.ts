@@ -32,9 +32,9 @@ export interface Order {
 
 export interface CreateOrderDto {
   client_id: string;
-  details: {
+  order_date?: string;
+  items: {
     product_id: string;
     quantity: number;
-    unit_price: number;
   }[];
 }

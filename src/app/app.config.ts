@@ -5,9 +5,26 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { importProvidersFrom } from '@angular/core';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatPaginatorIntl } from '@angular/material/paginator';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
+
+function spanishPaginatorIntl(): MatPaginatorIntl {
+  const intl = new MatPaginatorIntl();
+  intl.itemsPerPageLabel = 'Elementos por página:';
+  intl.nextPageLabel = 'Siguiente';
+  intl.previousPageLabel = 'Anterior';
+  intl.firstPageLabel = 'Primera página';
+  intl.lastPageLabel = 'Última página';
+  intl.getRangeLabel = (page: number, pageSize: number, length: number) => {
+    if (length === 0 || pageSize === 0) return `0 de ${length}`;
+    const start = page * pageSize + 1;
+    const end = Math.min(page * pageSize + pageSize, length);
+    return `${start} – ${end} de ${length}`;
+  };
+  return intl;
+}
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,5 +32,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
     importProvidersFrom(MatSnackBarModule, MatDialogModule),
+    { provide: MatPaginatorIntl, useFactory: spanishPaginatorIntl },
   ],
 };

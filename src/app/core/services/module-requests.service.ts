@@ -1,0 +1,56 @@
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, map } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { ModuleRequest, CreateModuleRequestDto, PlatformModule } from '../models/module-request.model';
+import { ApiListResponse, ApiResponse, PaginatedResponse } from '../models/pagination.model';
+
+@Injectable({ providedIn: 'root' })
+export class ModuleRequestsService {
+  private http = inject(HttpClient);
+  private base = `${environment.apiUrl}/module-requests`;
+
+  list(params: Record<string, string | number | boolean | undefined> = {}): Observable<PaginatedResponse<ModuleRequest>> {
+    return this.http.get<ApiListResponse<ModuleRequest>>(this.base, { params: params as Record<string, string> }).pipe(
+      map(res => ({
+        data: res.data,
+        total: res.pagination.total,
+        page: res.pagination.current_page,
+        limit: res.pagination.per_page,
+        totalPages: res.pagination.total_pages,
+      }))
+    );
+  }
+
+  listAll(params: Record<string, string | number | boolean | undefined> = {}): Observable<PaginatedResponse<ModuleRequest>> {
+    return this.http.get<ApiListResponse<ModuleRequest>>(`${this.base}/all`, { params: params as Record<string, string> }).pipe(
+      map(res => ({
+        data: res.data,
+        total: res.pagination.total,
+        page: res.pagination.current_page,
+        limit: res.pagination.per_page,
+        totalPages: res.pagination.total_pages,
+      }))
+    );
+  }
+
+  create(dto: CreateModuleRequestDto): Observable<ModuleRequest> {
+    return this.http.post<ApiResponse<ModuleRequest>>(this.base, dto).pipe(map(r => r.data));
+  }
+
+  approve(id: number): Observable<ModuleRequest> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/approve`, {}).pipe(map(r => r.data));
+  }
+
+  reject(id: number, reason?: string): Observable<ModuleRequest> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/reject`, { reason }).pipe(map(r => r.data));
+  }
+
+  cancel(id: number): Observable<ModuleRequest> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/cancel`, {}).pipe(map(r => r.data));
+  }
+
+  listPlatformModules(): Observable<PlatformModule[]> {
+    return this.http.get<ApiListResponse<PlatformModule>>(`${environment.apiUrl}/platform/modules`).pipe(map(r => r.data));
+  }
+}

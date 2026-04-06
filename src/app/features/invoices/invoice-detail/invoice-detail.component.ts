@@ -101,6 +101,10 @@ export class InvoiceDetailComponent implements OnInit {
     }).afterClosed();
   }
 
+  formatId(id: string | number | null | undefined): string {
+    return `${id ?? ''}`.slice(-8).toUpperCase();
+  }
+
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
   }

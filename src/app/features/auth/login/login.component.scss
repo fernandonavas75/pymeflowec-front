@@ -141,3 +141,19 @@
 .inline-spinner {
   display: inline-block;
 }
+
+.register-link {
+  text-align: center;
+  padding: 0 40px 24px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: #64748b;
+
+  a {
+    color: #6366f1;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
+}

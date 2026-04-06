@@ -56,13 +56,10 @@ export class OrderCreateComponent implements OnInit {
   quantityCtrl = new FormControl(1, [Validators.min(1)]);
   selectedProduct = signal<Product | null>(null);
 
-  taxRate = computed(() => {
-    const org = this.authService.currentUser()?.organization;
-    return org?.tax_rate ?? 0.12;
-  });
+  taxRate = 0.12; // IVA por defecto Ecuador; el backend calcula el total real
 
   subtotal = computed(() => this.cartItems().reduce((s, i) => s + i.product.unit_price * i.quantity, 0));
-  tax = computed(() => this.subtotal() * this.taxRate());
+  tax = computed(() => this.subtotal() * this.taxRate);
   total = computed(() => this.subtotal() + this.tax());
 
   ngOnInit(): void {
@@ -135,10 +132,9 @@ export class OrderCreateComponent implements OnInit {
     this.saving.set(true);
     const data = {
       client_id: this.selectedClient()!.id,
-      details: this.cartItems().map(i => ({
+      items: this.cartItems().map(i => ({
         product_id: i.product.id,
         quantity: i.quantity,
-        unit_price: i.product.unit_price,
       })),
     };
 
