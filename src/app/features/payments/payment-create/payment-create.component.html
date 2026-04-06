@@ -10,11 +10,18 @@
   <div class="form-card" style="max-width:560px">
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
       <div class="flex flex-col gap-4">
+
         <mat-form-field appearance="outline">
           <mat-label>Factura *</mat-label>
           <mat-select formControlName="invoice_id">
+            @if (invoices().length === 0) {
+              <mat-option disabled>No hay facturas pendientes</mat-option>
+            }
             @for (inv of invoices(); track inv.id) {
-              <mat-option [value]="inv.id">{{ inv.invoice_number }} — ${{ inv.total | number:'1.2-2' }}</mat-option>
+              <mat-option [value]="inv.id">
+                {{ inv.invoice_number }} — ${{ inv.total | number:'1.2-2' }}
+                @if (inv.payment_status === 'partial') { <span class="text-xs text-amber-600"> (pago parcial)</span> }
+              </mat-option>
             }
           </mat-select>
           @if (form.get('invoice_id')?.touched && form.get('invoice_id')?.invalid) {
@@ -27,11 +34,25 @@
           <mat-select formControlName="payment_method">
             <mat-option value="cash">Efectivo</mat-option>
             <mat-option value="transfer">Transferencia</mat-option>
-            <mat-option value="card">Tarjeta</mat-option>
-            <mat-option value="credit">Crédito</mat-option>
-            <mat-option value="other">Otro</mat-option>
           </mat-select>
         </mat-form-field>
+
+        @if (isCash) {
+          <mat-form-field appearance="outline">
+            <mat-label>Caja registradora *</mat-label>
+            <mat-select formControlName="cash_register_id">
+              @if (openRegisters().length === 0) {
+                <mat-option disabled>No hay cajas abiertas</mat-option>
+              }
+              @for (cr of openRegisters(); track cr.id) {
+                <mat-option [value]="cr.id">Caja #{{ cr.id }} — Abierta {{ cr.opened_at | date:'shortDate' }}</mat-option>
+              }
+            </mat-select>
+            @if (form.get('cash_register_id')?.touched && form.get('cash_register_id')?.invalid) {
+              <mat-error>Selecciona una caja abierta</mat-error>
+            }
+          </mat-form-field>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Monto *</mat-label>
@@ -49,22 +70,28 @@
           <mat-datepicker #picker />
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Número de referencia</mat-label>
-          <input matInput formControlName="reference_number" placeholder="Nro. transferencia, cheque, etc.">
-        </mat-form-field>
+        @if (!isCash) {
+          <mat-form-field appearance="outline">
+            <mat-label>Número de referencia</mat-label>
+            <input matInput formControlName="reference_number" placeholder="Nro. transferencia, cheque, etc.">
+          </mat-form-field>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Notas</mat-label>
           <textarea matInput rows="2" formControlName="notes"></textarea>
         </mat-form-field>
+
       </div>
 
       <div class="form-actions">
         <a routerLink="/payments" mat-stroked-button>Cancelar</a>
         <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-          @if (saving()) { <mat-spinner diameter="20" class="inline-block"></mat-spinner>
-          } @else { Registrar pago }
+          @if (saving()) {
+            <mat-spinner diameter="20" class="inline-block"></mat-spinner>
+          } @else {
+            Registrar pago
+          }
         </button>
       </div>
     </form>

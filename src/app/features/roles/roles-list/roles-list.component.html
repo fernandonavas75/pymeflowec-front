@@ -1,0 +1,78 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Roles</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona los roles y permisos del sistema</p>
+    </div>
+    <a routerLink="/roles/new" mat-flat-button color="primary" class="flex items-center gap-2">
+      <mat-icon>add</mat-icon>
+      Nuevo rol
+    </a>
+  </div>
+
+  <div class="table-container">
+    @if (loading()) {
+      <div class="loading-overlay">
+        @for (i of [1,2,3]; track i) {
+          <div class="skeleton-row">
+            <div class="skeleton h-4 w-32"></div>
+            <div class="skeleton h-4 w-48"></div>
+            <div class="skeleton h-4 w-24"></div>
+            <div class="skeleton h-4 w-12"></div>
+            <div class="skeleton h-8 w-20"></div>
+          </div>
+        }
+      </div>
+    } @else {
+      <table mat-table [dataSource]="roles()" class="w-full">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="font-medium text-gray-900">{{ r.name }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="description">
+          <th mat-header-cell *matHeaderCellDef>Descripción</th>
+          <td mat-cell *matCellDef="let r" class="text-gray-500">{{ r.description || '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="permissions">
+          <th mat-header-cell *matHeaderCellDef>Permisos</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="badge bg-indigo-50 text-indigo-700">
+              {{ r.permissions?.length ?? 0 }} permisos
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="users">
+          <th mat-header-cell *matHeaderCellDef>Usuarios</th>
+          <td mat-cell *matCellDef="let r" class="text-gray-600">{{ r.users_count ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let r">
+            <div class="flex items-center gap-1">
+              <a [routerLink]="['/roles', r.id, 'edit']" mat-icon-button matTooltip="Editar">
+                <mat-icon class="text-gray-400">edit</mat-icon>
+              </a>
+              <button mat-icon-button matTooltip="Eliminar" (click)="delete(r)">
+                <mat-icon class="text-red-400">delete</mat-icon>
+              </button>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">
+            No hay roles creados
+          </td>
+        </tr>
+      </table>
+    }
+  </div>
+</div>

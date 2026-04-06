@@ -8,46 +8,52 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { CategoriesService } from '../../../core/services/categories.service';
-import { Category } from '../../../core/models/category.model';
+import { RolesService } from '../../../core/services/roles.service';
+import { Role } from '../../../core/models/role.model';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
-  selector: 'app-categories-list',
+  selector: 'app-roles-list',
   standalone: true,
   imports: [
     CommonModule, RouterLink, MatTableModule, MatButtonModule,
     MatIconModule, MatTooltipModule, MatDialogModule, MatChipsModule,
-    MatProgressSpinnerModule,
   ],
-  templateUrl: './categories-list.component.html',
+  templateUrl: './roles-list.component.html',
 })
-export class CategoriesListComponent implements OnInit {
-  private svc = inject(CategoriesService);
+export class RolesListComponent implements OnInit {
+  private svc = inject(RolesService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
-  categories = signal<Category[]>([]);
+  roles = signal<Role[]>([]);
   loading = signal(true);
-  displayedColumns = ['name', 'parent', 'status', 'actions'];
+  displayedColumns = ['name', 'description', 'permissions', 'users', 'actions'];
 
   ngOnInit(): void { this.load(); }
 
   load(): void {
     this.loading.set(true);
-    this.svc.list({ limit: 100 }).subscribe({
-      next: res => { this.categories.set(res.data); this.loading.set(false); },
+    this.svc.listAll().subscribe({
+      next: roles => { this.roles.set(roles); this.loading.set(false); },
       error: () => this.loading.set(false),
     });
   }
 
-  delete(cat: Category): void {
+  delete(role: Role): void {
     this.dialog.open(ConfirmDialogComponent, {
-      data: { title: 'Eliminar categoría', message: `¿Eliminar "${cat.name}"?`, confirmText: 'Eliminar', danger: true },
+      data: {
+        title: 'Eliminar rol',
+        message: `¿Eliminar el rol "${role.name}"? Los usuarios asignados perderán este rol.`,
+        confirmText: 'Eliminar',
+        danger: true,
+      },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
-      this.svc.remove(cat.id).subscribe({ next: () => { this.snackBar.open('Categoría eliminada', 'OK', { duration: 3000 }); this.load(); } });
+      this.svc.remove(role.id).subscribe({
+        next: () => { this.snackBar.open('Rol eliminado', 'OK', { duration: 3000 }); this.load(); },
+        error: () => this.snackBar.open('No se pudo eliminar el rol', 'OK', { duration: 3000 }),
+      });
     });
   }
 }

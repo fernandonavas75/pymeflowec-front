@@ -9,7 +9,8 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { UsersService } from '../../../core/services/users.service';
-import { RolesService, Role } from '../../../core/services/roles.service';
+import { RolesService } from '../../../core/services/roles.service';
+import { Role } from '../../../core/models/role.model';
 
 @Component({
   selector: 'app-user-form',
@@ -56,7 +57,7 @@ export class UserFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.rolesService.list().subscribe({
+    this.rolesService.listAll().subscribe({
       next: roles => this.roles.set(roles),
     });
 

@@ -12,7 +12,9 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { PaymentsService } from '../../../core/services/payments.service';
 import { InvoicesService } from '../../../core/services/invoices.service';
+import { CashRegistersService } from '../../../core/services/cash-registers.service';
 import { Invoice } from '../../../core/models/invoice.model';
+import { CashRegister } from '../../../core/models/cash-register.model';
 
 @Component({
   selector: 'app-payment-create',
@@ -30,22 +32,45 @@ export class PaymentCreateComponent implements OnInit {
   private router = inject(Router);
   private svc = inject(PaymentsService);
   private invoicesSvc = inject(InvoicesService);
+  private cashRegistersSvc = inject(CashRegistersService);
   private snackBar = inject(MatSnackBar);
 
   saving = signal(false);
   invoices = signal<Invoice[]>([]);
+  openRegisters = signal<CashRegister[]>([]);
 
   form = this.fb.group({
-    invoice_id: [null as number | null, Validators.required],
+    invoice_id: [null as string | null, Validators.required],
     payment_method: ['cash', Validators.required],
     amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     payment_date: [new Date()],
+    cash_register_id: [null as number | null],
     reference_number: [''],
     notes: [''],
   });
 
+  get isCash(): boolean {
+    return this.form.get('payment_method')?.value === 'cash';
+  }
+
   ngOnInit(): void {
-    this.invoicesSvc.list({ limit: 100, status: 'pending' }).subscribe(res => this.invoices.set(res.data));
+    this.invoicesSvc.list({ limit: 100 }).subscribe(res =>
+      this.invoices.set(res.data.filter(inv => inv.status !== 'cancelled' && inv.payment_status !== 'paid'))
+    );
+    this.cashRegistersSvc.list({ status: 'open', limit: 50 }).subscribe(res =>
+      this.openRegisters.set(res.data)
+    );
+
+    this.form.get('payment_method')!.valueChanges.subscribe(method => {
+      const ctrl = this.form.get('cash_register_id')!;
+      if (method === 'cash') {
+        ctrl.setValidators(Validators.required);
+      } else {
+        ctrl.clearValidators();
+        ctrl.setValue(null);
+      }
+      ctrl.updateValueAndValidity();
+    });
   }
 
   onSubmit(): void {
@@ -53,10 +78,11 @@ export class PaymentCreateComponent implements OnInit {
     this.saving.set(true);
     const v = this.form.value;
     const dto = {
-      invoice_id: v.invoice_id!,
+      invoice_id: +v.invoice_id!,
       payment_method: v.payment_method as any,
       amount: v.amount!,
       payment_date: v.payment_date ? (v.payment_date as Date).toISOString().split('T')[0] : undefined,
+      cash_register_id: v.cash_register_id ?? undefined,
       reference_number: v.reference_number || undefined,
       notes: v.notes || undefined,
     };
@@ -65,7 +91,11 @@ export class PaymentCreateComponent implements OnInit {
         this.snackBar.open('Pago registrado', 'OK', { duration: 3000 });
         this.router.navigate(['/payments']);
       },
-      error: () => this.saving.set(false),
+      error: (err) => {
+        const msg = err?.error?.message || 'Error al registrar el pago';
+        this.snackBar.open(msg, 'OK', { duration: 5000 });
+        this.saving.set(false);
+      },
     });
   }
 }

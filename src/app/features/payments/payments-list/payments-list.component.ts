@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
 import { PaymentsService } from '../../../core/services/payments.service';
@@ -22,7 +23,7 @@ const METHOD_LABELS: Record<string, string> = {
   imports: [
     CommonModule, RouterLink, ReactiveFormsModule,
     MatTableModule, MatButtonModule, MatIconModule,
-    MatPaginatorModule, MatInputModule, MatTooltipModule,
+    MatPaginatorModule, MatInputModule, MatTooltipModule, MatProgressSpinnerModule,
   ],
   templateUrl: './payments-list.component.html',
 })

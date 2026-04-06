@@ -1,0 +1,80 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Cajas</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona las cajas registradoras</p>
+    </div>
+    <button mat-flat-button color="primary" (click)="showOpenForm.set(true)" class="flex items-center gap-2">
+      <mat-icon>point_of_sale</mat-icon>
+      Abrir caja
+    </button>
+  </div>
+
+  @if (showOpenForm()) {
+    <div class="form-card mb-6" style="max-width:400px">
+      <h3 class="text-base font-semibold text-gray-800 mb-4">Abrir nueva caja</h3>
+      <form [formGroup]="openForm" (ngSubmit)="openRegister()">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Monto de apertura</mat-label>
+          <span matPrefix>$&nbsp;</span>
+          <input matInput type="number" step="0.01" formControlName="opening_amount">
+        </mat-form-field>
+        <div class="flex gap-2 mt-2">
+          <button mat-stroked-button type="button" (click)="showOpenForm.set(false)">Cancelar</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="opening()">
+            @if (opening()) { <mat-spinner diameter="18" class="inline-block"></mat-spinner>
+            } @else { Abrir }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <div class="table-container">
+    @if (loading()) {
+      <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else {
+      <table mat-table [dataSource]="registers()" class="w-full">
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>Caja</th>
+          <td mat-cell *matCellDef="let r"><span class="font-medium">Caja #{{ r.id }}</span></td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="badge" [ngClass]="r.status === 'open' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'">
+              {{ r.status === 'open' ? 'Abierta' : 'Cerrada' }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="opening_amount">
+          <th mat-header-cell *matHeaderCellDef>Apertura</th>
+          <td mat-cell *matCellDef="let r">${{ r.opening_amount | number:'1.2-2' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="opened_at">
+          <th mat-header-cell *matHeaderCellDef>Abierta</th>
+          <td mat-cell *matCellDef="let r" class="text-sm text-gray-500">{{ r.opened_at | date:'dd/MM/yyyy HH:mm' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="closed_at">
+          <th mat-header-cell *matHeaderCellDef>Cerrada</th>
+          <td mat-cell *matCellDef="let r" class="text-sm text-gray-500">{{ r.closed_at ? (r.closed_at | date:'dd/MM/yyyy HH:mm') : '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let r">
+            <a [routerLink]="['/cash-registers', r.id]" mat-icon-button matTooltip="Ver detalle">
+              <mat-icon class="text-gray-400">visibility</mat-icon>
+            </a>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">No hay cajas registradas</td>
+        </tr>
+      </table>
+      <mat-paginator [length]="total()" [pageSize]="limit()" [pageIndex]="page()-1"
+        [pageSizeOptions]="[10,20,50]" (page)="onPageChange($event)" showFirstLastButtons />
+    }
+  </div>
+</div>

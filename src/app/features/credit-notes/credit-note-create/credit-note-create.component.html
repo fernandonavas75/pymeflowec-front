@@ -1,0 +1,70 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/credit-notes" mat-icon-button><mat-icon>arrow_back</mat-icon></a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Nueva nota de crédito</h1>
+      <p class="text-sm text-gray-500 mt-1">Emite una nota de crédito sobre una factura existente</p>
+    </div>
+  </div>
+
+  <div class="form-card" style="max-width:700px">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="flex flex-col gap-4 mb-6">
+        <mat-form-field appearance="outline">
+          <mat-label>Factura *</mat-label>
+          <mat-select formControlName="invoice_id">
+            @for (inv of invoices(); track inv.id) {
+              <mat-option [value]="inv.id">{{ inv.invoice_number }} — ${{ inv.total | number:'1.2-2' }}</mat-option>
+            }
+          </mat-select>
+          @if (form.get('invoice_id')?.touched && form.get('invoice_id')?.invalid) {
+            <mat-error>Selecciona una factura</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Motivo *</mat-label>
+          <textarea matInput rows="2" formControlName="reason" placeholder="Ej: Producto defectuoso, devolución, error de precio..."></textarea>
+          @if (form.get('reason')?.touched && form.get('reason')?.invalid) {
+            <mat-error>Ingresa el motivo (mínimo 5 caracteres)</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (itemsArray.length > 0) {
+        <h2 class="text-base font-semibold text-gray-800 mb-3">Ítems a acreditar</h2>
+        <div class="flex flex-col gap-3 mb-6">
+          @for (item of itemsArray.controls; track item; let i = $index) {
+            <div [formGroup]="$any(item)" class="border border-gray-200 rounded-lg p-4">
+              <p class="font-medium text-gray-800 mb-3">{{ item.get('product_name')?.value }}</p>
+              <div class="grid grid-cols-2 gap-3">
+                <mat-form-field appearance="outline">
+                  <mat-label>Cantidad (máx. {{ item.get('max_quantity')?.value }})</mat-label>
+                  <input matInput type="number" step="0.001" formControlName="quantity">
+                  @if (item.get('quantity')?.touched && item.get('quantity')?.invalid) {
+                    <mat-error>Entre 0 y {{ item.get('max_quantity')?.value }}</mat-error>
+                  }
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Precio unitario</mat-label>
+                  <span matPrefix>$&nbsp;</span>
+                  <input matInput type="number" step="0.01" formControlName="unit_price">
+                </mat-form-field>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (selectedInvoice()) {
+        <p class="text-sm text-gray-400 mb-6">Esta factura no tiene ítems disponibles.</p>
+      }
+
+      <div class="form-actions">
+        <a routerLink="/credit-notes" mat-stroked-button>Cancelar</a>
+        <button mat-flat-button color="primary" type="submit" [disabled]="saving() || itemsArray.length === 0">
+          @if (saving()) { <mat-spinner diameter="20" class="inline-block"></mat-spinner>
+          } @else { Emitir nota de crédito }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

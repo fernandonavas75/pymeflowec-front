@@ -63,11 +63,14 @@
           <th mat-header-cell *matHeaderCellDef>Stock</th>
           <td mat-cell *matCellDef="let p">
             <div class="flex items-center gap-2">
-              <span [class.text-red-600]="p.stock < 5" [class.font-semibold]="p.stock < 5">{{ p.stock }}</span>
-              @if (p.stock < 5) {
+              <span class="font-semibold" [class.text-red-600]="p.stock <= p.min_stock" [class.text-amber-600]="p.stock > p.min_stock && p.stock <= p.min_stock * 2" [class.text-gray-900]="p.stock > p.min_stock * 2">
+                {{ p.stock }} <span class="text-xs font-normal text-gray-400">{{ p.unit }}</span>
+              </span>
+              @if (p.stock <= p.min_stock) {
                 <span class="badge bg-red-100 text-red-700 text-xs">Bajo</span>
               }
             </div>
+            <div class="text-xs text-gray-400 mt-0.5">Mín: {{ p.min_stock }}</div>
           </td>
         </ng-container>
         <ng-container matColumnDef="unit_price">
@@ -86,6 +89,9 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let p">
             <div class="flex items-center gap-1">
+              <button mat-icon-button matTooltip="Ajustar stock" (click)="openStockDialog(p)">
+                <mat-icon class="text-blue-400">inventory</mat-icon>
+              </button>
               @if (canEdit()) {
                 <a [routerLink]="['/products', p.id, 'edit']" mat-icon-button matTooltip="Editar">
                   <mat-icon class="text-gray-400">edit</mat-icon>

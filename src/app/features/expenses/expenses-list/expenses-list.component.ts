@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { Expense } from '../../../core/models/expense.model';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -23,7 +24,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     CommonModule, RouterLink, ReactiveFormsModule,
     MatTableModule, MatButtonModule, MatIconModule,
     MatPaginatorModule, MatInputModule, MatSelectModule,
-    MatTooltipModule, MatDialogModule,
+    MatTooltipModule, MatDialogModule, MatProgressSpinnerModule,
   ],
   templateUrl: './expenses-list.component.html',
 })

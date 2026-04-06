@@ -1,0 +1,81 @@
+<div class="page-container">
+  <div class="page-header">
+    <a routerLink="/roles" mat-icon-button>
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar rol' : 'Nuevo rol' }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Modifica nombre y permisos del rol' : 'Crea un nuevo rol con permisos personalizados' }}</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <mat-spinner diameter="48"></mat-spinner>
+    </div>
+  } @else {
+    <div class="form-card" style="max-width: 700px">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-4 mb-6">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre del rol *</mat-label>
+            <input matInput formControlName="name">
+            @if (form.get('name')?.touched && form.get('name')?.invalid) {
+              <mat-error>Mínimo 2 caracteres</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Descripción</mat-label>
+            <textarea matInput formControlName="description" rows="2"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="mb-6">
+          <h2 class="text-base font-semibold text-gray-800 mb-3">Permisos</h2>
+          @if (permissionGroups().length === 0) {
+            <p class="text-sm text-gray-400">No hay permisos disponibles.</p>
+          }
+          <div class="flex flex-col gap-4">
+            @for (group of permissionGroups(); track group.module) {
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-3">
+                  <mat-checkbox
+                    [checked]="isGroupAllChecked(group)"
+                    [indeterminate]="isGroupIndeterminate(group)"
+                    (change)="toggleAll(group)"
+                    class="font-semibold text-gray-700"
+                  >
+                    {{ group.module }}
+                  </mat-checkbox>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pl-4">
+                  @for (perm of group.permissions; track perm.id) {
+                    <mat-checkbox
+                      [checked]="isChecked(perm.id)"
+                      (change)="togglePermission(perm.id)"
+                      class="text-sm text-gray-600"
+                    >
+                      {{ perm.description || perm.code }}
+                    </mat-checkbox>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <a routerLink="/roles" mat-stroked-button>Cancelar</a>
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) {
+              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
+            } @else {
+              {{ isEdit ? 'Guardar cambios' : 'Crear rol' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+</div>

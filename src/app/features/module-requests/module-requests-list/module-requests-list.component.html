@@ -1,0 +1,104 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Solicitudes de módulos</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ isPlatformStaff ? 'Gestiona solicitudes de todas las organizaciones' : 'Solicita nuevos módulos para tu organización' }}</p>
+    </div>
+    @if (!isPlatformStaff) {
+      <button mat-flat-button color="primary" (click)="showRequestForm.set(true)" class="flex items-center gap-2">
+        <mat-icon>add</mat-icon>
+        Solicitar módulo
+      </button>
+    }
+  </div>
+
+  @if (showRequestForm()) {
+    <div class="form-card mb-6" style="max-width:500px">
+      <h3 class="text-base font-semibold text-gray-800 mb-4">Nueva solicitud</h3>
+      <form [formGroup]="requestForm" (ngSubmit)="submitRequest()" class="flex flex-col gap-4">
+        <mat-form-field appearance="outline">
+          <mat-label>Módulo *</mat-label>
+          <mat-select formControlName="module_id">
+            @for (m of availableModules(); track m.id) {
+              <mat-option [value]="m.id">{{ m.name }}</mat-option>
+            }
+          </mat-select>
+          @if (requestForm.get('module_id')?.touched && requestForm.get('module_id')?.invalid) {
+            <mat-error>Selecciona un módulo</mat-error>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Notas (opcional)</mat-label>
+          <textarea matInput rows="2" formControlName="notes"></textarea>
+        </mat-form-field>
+        <div class="flex gap-2">
+          <button mat-stroked-button type="button" (click)="showRequestForm.set(false)">Cancelar</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) { <mat-spinner diameter="18" class="inline-block"></mat-spinner>
+            } @else { Enviar solicitud }
+          </button>
+        </div>
+      </form>
+    </div>
+  }
+
+  <div class="table-container">
+    @if (loading()) {
+      <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else if (forbidden()) {
+      <div class="flex flex-col items-center py-16 text-gray-400 gap-3">
+        <mat-icon class="text-5xl">lock</mat-icon>
+        <p class="text-base font-medium">Sin permiso para ver solicitudes</p>
+        <p class="text-sm">Solicita al administrador que asigne el permiso <span class="font-mono bg-gray-100 px-1 rounded">modules.view</span> a tu rol.</p>
+      </div>
+    } @else {
+      <table mat-table [dataSource]="requests()" class="w-full">
+        @if (isPlatformStaff) {
+          <ng-container matColumnDef="org">
+            <th mat-header-cell *matHeaderCellDef>Organización</th>
+            <td mat-cell *matCellDef="let r" class="font-medium">{{ r.organization?.name || '#' + r.organization_id }}</td>
+          </ng-container>
+        }
+        <ng-container matColumnDef="module">
+          <th mat-header-cell *matHeaderCellDef>Módulo</th>
+          <td mat-cell *matCellDef="let r">{{ r.module?.name || '#' + r.module_id }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let r">
+            <span class="badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="date">
+          <th mat-header-cell *matHeaderCellDef>Fecha</th>
+          <td mat-cell *matCellDef="let r" class="text-sm text-gray-500">{{ r.created_at | date:'dd/MM/yyyy' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let r">
+            <div class="flex items-center gap-1">
+              @if (isPlatformStaff && r.status === 'pending') {
+                <button mat-icon-button matTooltip="Aprobar" (click)="approve(r)">
+                  <mat-icon class="text-green-500">check_circle</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Rechazar" (click)="reject(r)">
+                  <mat-icon class="text-red-400">cancel</mat-icon>
+                </button>
+              }
+              @if (!isPlatformStaff && r.status === 'pending') {
+                <button mat-icon-button matTooltip="Cancelar solicitud" (click)="cancel(r)">
+                  <mat-icon class="text-gray-400">delete</mat-icon>
+                </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns().length">No hay solicitudes</td>
+        </tr>
+      </table>
+    }
+  </div>
+</div>

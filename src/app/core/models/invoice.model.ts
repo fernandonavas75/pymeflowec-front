@@ -2,6 +2,7 @@ import { Order } from './order.model';
 import { Product } from './product.model';
 
 export type InvoiceStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
+export type PaymentStatus = 'pending' | 'partial' | 'paid';
 
 export interface InvoiceDetail {
   id: string;
@@ -23,6 +24,7 @@ export interface Invoice {
   tax: number;
   total: number;
   status: InvoiceStatus;
+  payment_status: PaymentStatus;
   created_at: string;
   order?: Order;
   details?: InvoiceDetail[];

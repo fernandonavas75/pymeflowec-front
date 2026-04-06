@@ -1,6 +1,6 @@
 <div class="page-container">
   <div class="page-header">
-    <a routerLink="/products" mat-icon-button class="back-btn">
+    <a routerLink="/products" mat-icon-button>
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
@@ -14,44 +14,109 @@
       <mat-spinner diameter="48"></mat-spinner>
     </div>
   } @else {
-    <div class="form-card">
+    <div class="form-card" style="max-width:720px">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="form-grid">
+
+        <!-- Información básica -->
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Información general</h3>
+        <div class="grid grid-cols-2 gap-4 mb-6">
           <mat-form-field appearance="outline" class="col-span-2">
             <mat-label>Nombre del producto *</mat-label>
-            <input matInput formControlName="name" placeholder="Ej: Laptop HP 15">
-            @if (form.get('name')?.touched && form.get('name')?.hasError('required')) {
-              <mat-error>El nombre es requerido</mat-error>
+            <input matInput formControlName="name" placeholder="Ej: Arroz extra 25kg">
+            @if (form.get('name')?.touched && form.get('name')?.invalid) {
+              <mat-error>Mínimo 2 caracteres</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Categoría</mat-label>
-            <input matInput formControlName="category" placeholder="Ej: Electrónica">
+            <mat-select formControlName="category_id">
+              <mat-option [value]="null">Sin categoría</mat-option>
+              @for (cat of categories(); track cat.id) {
+                <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Precio unitario *</mat-label>
-            <span matPrefix>$&nbsp;</span>
-            <input matInput type="number" formControlName="unit_price" min="0" step="0.01">
-            @if (form.get('unit_price')?.touched && form.get('unit_price')?.invalid) {
-              <mat-error>Ingresa un precio válido</mat-error>
-            }
+            <mat-label>Unidad de medida *</mat-label>
+            <mat-select formControlName="unit">
+              @for (u of units; track u.value) {
+                <mat-option [value]="u.value">{{ u.label }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Stock inicial *</mat-label>
-            <input matInput type="number" formControlName="stock" min="0">
-            @if (form.get('stock')?.touched && form.get('stock')?.invalid) {
-              <mat-error>Ingresa una cantidad válida</mat-error>
-            }
+            <mat-label>SKU</mat-label>
+            <input matInput formControlName="sku" placeholder="Código interno">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Código de barras</mat-label>
+            <mat-icon matPrefix>qr_code</mat-icon>
+            <input matInput formControlName="barcode">
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="col-span-2">
             <mat-label>Descripción</mat-label>
-            <textarea matInput formControlName="description" rows="3" placeholder="Descripción opcional del producto"></textarea>
+            <textarea matInput formControlName="description" rows="2" placeholder="Descripción opcional"></textarea>
           </mat-form-field>
         </div>
+
+        <!-- Precios -->
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Precios</h3>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <mat-form-field appearance="outline">
+            <mat-label>Costo *</mat-label>
+            <span matPrefix>$&nbsp;</span>
+            <input matInput type="number" step="0.01" min="0" formControlName="cost_price">
+            @if (form.get('cost_price')?.touched && form.get('cost_price')?.invalid) {
+              <mat-error>Ingresa un costo válido</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Precio de venta *</mat-label>
+            <span matPrefix>$&nbsp;</span>
+            <input matInput type="number" step="0.01" min="0" formControlName="unit_price">
+            @if (form.get('unit_price')?.touched && form.get('unit_price')?.invalid) {
+              <mat-error>Ingresa un precio válido</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <!-- Stock -->
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Inventario</h3>
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          @if (!isEdit) {
+            <mat-form-field appearance="outline">
+              <mat-label>Stock inicial</mat-label>
+              <input matInput type="number" min="0" step="0.001" formControlName="stock">
+              <mat-hint>Cantidad disponible al crear el producto</mat-hint>
+              @if (form.get('stock')?.touched && form.get('stock')?.invalid) {
+                <mat-error>Ingresa una cantidad válida</mat-error>
+              }
+            </mat-form-field>
+          }
+
+          <mat-form-field appearance="outline">
+            <mat-label>Stock mínimo (alerta)</mat-label>
+            <mat-icon matSuffix matTooltip="Recibirás una alerta cuando el stock llegue a este nivel">info_outline</mat-icon>
+            <input matInput type="number" min="0" step="0.001" formControlName="min_stock">
+            <mat-hint>Umbral para la alerta de reabastecimiento</mat-hint>
+            @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
+              <mat-error>Ingresa una cantidad válida</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        @if (isEdit) {
+          <p class="text-xs text-gray-400 mb-6 flex items-center gap-1">
+            <mat-icon class="text-sm">info</mat-icon>
+            Para modificar el stock de un producto existente, usa el boton "Ajustar stock" en la lista de productos.
+          </p>
+        }
 
         <div class="form-actions">
           <a routerLink="/products" mat-stroked-button>Cancelar</a>

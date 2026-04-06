@@ -67,7 +67,7 @@ export class SidebarComponent {
       items: [
         { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',          permission: 'users.view'          },
         { label: 'Roles',     icon: 'security',        route: '/roles',          permission: 'roles.manage'        },
-        { label: 'Módulos',   icon: 'extension',       route: '/module-requests', permission: 'modules.view'       },
+        { label: 'Módulos',   icon: 'extension',       route: '/module-requests' },
       ],
     },
     {

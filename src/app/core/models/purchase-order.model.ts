@@ -14,7 +14,7 @@ export interface PurchaseOrder {
   id: number;
   organization_id: number;
   supplier_id: number;
-  supplier?: { id: number; name: string } | null;
+  supplier?: { id: number; business_name: string } | null;
   order_number: string;
   status: PurchaseOrderStatus;
   order_date: string;

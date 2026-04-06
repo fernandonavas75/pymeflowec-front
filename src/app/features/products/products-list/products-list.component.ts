@@ -18,6 +18,7 @@ import { Product } from '../../../core/models/product.model';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { StockAdjustDialogComponent } from '../stock-adjust-dialog/stock-adjust-dialog.component';
 
 @Component({
   selector: 'app-products-list',
@@ -58,10 +59,7 @@ export class ProductsListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadProducts();
-    this.searchCtrl.valueChanges.pipe(
-      debounceTime(400),
-      distinctUntilChanged()
-    ).subscribe(() => {
+    this.searchCtrl.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
       this.page.set(1);
       this.loadProducts();
     });
@@ -94,6 +92,16 @@ export class ProductsListComponent implements OnInit {
     this.page.set(event.pageIndex + 1);
     this.limit.set(event.pageSize);
     this.loadProducts();
+  }
+
+  openStockDialog(product: Product): void {
+    const ref = this.dialog.open(StockAdjustDialogComponent, {
+      data: product,
+      width: '400px',
+    });
+    ref.afterClosed().subscribe(result => {
+      if (result) this.loadProducts();
+    });
   }
 
   toggleStatus(product: Product): void {

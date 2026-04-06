@@ -55,21 +55,21 @@ export const routes: Routes = [
       // Categorías
       {
         path: 'categories',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/categories/categories-list/categories-list.component').then(m => m.CategoriesListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['products.view'], title: 'Categorías' },
+        data: { permissions: ['products.view'] },
       },
       {
         path: 'categories/new',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/categories/category-form/category-form.component').then(m => m.CategoryFormComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['products.create'], title: 'Nueva categoría' },
+        data: { permissions: ['products.create'] },
       },
       {
         path: 'categories/:id/edit',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/categories/category-form/category-form.component').then(m => m.CategoryFormComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['products.edit'], title: 'Editar categoría' },
+        data: { permissions: ['products.edit'] },
       },
 
       // Clientes
@@ -149,89 +149,89 @@ export const routes: Routes = [
       // Pagos
       {
         path: 'payments',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/payments/payments-list/payments-list.component').then(m => m.PaymentsListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['payments.view'], title: 'Pagos' },
+        data: { permissions: ['payments.view'] },
       },
       {
         path: 'payments/new',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/payments/payment-create/payment-create.component').then(m => m.PaymentCreateComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['payments.create'], title: 'Nuevo pago' },
+        data: { permissions: ['payments.create'] },
       },
 
       // Notas de crédito
       {
         path: 'credit-notes',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/credit-notes/credit-notes-list/credit-notes-list.component').then(m => m.CreditNotesListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['credit_notes.manage'], title: 'Notas de crédito' },
+        data: { permissions: ['credit_notes.manage'] },
       },
       {
         path: 'credit-notes/new',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/credit-notes/credit-note-create/credit-note-create.component').then(m => m.CreditNoteCreateComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['credit_notes.manage'], title: 'Nueva nota de crédito' },
+        data: { permissions: ['credit_notes.manage'] },
       },
       {
         path: 'credit-notes/:id',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/credit-notes/credit-note-detail/credit-note-detail.component').then(m => m.CreditNoteDetailComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['credit_notes.manage'], title: 'Detalle nota de crédito' },
+        data: { permissions: ['credit_notes.manage'] },
       },
 
       // Órdenes de compra
       {
         path: 'purchase-orders',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/purchase-orders/purchase-orders-list/purchase-orders-list.component').then(m => m.PurchaseOrdersListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['purchases.view'], title: 'Órdenes de compra' },
+        data: { permissions: ['purchases.view'] },
       },
       {
         path: 'purchase-orders/new',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/purchase-orders/purchase-order-create/purchase-order-create.component').then(m => m.PurchaseOrderCreateComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['purchases.manage'], title: 'Nueva orden de compra' },
+        data: { permissions: ['purchases.manage'] },
       },
       {
         path: 'purchase-orders/:id',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/purchase-orders/purchase-order-detail/purchase-order-detail.component').then(m => m.PurchaseOrderDetailComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['purchases.view'], title: 'Detalle orden de compra' },
+        data: { permissions: ['purchases.view'] },
       },
 
       // Caja
       {
         path: 'cash-registers',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/cash-registers/cash-registers-list/cash-registers-list.component').then(m => m.CashRegistersListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['cash_register.operate'], title: 'Caja' },
+        data: { permissions: ['cash_register.operate'] },
       },
       {
         path: 'cash-registers/:id',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/cash-registers/cash-register-detail/cash-register-detail.component').then(m => m.CashRegisterDetailComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['cash_register.operate'], title: 'Detalle de caja' },
+        data: { permissions: ['cash_register.operate'] },
       },
 
       // Gastos
       {
         path: 'expenses',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/expenses/expenses-list/expenses-list.component').then(m => m.ExpensesListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['expenses.view'], title: 'Gastos' },
+        data: { permissions: ['expenses.view'] },
       },
       {
         path: 'expenses/new',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/expenses/expense-create/expense-create.component').then(m => m.ExpenseCreateComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['expenses.create'], title: 'Nuevo gasto' },
+        data: { permissions: ['expenses.create'] },
       },
       {
         path: 'expenses/categories',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/expenses/expense-categories/expense-categories.component').then(m => m.ExpenseCategoriesComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['expenses.manage'], title: 'Categorías de gastos' },
+        data: { permissions: ['expenses.manage'] },
       },
 
       // Usuarios
@@ -257,37 +257,35 @@ export const routes: Routes = [
       // Roles
       {
         path: 'roles',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/roles/roles-list/roles-list.component').then(m => m.RolesListComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['roles.manage'], title: 'Roles' },
+        data: { permissions: ['roles.manage'] },
       },
       {
         path: 'roles/new',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/roles/role-form/role-form.component').then(m => m.RoleFormComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['roles.manage'], title: 'Nuevo rol' },
+        data: { permissions: ['roles.manage'] },
       },
       {
         path: 'roles/:id/edit',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/roles/role-form/role-form.component').then(m => m.RoleFormComponent),
         canActivate: [permissionGuard],
-        data: { permissions: ['roles.manage'], title: 'Editar rol' },
+        data: { permissions: ['roles.manage'] },
       },
 
-      // Solicitudes de módulos
+      // Solicitudes de módulos — accesible para cualquier usuario de org, backend enforcea por endpoint
       {
         path: 'module-requests',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
-        canActivate: [permissionGuard],
-        data: { permissions: ['modules.view', 'modules.request'], title: 'Solicitudes de módulos' },
+        loadComponent: () => import('./features/module-requests/module-requests-list/module-requests-list.component').then(m => m.ModuleRequestsListComponent),
       },
 
       // Organizaciones (solo superadmin / platform staff)
       {
         path: 'organizations',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/organizations/organizations-list/organizations-list.component').then(m => m.OrganizationsListComponent),
         canActivate: [permissionGuard],
-        data: { platformStaff: true, title: 'Organizaciones' },
+        data: { platformStaff: true },
       },
 
       // Plataforma (solo platform staff)
@@ -299,9 +297,9 @@ export const routes: Routes = [
       },
       {
         path: 'platform/staff',
-        loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
+        loadComponent: () => import('./features/platform-staff/platform-staff-list/platform-staff-list.component').then(m => m.PlatformStaffListComponent),
         canActivate: [permissionGuard],
-        data: { platformStaff: true, title: 'Staff de plataforma' },
+        data: { platformStaff: true },
       },
     ],
   },

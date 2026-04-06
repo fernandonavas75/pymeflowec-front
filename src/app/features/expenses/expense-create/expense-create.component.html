@@ -53,7 +53,7 @@
           <mat-select formControlName="supplier_id">
             <mat-option [value]="null">Ninguno</mat-option>
             @for (s of suppliers(); track s.id) {
-              <mat-option [value]="s.id">{{ s.name }}</mat-option>
+              <mat-option [value]="s.id">{{ s.business_name }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
