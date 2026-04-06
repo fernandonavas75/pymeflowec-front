@@ -1,0 +1,274 @@
+<div class="register-page">
+
+  <!-- Left panel -->
+  <div class="register-left">
+    <div class="left-content">
+      <a routerLink="/" class="back-link">
+        <span class="material-icons-round">arrow_back</span>
+        Volver al inicio
+      </a>
+      <div class="brand">
+        <div class="brand-logo">
+          <span class="material-icons-round">bolt</span>
+        </div>
+        <h1 class="brand-name">PymeFlow<span class="brand-accent">EC</span></h1>
+      </div>
+      <h2 class="left-title">Digitaliza tu empresa hoy</h2>
+      <p class="left-subtitle">
+        Gestión empresarial integral para PYMEs ecuatorianas.
+        Facturación electrónica SRI, inventario, ventas y más.
+      </p>
+
+      <div class="left-benefits">
+        @for (b of benefits; track b) {
+          <div class="benefit">
+            <span class="benefit-icon material-icons-round">check_circle</span>
+            <span>{{ b }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="left-orb left-orb-1"></div>
+    <div class="left-orb left-orb-2"></div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="register-right">
+    <div class="register-card">
+
+      <!-- Stepper -->
+      <div class="stepper-bar">
+        @for (s of [1,2,3]; track s) {
+          <div class="step-item" [class.active]="step() >= s" [class.current]="step() === s">
+            <div class="step-circle">
+              @if (step() > s) {
+                <span class="material-icons-round">check</span>
+              } @else {
+                <span>{{ s }}</span>
+              }
+            </div>
+            <span class="step-label">
+              {{ s === 1 ? 'Empresa' : s === 2 ? 'Administrador' : 'Módulos' }}
+            </span>
+          </div>
+          @if (s < 3) {
+            <div class="step-line" [class.filled]="step() > s"></div>
+          }
+        }
+      </div>
+
+      <!-- Error alert -->
+      @if (error()) {
+        <div class="error-alert">
+          <span class="material-icons-round">error_outline</span>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      <!-- ── Step 1: Empresa ── -->
+      @if (step() === 1) {
+        <div class="form-step">
+          <div class="step-header">
+            <div class="step-icon-wrap">
+              <span class="material-icons-round">business</span>
+            </div>
+            <div>
+              <h3 class="step-title">Datos de la empresa</h3>
+              <p class="step-subtitle">Información básica de tu organización</p>
+            </div>
+          </div>
+
+          <form [formGroup]="orgForm" class="step-form" (ngSubmit)="goStep(2)">
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>Nombre de la empresa *</mat-label>
+              <input matInput formControlName="org_name" placeholder="Ej: Mi Empresa S.A.">
+              <mat-icon matPrefix>storefront</mat-icon>
+              @if (getOrgError('org_name')) {
+                <mat-error>{{ getOrgError('org_name') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>RUC *</mat-label>
+              <input matInput formControlName="org_ruc" placeholder="0000000000001" maxlength="13">
+              <mat-icon matPrefix>badge</mat-icon>
+              @if (getOrgError('org_ruc')) {
+                <mat-error>{{ getOrgError('org_ruc') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="field-row">
+              <mat-form-field appearance="outline" class="field-half">
+                <mat-label>Email de la empresa</mat-label>
+                <input matInput formControlName="org_email" type="email" placeholder="info@miempresa.com">
+                <mat-icon matPrefix>mail_outline</mat-icon>
+                @if (getOrgError('org_email')) {
+                  <mat-error>{{ getOrgError('org_email') }}</mat-error>
+                }
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="field-half">
+                <mat-label>Teléfono</mat-label>
+                <input matInput formControlName="org_phone" placeholder="0998765432">
+                <mat-icon matPrefix>phone</mat-icon>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>Ciudad</mat-label>
+              <input matInput formControlName="org_city" placeholder="Ej: Quito">
+              <mat-icon matPrefix>location_on</mat-icon>
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" type="submit" class="btn-next">
+              Continuar
+              <span class="material-icons-round">arrow_forward</span>
+            </button>
+          </form>
+        </div>
+      }
+
+      <!-- ── Step 2: Administrador ── -->
+      @if (step() === 2) {
+        <div class="form-step">
+          <div class="step-header">
+            <div class="step-icon-wrap">
+              <span class="material-icons-round">manage_accounts</span>
+            </div>
+            <div>
+              <h3 class="step-title">Cuenta de administrador</h3>
+              <p class="step-subtitle">Serás el administrador principal de la organización</p>
+            </div>
+          </div>
+
+          <form [formGroup]="userForm" class="step-form" (ngSubmit)="goStep(3)">
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>Nombre completo *</mat-label>
+              <input matInput formControlName="full_name" placeholder="Juan Pérez">
+              <mat-icon matPrefix>person_outline</mat-icon>
+              @if (getUserError('full_name')) {
+                <mat-error>{{ getUserError('full_name') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>Correo electrónico *</mat-label>
+              <input matInput formControlName="email" type="email" placeholder="admin@miempresa.com">
+              <mat-icon matPrefix>mail_outline</mat-icon>
+              @if (getUserError('email')) {
+                <mat-error>{{ getUserError('email') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>Contraseña *</mat-label>
+              <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password">
+              <mat-icon matPrefix>lock_outline</mat-icon>
+              <button mat-icon-button matSuffix type="button" (click)="toggleShowPassword()">
+                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (getUserError('password')) {
+                <mat-error>{{ getUserError('password') }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="field-full">
+              <mat-label>Confirmar contraseña *</mat-label>
+              <input matInput [type]="showConfirm() ? 'text' : 'password'" formControlName="confirm_password">
+              <mat-icon matPrefix>lock_outline</mat-icon>
+              <button mat-icon-button matSuffix type="button" (click)="toggleShowConfirm()">
+                <mat-icon>{{ showConfirm() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              @if (passwordMismatch) {
+                <mat-error>Las contraseñas no coinciden</mat-error>
+              }
+            </mat-form-field>
+
+            <div class="btn-row">
+              <button mat-stroked-button type="button" class="btn-back" (click)="goStep(1)">
+                <span class="material-icons-round">arrow_back</span>
+                Atrás
+              </button>
+              <button mat-flat-button color="primary" type="submit" class="btn-next">
+                Continuar
+                <span class="material-icons-round">arrow_forward</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      }
+
+      <!-- ── Step 3: Módulos ── -->
+      @if (step() === 3) {
+        <div class="form-step">
+          <div class="step-header">
+            <div class="step-icon-wrap modules-icon">
+              <span class="material-icons-round">extension</span>
+            </div>
+            <div>
+              <h3 class="step-title">Módulos de interés</h3>
+              <p class="step-subtitle">Selecciona los que quieres solicitar (el superadmin los aprobará)</p>
+            </div>
+          </div>
+
+          @if (availableModules().length > 0) {
+            <div class="modules-grid">
+              @for (mod of availableModules(); track mod.id) {
+                <div
+                  class="module-chip"
+                  [class.selected]="isModuleSelected(mod.id)"
+                  [class.default-chip]="mod.is_default"
+                  (click)="mod.is_default ? null : toggleModule(mod.id)"
+                >
+                  <span class="material-icons-round chip-icon">{{ getModuleIcon(mod.code) }}</span>
+                  <span class="chip-name">{{ mod.name }}</span>
+                  @if (mod.is_default) {
+                    <span class="chip-badge">Incluido</span>
+                  } @else if (isModuleSelected(mod.id)) {
+                    <span class="material-icons-round chip-check">check_circle</span>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="no-modules">Los módulos se configurarán desde el panel de administración.</p>
+          }
+
+          <p class="modules-note">
+            <span class="material-icons-round">info</span>
+            Los módulos marcados como "Incluido" se activarán automáticamente. El resto quedará como solicitud pendiente.
+          </p>
+
+          <div class="btn-row">
+            <button mat-stroked-button type="button" class="btn-back" (click)="goStep(2)">
+              <span class="material-icons-round">arrow_back</span>
+              Atrás
+            </button>
+            <button
+              mat-flat-button
+              color="primary"
+              class="btn-submit"
+              [disabled]="loading()"
+              (click)="onSubmit()"
+            >
+              @if (loading()) {
+                <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
+                Creando cuenta...
+              } @else {
+                <span class="material-icons-round">rocket_launch</span>
+                Crear empresa
+              }
+            </button>
+          </div>
+        </div>
+      }
+
+      <p class="login-link">
+        ¿Ya tienes cuenta? <a routerLink="/login">Iniciar sesión</a>
+      </p>
+
+    </div>
+  </div>
+
+</div>

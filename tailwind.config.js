@@ -43,4 +43,9 @@ module.exports = {
     },
   },
   plugins: [],
+  corePlugins: {
+    // Angular Material maneja sus propios resets; el preflight de Tailwind
+    // conflicta con mat-form-field, mat-table y otros componentes MDC.
+    preflight: false,
+  },
 };

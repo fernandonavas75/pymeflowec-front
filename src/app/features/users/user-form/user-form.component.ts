@@ -9,14 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { UsersService } from '../../../core/services/users.service';
-
-const ROLES = [
-  { value: '1', label: 'Superadmin' },
-  { value: '2', label: 'Admin' },
-  { value: '3', label: 'Manager' },
-  { value: '4', label: 'Seller' },
-  { value: '5', label: 'Viewer' },
-];
+import { RolesService, Role } from '../../../core/services/roles.service';
 
 @Component({
   selector: 'app-user-form',
@@ -38,13 +31,14 @@ export class UserFormComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private usersService = inject(UsersService);
+  private rolesService = inject(RolesService);
   private snackBar = inject(MatSnackBar);
 
   loading = signal(false);
   saving = signal(false);
   userId = signal<string | null>(null);
   showPassword = signal(false);
-  roles = ROLES;
+  roles = signal<Role[]>([]);
 
   form = this.fb.group({
     full_name: ['', [Validators.required, Validators.minLength(3)]],
@@ -62,6 +56,10 @@ export class UserFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.rolesService.list().subscribe({
+      next: roles => this.roles.set(roles),
+    });
+
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.userId.set(id);
@@ -71,7 +69,7 @@ export class UserFormComponent implements OnInit {
           this.form.patchValue({
             full_name: user.full_name,
             email: user.email,
-            role_id: user.role_id,
+            role_id: `${user.role_id}`,
           });
           this.form.get('password')?.clearValidators();
           this.form.get('password')?.updateValueAndValidity();
@@ -98,12 +96,7 @@ export class UserFormComponent implements OnInit {
     const { full_name, email, password, role_id } = this.form.value;
 
     if (this.isEdit) {
-      const data: { full_name?: string; email?: string; role_id?: string } = {
-        full_name: full_name!,
-        email: email!,
-        role_id: role_id!,
-      };
-      this.usersService.update(this.userId()!, data).subscribe({
+      this.usersService.update(this.userId()!, { full_name: full_name!, email: email!, role_id: role_id! }).subscribe({
         next: () => {
           this.snackBar.open('Usuario actualizado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
           this.router.navigate(['/users']);
@@ -111,8 +104,7 @@ export class UserFormComponent implements OnInit {
         error: () => this.saving.set(false),
       });
     } else {
-      const data = { full_name: full_name!, email: email!, password: password!, role_id: role_id! };
-      this.usersService.create(data).subscribe({
+      this.usersService.create({ full_name: full_name!, email: email!, password: password!, role_id: role_id! }).subscribe({
         next: () => {
           this.snackBar.open('Usuario creado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
           this.router.navigate(['/users']);

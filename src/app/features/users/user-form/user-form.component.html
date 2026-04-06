@@ -49,8 +49,8 @@
           <mat-form-field appearance="outline">
             <mat-label>Rol *</mat-label>
             <mat-select formControlName="role_id">
-              @for (role of roles; track role.value) {
-                <mat-option [value]="role.value">{{ role.label }}</mat-option>
+              @for (role of roles(); track role.id) {
+                <mat-option [value]="'' + role.id">{{ role.name }}</mat-option>
               }
             </mat-select>
             @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {

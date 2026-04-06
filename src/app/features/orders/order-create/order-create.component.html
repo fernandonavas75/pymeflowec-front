@@ -141,7 +141,7 @@
           <span class="font-medium">${{ subtotal() | number:'1.2-2' }}</span>
         </div>
         <div class="flex justify-between text-sm">
-          <span class="text-gray-600">IVA ({{ (taxRate() * 100) | number:'1.0-0' }}%)</span>
+          <span class="text-gray-600">IVA ({{ (taxRate * 100) | number:'1.0-0' }}%)</span>
           <span class="font-medium">${{ tax() | number:'1.2-2' }}</span>
         </div>
         <div class="border-t border-gray-200 pt-3 flex justify-between">

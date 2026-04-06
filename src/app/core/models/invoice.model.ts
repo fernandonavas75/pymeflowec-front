@@ -1,7 +1,7 @@
 import { Order } from './order.model';
 import { Product } from './product.model';
 
-export type InvoiceStatus = 'issued' | 'paid' | 'overdue' | 'cancelled';
+export type InvoiceStatus = 'pending' | 'paid' | 'overdue' | 'cancelled';
 
 export interface InvoiceDetail {
   id: string;
@@ -29,8 +29,8 @@ export interface Invoice {
 }
 
 export interface CreateManualInvoiceDto {
-  client_id: string;
-  details: {
+  issue_date?: string;
+  items: {
     product_id: string;
     quantity: number;
     unit_price: number;

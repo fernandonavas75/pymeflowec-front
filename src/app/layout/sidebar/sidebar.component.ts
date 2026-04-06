@@ -9,7 +9,13 @@ interface NavItem {
   label: string;
   icon: string;
   route: string;
-  roles?: string[];
+  permission?: string;
+  platformStaff?: boolean;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
 }
 
 @Component({
@@ -24,22 +30,68 @@ export class SidebarComponent {
   collapsed = input<boolean>(false);
   toggleCollapse = output<void>();
 
-  navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { label: 'Productos', icon: 'inventory_2', route: '/products' },
-    { label: 'Clientes', icon: 'people', route: '/clients' },
-    { label: 'Proveedores', icon: 'local_shipping', route: '/suppliers', roles: ['superadmin', 'admin', 'manager'] },
-    { label: 'Pedidos', icon: 'shopping_cart', route: '/orders' },
-    { label: 'Facturas', icon: 'receipt_long', route: '/invoices' },
-    { label: 'Usuarios', icon: 'manage_accounts', route: '/users', roles: ['superadmin', 'admin'] },
+  private navGroups: NavGroup[] = [
+    {
+      label: 'Ventas',
+      items: [
+        { label: 'Clientes',          icon: 'people',           route: '/clients',       permission: 'clients.view'        },
+        { label: 'Pedidos',           icon: 'shopping_cart',    route: '/orders',        permission: 'orders.view'         },
+        { label: 'Facturas',          icon: 'receipt_long',     route: '/invoices',      permission: 'invoices.view'       },
+        { label: 'Pagos',             icon: 'payments',         route: '/payments',      permission: 'payments.view'       },
+        { label: 'Notas de crédito',  icon: 'note_alt',         route: '/credit-notes',  permission: 'credit_notes.manage' },
+      ],
+    },
+    {
+      label: 'Inventario',
+      items: [
+        { label: 'Productos',   icon: 'inventory_2', route: '/products',   permission: 'products.view' },
+        { label: 'Categorías',  icon: 'category',    route: '/categories', permission: 'products.view' },
+      ],
+    },
+    {
+      label: 'Compras',
+      items: [
+        { label: 'Proveedores',         icon: 'local_shipping', route: '/suppliers',       permission: 'suppliers.view'  },
+        { label: 'Órdenes de compra',   icon: 'shopping_bag',   route: '/purchase-orders', permission: 'purchases.view'  },
+      ],
+    },
+    {
+      label: 'Finanzas',
+      items: [
+        { label: 'Caja',    icon: 'point_of_sale',          route: '/cash-registers', permission: 'cash_register.operate' },
+        { label: 'Gastos',  icon: 'account_balance_wallet', route: '/expenses',       permission: 'expenses.view'         },
+      ],
+    },
+    {
+      label: 'Administración',
+      items: [
+        { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',          permission: 'users.view'          },
+        { label: 'Roles',     icon: 'security',        route: '/roles',          permission: 'roles.manage'        },
+        { label: 'Módulos',   icon: 'extension',       route: '/module-requests', permission: 'modules.view'       },
+      ],
+    },
+    {
+      label: 'Plataforma',
+      items: [
+        { label: 'Organizaciones',  icon: 'business',              route: '/organizations',     platformStaff: true },
+        { label: 'Módulos',         icon: 'widgets',               route: '/platform/modules',  platformStaff: true },
+        { label: 'Staff',           icon: 'admin_panel_settings',  route: '/platform/staff',    platformStaff: true },
+      ],
+    },
   ];
 
-  get visibleNavItems(): NavItem[] {
-    const role = this.authService.role();
-    return this.navItems.filter(item => {
-      if (!item.roles) return true;
-      return role && item.roles.includes(role);
-    });
+  get visibleNavGroups(): NavGroup[] {
+    const isSystem = this.authService.isSystemUser();
+    return this.navGroups
+      .map(group => ({
+        ...group,
+        items: group.items.filter(item => {
+          if (item.platformStaff) return isSystem || this.authService.isPlatformStaff();
+          if (item.permission)   return isSystem || this.authService.hasPermission(item.permission);
+          return true;
+        }),
+      }))
+      .filter(group => group.items.length > 0);
   }
 
   get userInitials(): string {

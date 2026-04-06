@@ -124,6 +124,28 @@
   flex-direction: column;
   gap: 2px;
   overflow-y: auto;
+  overflow-x: hidden;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+}
+
+.nav-group-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 20px 12px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.nav-group-divider {
+  height: 1px;
+  background: #1e293b;
+  margin: 8px 4px;
 }
 
 .nav-item {

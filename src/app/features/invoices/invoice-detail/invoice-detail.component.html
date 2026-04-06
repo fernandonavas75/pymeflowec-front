@@ -40,7 +40,7 @@
               <div>
                 <p class="text-gray-500 mb-1">Pedido relacionado</p>
                 <a [routerLink]="['/orders', invoice()!.order_id]" class="text-indigo-600 font-medium hover:underline">
-                  #{{ invoice()!.order_id.slice(-8).toUpperCase() }}
+                  #{{ formatId(invoice()!.order_id) }}
                 </a>
               </div>
             }
@@ -102,12 +102,12 @@
         <div class="form-card">
           <h3 class="section-title">Acciones</h3>
           <div class="flex flex-col gap-2" [class.opacity-50]="actionLoading()">
-            @if (invoice()!.status === 'issued' || invoice()!.status === 'overdue') {
+            @if (invoice()!.status === 'pending' || invoice()!.status === 'overdue') {
               <button mat-flat-button color="primary" (click)="markPaid()" [disabled]="actionLoading()">
                 <mat-icon>check_circle</mat-icon> Marcar como pagada
               </button>
             }
-            @if (invoice()!.status === 'issued') {
+            @if (invoice()!.status === 'pending') {
               <button mat-stroked-button color="warn" (click)="markOverdue()" [disabled]="actionLoading()">
                 <mat-icon>schedule</mat-icon> Marcar como vencida
               </button>
