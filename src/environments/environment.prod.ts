@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:8080/api'
+  apiUrl: 'http://pymeflowec-backend-env.eba-qsh8fftq.us-east-1.elasticbeanstalk.com/api'
 };
