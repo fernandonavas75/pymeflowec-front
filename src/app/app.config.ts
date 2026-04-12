@@ -37,8 +37,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: MAT_SELECT_CONFIG,
       useValue: {
-        disableOptionCentering: true,
-        overlayPanelClass: 'mat-select-panel-above'
+        disableOptionCentering: true
       }
     },
   ],
