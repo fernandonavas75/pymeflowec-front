@@ -4,7 +4,9 @@
   "scripts": {
     "start": "ng serve --port 5173",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "build:gh-pages": "ng build --configuration production --base-href /pymeflowec-front/",
+    "watch": "ng build --watch --configuration development",
+    "build:pages-docs": "npm run build:gh-pages && rm -rf docs && mkdir -p docs && cp -r dist/pymeflowec-frontend/browser/* docs/ && touch docs/.nojekyll"
   },
   "dependencies": {
     "@angular/animations": "^17.3.0",
