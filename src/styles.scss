@@ -86,7 +86,24 @@ img, video { max-width: 100%; height: auto; }
 a { color: inherit; }
 
 // ── CDK / Material Overrides ──────────────────────────────────────
-.cdk-overlay-container { z-index: 1050 !important; }
+.cdk-overlay-container {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1050 !important;
+  pointer-events: none;
+}
+
+.cdk-global-overlay-wrapper {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex;
+  pointer-events: none;
+}
+
+.cdk-overlay-pane {
+  position: absolute !important;
+  pointer-events: auto;
+}
 
 .mat-mdc-select-panel {
   max-height: 200px !important;
