@@ -86,11 +86,23 @@ img, video { max-width: 100%; height: auto; }
 a { color: inherit; }
 
 // ── CDK / Material Overrides ──────────────────────────────────────
-// Conflict resolution note:
-// keep native CDK overlay positioning (only z-index override) to avoid
-// misaligned menus/select panels while preserving proper stacking.
 .cdk-overlay-container {
+  position: fixed !important;
+  inset: 0 !important;
   z-index: 1050 !important;
+  pointer-events: none;
+}
+
+.cdk-global-overlay-wrapper {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex;
+  pointer-events: none;
+}
+
+.cdk-overlay-pane {
+  position: absolute !important;
+  pointer-events: auto;
 }
 
 .mat-mdc-select-panel {
@@ -112,21 +124,6 @@ a { color: inherit; }
 
 .mat-mdc-select-value {
   color: var(--text-primary) !important;
-}
-
-.mat-mdc-menu-panel {
-  border-radius: 10px !important;
-  border: 1px solid var(--border) !important;
-  background: var(--bg-surface) !important;
-  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16) !important;
-}
-
-.mat-mdc-menu-item {
-  color: var(--text-primary) !important;
-}
-
-.mat-mdc-menu-item:hover:not([disabled]) {
-  background: var(--bg-hover) !important;
 }
 
 .mat-mdc-dialog-container {
