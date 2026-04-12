@@ -86,6 +86,8 @@ img, video { max-width: 100%; height: auto; }
 a { color: inherit; }
 
 // ── CDK / Material Overrides ──────────────────────────────────────
+.cdk-overlay-container {
+  z-index: 1050 !important;
 // Conflict resolution note:
 // keep native CDK overlay positioning (only z-index override) to avoid
 // misaligned menus/select panels while preserving proper stacking.
