@@ -6,6 +6,7 @@ import { importProvidersFrom } from '@angular/core';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorIntl } from '@angular/material/paginator';
+import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_SELECT_CONFIG } from '@angular/material/select';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
@@ -34,6 +35,10 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     importProvidersFrom(MatSnackBarModule, MatDialogModule),
     { provide: MatPaginatorIntl, useFactory: spanishPaginatorIntl },
+    {
+      provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
+      useValue: { subscriptSizing: 'dynamic' }
+    },
     {
       provide: MAT_SELECT_CONFIG,
       useValue: {
