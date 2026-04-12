@@ -88,6 +88,47 @@ a { color: inherit; }
 // ── CDK / Material Overrides ──────────────────────────────────────
 .cdk-overlay-container {
   z-index: 1050 !important;
+// Conflict resolution note:
+// keep native CDK overlay positioning (only z-index override) to avoid
+// misaligned menus/select panels while preserving proper stacking.
+.cdk-overlay-container {
+  z-index: 1050 !important;
+}
+
+.mat-mdc-select-panel {
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16) !important;
+  background: var(--bg-surface) !important;
+}
+
+.mat-mdc-option {
+  min-height: 40px !important;
+}
+
+.mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+  background-color: rgb(99 102 241 / 0.10) !important;
+}
+
+.mat-mdc-select-value {
+  color: var(--text-primary) !important;
+}
+
+.mat-mdc-menu-panel {
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16) !important;
+}
+
+.mat-mdc-menu-item {
+  color: var(--text-primary) !important;
+}
+
+.mat-mdc-menu-item:hover:not([disabled]) {
+  background: var(--bg-hover) !important;
 }
 
 .mat-mdc-dialog-container {
