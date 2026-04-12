@@ -1,11 +1,11 @@
 <div class="page-container">
   <div class="page-header">
-    <a routerLink="/clients" mat-icon-button>
+    <a routerLink="/customers" mat-icon-button>
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza los datos del cliente' : 'Registra un nuevo cliente' }}</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza los datos del cliente' : 'Registra un nuevo cliente' }}</p>
     </div>
   </div>
 
@@ -17,19 +17,29 @@
     <div class="form-card">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-grid">
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de identificación *</mat-label>
+            <mat-select formControlName="customer_type">
+              @for (t of customerTypes; track t.value) {
+                <mat-option [value]="t.value">{{ t.label }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Número de documento *</mat-label>
+            <input matInput formControlName="document_number" placeholder="1234567890">
+            @if (form.get('document_number')?.touched && form.get('document_number')?.invalid) {
+              <mat-error>Ingresa un número válido (10-13 dígitos)</mat-error>
+            }
+          </mat-form-field>
+
           <mat-form-field appearance="outline" class="col-span-2">
             <mat-label>Nombre completo *</mat-label>
             <input matInput formControlName="full_name">
             @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
               <mat-error>Mínimo 3 caracteres</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline">
-            <mat-label>Identificación (RUC/CI) *</mat-label>
-            <input matInput formControlName="identification" placeholder="1234567890">
-            @if (form.get('identification')?.touched && form.get('identification')?.invalid) {
-              <mat-error>Ingresa un número válido (10-13 dígitos)</mat-error>
             }
           </mat-form-field>
 
@@ -41,7 +51,7 @@
             }
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="col-span-2">
+          <mat-form-field appearance="outline">
             <mat-label>Email</mat-label>
             <input matInput type="email" formControlName="email">
             @if (form.get('email')?.touched && form.get('email')?.invalid) {
@@ -53,10 +63,11 @@
             <mat-label>Dirección</mat-label>
             <textarea matInput formControlName="address" rows="2"></textarea>
           </mat-form-field>
+
         </div>
 
         <div class="form-actions">
-          <a routerLink="/clients" mat-stroked-button>Cancelar</a>
+          <a routerLink="/customers" mat-stroked-button>Cancelar</a>
           <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
             @if (saving()) {
               <mat-spinner diameter="20" class="inline-block"></mat-spinner>

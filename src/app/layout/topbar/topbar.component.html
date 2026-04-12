@@ -1,0 +1,41 @@
+<header class="topbar">
+  <!-- Toggle sidebar button -->
+  <button class="topbar-toggle" (click)="onToggleSidebar()"
+          [matTooltip]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'">
+    <mat-icon>{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</mat-icon>
+  </button>
+
+  <!-- Company name (solo si tiene empresa) -->
+  @if (companyName) {
+    <span class="company-name">
+      <mat-icon class="company-icon">business</mat-icon>
+      {{ companyName }}
+    </span>
+  }
+
+  <div class="topbar-spacer"></div>
+
+  <!-- Theme toggle -->
+  <button class="topbar-icon-btn"
+          (click)="themeService.toggle()"
+          [matTooltip]="themeService.isDark() ? 'Modo claro' : 'Modo oscuro'">
+    <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+  </button>
+
+  <!-- User menu -->
+  <button class="user-menu-btn" [matMenuTriggerFor]="userMenu">
+    <div class="user-avatar">{{ userInitials }}</div>
+    <div class="user-info">
+      <span class="user-name">{{ authService.currentUser()?.full_name }}</span>
+      <span class="user-role">{{ authService.role() }}</span>
+    </div>
+    <mat-icon class="chevron">expand_more</mat-icon>
+  </button>
+
+  <mat-menu #userMenu="matMenu" xPosition="before">
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Cerrar sesión</span>
+    </button>
+  </mat-menu>
+</header>

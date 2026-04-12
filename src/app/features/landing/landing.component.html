@@ -163,13 +163,10 @@
         </div>
         <div class="modules-grid">
           @for (mod of modules(); track mod.id) {
-            <div class="module-card" [class.module-default]="mod.is_default">
+            <div class="module-card">
               <div class="module-icon-wrap">
                 <span class="material-icons-round">{{ getModuleIcon(mod.code) }}</span>
               </div>
-              @if (mod.is_default) {
-                <span class="module-badge">Incluido</span>
-              }
               <h3 class="module-name">{{ mod.name }}</h3>
               @if (mod.description) {
                 <p class="module-desc">{{ mod.description }}</p>

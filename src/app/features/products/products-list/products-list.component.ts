@@ -55,7 +55,7 @@ export class ProductsListComponent implements OnInit {
   searchCtrl = new FormControl('');
   statusCtrl = new FormControl('');
 
-  displayedColumns = ['name', 'category', 'stock', 'unit_price', 'status', 'actions'];
+  displayedColumns = ['name', 'stock', 'sale_price', 'status', 'actions'];
 
   ngOnInit(): void {
     this.loadProducts();
@@ -105,14 +105,14 @@ export class ProductsListComponent implements OnInit {
   }
 
   toggleStatus(product: Product): void {
-    const action = product.status === 'active'
+    const action = product.status === 'ACTIVE'
       ? this.productsService.deactivate(product.id)
       : this.productsService.activate(product.id);
 
     action.subscribe({
       next: () => {
         this.snackBar.open(
-          product.status === 'active' ? 'Producto desactivado' : 'Producto activado',
+          product.status === 'ACTIVE' ? 'Producto desactivado' : 'Producto activado',
           'OK',
           { duration: 3000, panelClass: ['success-snackbar'] }
         );
@@ -125,7 +125,7 @@ export class ProductsListComponent implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Eliminar producto',
-        message: `¿Estás seguro de eliminar "${product.name}"? Esta acción no se puede deshacer.`,
+        message: `¿Estás seguro de eliminar "${product.name}"?`,
         confirmText: 'Eliminar',
         danger: true,
       },
@@ -144,6 +144,6 @@ export class ProductsListComponent implements OnInit {
   }
 
   canEdit(): boolean {
-    return this.authService.hasRole('superadmin', 'admin', 'manager');
+    return this.authService.isSystemUser() || this.authService.isStoreAdmin();
   }
 }

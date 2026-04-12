@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ModuleRequestService } from '../../core/services/module-request.service';
-import { PlatformModule } from '../../core/models/auth.model';
+import { PlatformModule } from '../../core/models/module-request.model';
 
 interface Feature {
   icon: string;

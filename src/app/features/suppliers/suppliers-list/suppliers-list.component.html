@@ -1,28 +1,22 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Proveedores</h1>
-      <p class="text-sm text-gray-500 mt-1">Gestiona la red de proveedores</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Proveedores</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestiona la red de proveedores</p>
     </div>
-    <a routerLink="/suppliers/new" mat-flat-button color="primary" class="flex items-center gap-2">
-      <mat-icon>add_business</mat-icon>
-      Nuevo proveedor
-    </a>
+    @if (canEdit()) {
+      <a routerLink="/suppliers/new" mat-flat-button color="primary" class="flex items-center gap-2">
+        <mat-icon>add_business</mat-icon>
+        Nuevo proveedor
+      </a>
+    }
   </div>
 
   <div class="filters-bar">
     <mat-form-field appearance="outline" class="search-field">
       <mat-label>Buscar proveedores</mat-label>
       <mat-icon matPrefix>search</mat-icon>
-      <input matInput [formControl]="searchCtrl" placeholder="Razón social, contacto...">
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="status-filter">
-      <mat-label>Estado</mat-label>
-      <mat-select [formControl]="statusCtrl">
-        <mat-option value="">Todos</mat-option>
-        <mat-option value="active">Activos</mat-option>
-        <mat-option value="inactive">Inactivos</mat-option>
-      </mat-select>
+      <input matInput [formControl]="searchCtrl" placeholder="Nombre, RUC...">
     </mat-form-field>
   </div>
 
@@ -35,20 +29,19 @@
             <div class="skeleton h-4 w-28"></div>
             <div class="skeleton h-4 w-36"></div>
             <div class="skeleton h-4 w-24"></div>
-            <div class="skeleton h-6 w-20 rounded-full"></div>
             <div class="skeleton h-8 w-24"></div>
           </div>
         }
       </div>
     } @else {
       <table mat-table [dataSource]="suppliers()" class="w-full">
-        <ng-container matColumnDef="business_name">
-          <th mat-header-cell *matHeaderCellDef>Razón Social</th>
-          <td mat-cell *matCellDef="let s" class="font-medium">{{ s.business_name }}</td>
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let s" class="font-medium">{{ s.name }}</td>
         </ng-container>
-        <ng-container matColumnDef="contact_name">
-          <th mat-header-cell *matHeaderCellDef>Contacto</th>
-          <td mat-cell *matCellDef="let s">{{ s.contact_name || '—' }}</td>
+        <ng-container matColumnDef="ruc">
+          <th mat-header-cell *matHeaderCellDef>RUC</th>
+          <td mat-cell *matCellDef="let s" class="font-mono text-sm">{{ s.ruc || '—' }}</td>
         </ng-container>
         <ng-container matColumnDef="email">
           <th mat-header-cell *matHeaderCellDef>Email</th>
@@ -58,34 +51,25 @@
           <th mat-header-cell *matHeaderCellDef>Teléfono</th>
           <td mat-cell *matCellDef="let s">{{ s.phone || '—' }}</td>
         </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let s">
-            <app-status-badge [status]="s.status" type="supplier" />
-          </td>
-        </ng-container>
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let s">
             <div class="flex items-center gap-1">
-              <a [routerLink]="['/suppliers', s.id, 'edit']" mat-icon-button matTooltip="Editar">
-                <mat-icon class="text-gray-400">edit</mat-icon>
-              </a>
-              <button mat-icon-button [matTooltip]="s.status === 'active' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(s)">
-                <mat-icon [class.text-green-500]="s.status === 'active'" [class.text-gray-400]="s.status !== 'active'">
-                  {{ s.status === 'active' ? 'toggle_on' : 'toggle_off' }}
-                </mat-icon>
-              </button>
-              <button mat-icon-button matTooltip="Eliminar" (click)="deleteSupplier(s)">
-                <mat-icon class="text-red-400">delete</mat-icon>
-              </button>
+              @if (canEdit()) {
+                <a [routerLink]="['/suppliers', s.id, 'edit']" mat-icon-button matTooltip="Editar">
+                  <mat-icon class="text-slate-400 dark:text-slate-500">edit</mat-icon>
+                </a>
+                <button mat-icon-button matTooltip="Eliminar" (click)="deleteSupplier(s)">
+                  <mat-icon class="text-red-400">delete</mat-icon>
+                </button>
+              }
             </div>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">
+          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
             No se encontraron proveedores
           </td>
         </tr>

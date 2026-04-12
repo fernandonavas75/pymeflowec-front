@@ -42,15 +42,11 @@ export class ModuleRequestsService {
     return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/approve`, {}).pipe(map(r => r.data));
   }
 
-  reject(id: number, reason?: string): Observable<ModuleRequest> {
-    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/reject`, { reason }).pipe(map(r => r.data));
-  }
-
-  cancel(id: number): Observable<ModuleRequest> {
-    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/cancel`, {}).pipe(map(r => r.data));
+  reject(id: number, comments?: string): Observable<ModuleRequest> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/reject`, { comments }).pipe(map(r => r.data));
   }
 
   listPlatformModules(): Observable<PlatformModule[]> {
-    return this.http.get<ApiListResponse<PlatformModule>>(`${environment.apiUrl}/platform/modules`).pipe(map(r => r.data));
+    return this.http.get<{ success: boolean; data: PlatformModule[] }>(`${environment.apiUrl}/platform/modules/public`).pipe(map(r => r.data));
   }
 }

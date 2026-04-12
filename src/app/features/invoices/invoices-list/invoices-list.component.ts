@@ -40,7 +40,7 @@ export class InvoicesListComponent implements OnInit {
 
   statusCtrl = new FormControl('');
 
-  displayedColumns = ['number', 'date', 'subtotal', 'tax', 'total', 'status', 'actions'];
+  displayedColumns = ['number', 'customer', 'date', 'subtotal', 'tax_amount', 'total', 'status', 'actions'];
 
   ngOnInit(): void {
     this.loadInvoices();

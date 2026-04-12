@@ -50,38 +50,15 @@ export class InvoiceDetailComponent implements OnInit {
     });
   }
 
-  markPaid(): void {
-    this.openConfirm('Marcar como pagada', '¿Marcar esta factura como pagada?', 'Marcar pagada').subscribe(ok => {
-      if (!ok) return;
-      this.actionLoading.set(true);
-      this.invoicesService.markPaid(this.invoice()!.id).subscribe({
-        next: inv => {
-          this.invoice.set(inv);
-          this.actionLoading.set(false);
-          this.snackBar.open('Factura marcada como pagada', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
-        },
-        error: () => this.actionLoading.set(false),
-      });
-    });
-  }
-
-  markOverdue(): void {
-    this.openConfirm('Marcar como vencida', '¿Marcar esta factura como vencida?', 'Marcar vencida', false).subscribe(ok => {
-      if (!ok) return;
-      this.actionLoading.set(true);
-      this.invoicesService.markOverdue(this.invoice()!.id).subscribe({
-        next: inv => {
-          this.invoice.set(inv);
-          this.actionLoading.set(false);
-          this.snackBar.open('Factura marcada como vencida', 'OK', { duration: 3000 });
-        },
-        error: () => this.actionLoading.set(false),
-      });
-    });
-  }
-
   cancelInvoice(): void {
-    this.openConfirm('Cancelar factura', '¿Estás seguro de cancelar esta factura?', 'Cancelar', true).subscribe(ok => {
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Cancelar factura',
+        message: '¿Estás seguro de cancelar esta factura? Esta acción no se puede deshacer.',
+        confirmText: 'Cancelar factura',
+        danger: true,
+      },
+    }).afterClosed().subscribe(ok => {
       if (!ok) return;
       this.actionLoading.set(true);
       this.invoicesService.cancel(this.invoice()!.id).subscribe({
@@ -93,16 +70,6 @@ export class InvoiceDetailComponent implements OnInit {
         error: () => this.actionLoading.set(false),
       });
     });
-  }
-
-  private openConfirm(title: string, message: string, confirmText: string, danger = false) {
-    return this.dialog.open(ConfirmDialogComponent, {
-      data: { title, message, confirmText, danger },
-    }).afterClosed();
-  }
-
-  formatId(id: string | number | null | undefined): string {
-    return `${id ?? ''}`.slice(-8).toUpperCase();
   }
 
   formatDate(date: string): string {

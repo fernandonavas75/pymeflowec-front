@@ -10,30 +10,25 @@
     } @else {
       <div class="logo-icon-only"><mat-icon>bolt</mat-icon></div>
     }
-    <button class="collapse-btn" (click)="onToggle()"
-            [matTooltip]="collapsed() ? 'Expandir' : 'Colapsar'" matTooltipPosition="right">
-      <mat-icon>{{ collapsed() ? 'chevron_right' : 'chevron_left' }}</mat-icon>
-    </button>
   </div>
 
   <!-- Navegación -->
   <nav class="sidebar-nav">
 
-    <!-- Dashboard (siempre visible) -->
+    <!-- Dashboard -->
     <a routerLink="/dashboard" routerLinkActive="active" class="nav-item"
        [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
       <mat-icon class="nav-icon">dashboard</mat-icon>
       @if (!collapsed()) { <span class="nav-label">Dashboard</span> }
     </a>
 
-    <!-- Grupos con permisos -->
+    <!-- Grupos -->
     @for (group of visibleNavGroups; track group.label) {
       @if (!collapsed()) {
         <div class="nav-group-label">{{ group.label }}</div>
       } @else {
         <div class="nav-group-divider"></div>
       }
-
       @for (item of group.items; track item.route) {
         <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
            [matTooltip]="collapsed() ? item.label : ''" matTooltipPosition="right">
@@ -45,7 +40,7 @@
 
   </nav>
 
-  <!-- Footer con usuario -->
+  <!-- Footer -->
   <div class="sidebar-footer">
     <div class="user-info">
       <div class="user-avatar">{{ userInitials }}</div>
@@ -59,7 +54,7 @@
     <button class="logout-btn" (click)="logout()"
             [matTooltip]="collapsed() ? 'Cerrar sesión' : ''" matTooltipPosition="right">
       <mat-icon>logout</mat-icon>
-      @if (!collapsed()) { <span>Salir</span> }
+      @if (!collapsed()) { <span>Cerrar sesión</span> }
     </button>
   </div>
 

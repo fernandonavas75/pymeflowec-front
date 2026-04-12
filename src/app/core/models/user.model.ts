@@ -1,36 +1,37 @@
 export interface User {
-  id: string;
-  organization_id: string;
-  role_id: string;
+  id: number;
+  company_id: number | null;
+  role_id: number;
   full_name: string;
   email: string;
-  status: 'active' | 'inactive';
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
   created_at: string;
   updated_at: string;
+  deleted_at?: string | null;
   role?: {
-    id?: string;
+    id: number;
     name: string;
+    scope: 'PLATFORM' | 'STORE';
   };
-  organization?: {
-    id?: string;
+  company?: {
+    id: number;
     name: string;
-  };
+  } | null;
 }
 
 export interface CreateUserDto {
   full_name: string;
   email: string;
   password: string;
-  role_id: string;
+  role_id: number;
 }
 
 export interface UpdateUserDto {
   full_name?: string;
   email?: string;
-  role_id?: string;
+  role_id?: number;
 }
 
 export interface ChangePasswordDto {
-  current_password: string;
   new_password: string;
 }

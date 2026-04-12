@@ -12,9 +12,8 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { ClientsService } from '../../../core/services/clients.service';
-import { Client } from '../../../core/models/client.model';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { CustomersService } from '../../../core/services/customers.service';
+import { Customer } from '../../../core/models/customer.model';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
@@ -32,50 +31,43 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     MatPaginatorModule,
     MatTooltipModule,
     MatDialogModule,
-    StatusBadgeComponent,
   ],
   templateUrl: './clients-list.component.html',
 })
 export class ClientsListComponent implements OnInit {
-  private clientsService = inject(ClientsService);
+  private customersService = inject(CustomersService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
-  clients = signal<Client[]>([]);
+  customers = signal<Customer[]>([]);
   loading = signal(true);
   total = signal(0);
   page = signal(1);
   limit = signal(20);
 
   searchCtrl = new FormControl('');
-  statusCtrl = new FormControl('');
 
-  displayedColumns = ['full_name', 'identification', 'email', 'phone', 'status', 'actions'];
+  displayedColumns = ['full_name', 'customer_type', 'document_number', 'email', 'phone', 'actions'];
 
   ngOnInit(): void {
-    this.loadClients();
+    this.loadCustomers();
     this.searchCtrl.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
       this.page.set(1);
-      this.loadClients();
-    });
-    this.statusCtrl.valueChanges.subscribe(() => {
-      this.page.set(1);
-      this.loadClients();
+      this.loadCustomers();
     });
   }
 
-  loadClients(): void {
+  loadCustomers(): void {
     this.loading.set(true);
     const params: Record<string, string | number | boolean | undefined> = {
       page: this.page(),
       limit: this.limit(),
     };
     if (this.searchCtrl.value) params['search'] = this.searchCtrl.value;
-    if (this.statusCtrl.value) params['status'] = this.statusCtrl.value;
 
-    this.clientsService.list(params).subscribe({
+    this.customersService.list(params).subscribe({
       next: res => {
-        this.clients.set(res.data);
+        this.customers.set(res.data);
         this.total.set(res.total);
         this.loading.set(false);
       },
@@ -86,31 +78,14 @@ export class ClientsListComponent implements OnInit {
   onPageChange(event: PageEvent): void {
     this.page.set(event.pageIndex + 1);
     this.limit.set(event.pageSize);
-    this.loadClients();
+    this.loadCustomers();
   }
 
-  toggleStatus(client: Client): void {
-    const action = client.status === 'active'
-      ? this.clientsService.deactivate(client.id)
-      : this.clientsService.activate(client.id);
-
-    action.subscribe({
-      next: () => {
-        this.snackBar.open(
-          client.status === 'active' ? 'Cliente desactivado' : 'Cliente activado',
-          'OK',
-          { duration: 3000, panelClass: ['success-snackbar'] }
-        );
-        this.loadClients();
-      },
-    });
-  }
-
-  deleteClient(client: Client): void {
+  deleteCustomer(customer: Customer): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Eliminar cliente',
-        message: `¿Estás seguro de eliminar a "${client.full_name}"?`,
+        message: `¿Estás seguro de eliminar a "${customer.full_name}"?`,
         confirmText: 'Eliminar',
         danger: true,
       },
@@ -118,13 +93,22 @@ export class ClientsListComponent implements OnInit {
 
     ref.afterClosed().subscribe(result => {
       if (result) {
-        this.clientsService.remove(client.id).subscribe({
+        this.customersService.remove(customer.id).subscribe({
           next: () => {
             this.snackBar.open('Cliente eliminado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
-            this.loadClients();
+            this.loadCustomers();
           },
         });
       }
     });
+  }
+
+  customerTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      CEDULA: 'Cédula',
+      RUC: 'RUC',
+      FINAL_CONSUMER: 'Consumidor Final',
+    };
+    return labels[type] ?? type;
   }
 }

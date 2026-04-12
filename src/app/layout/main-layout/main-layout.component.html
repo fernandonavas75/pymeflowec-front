@@ -1,11 +1,12 @@
-<div class="layout-container">
-  <app-sidebar
-    [collapsed]="sidebarCollapsed()"
-    (toggleCollapse)="toggleSidebar()"
-  />
-  <main class="main-content" [class.expanded]="sidebarCollapsed()" cdkScrollable>
+<div class="layout-container" [class.sidebar-collapsed]="sidebarCollapsed()">
+  <app-sidebar [collapsed]="sidebarCollapsed()" />
+  <div class="main-content">
+    <app-topbar
+      [sidebarCollapsed]="sidebarCollapsed()"
+      (toggleSidebar)="toggleSidebar()"
+    />
     <div class="page-wrapper">
       <router-outlet />
     </div>
-  </main>
+  </div>
 </div>

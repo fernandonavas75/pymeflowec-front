@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./src/**/*.{html,ts}'],
+  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
@@ -21,10 +22,14 @@ module.exports = {
           DEFAULT: '#6366f1',
         },
       },
+      boxShadow: {
+        'card':    '0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07)',
+        'card-md': '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
+      },
       animation: {
-        'fade-in': 'fadeIn 0.3s ease-in-out',
+        'fade-in':  'fadeIn 0.25s ease-out',
         'slide-up': 'slideUp 0.3s ease-out',
-        'shimmer': 'shimmer 1.5s infinite',
+        'shimmer':  'shimmer 1.5s infinite',
       },
       keyframes: {
         fadeIn: {

@@ -22,7 +22,7 @@ export class SuppliersService {
     );
   }
 
-  getById(id: string): Observable<Supplier> {
+  getById(id: number | string): Observable<Supplier> {
     return this.api.get<ApiResponse<Supplier>>(`/suppliers/${id}`).pipe(
       map(res => res.data)
     );
@@ -34,25 +34,13 @@ export class SuppliersService {
     );
   }
 
-  update(id: string, data: UpdateSupplierDto): Observable<Supplier> {
+  update(id: number | string, data: UpdateSupplierDto): Observable<Supplier> {
     return this.api.put<ApiResponse<Supplier>>(`/suppliers/${id}`, data).pipe(
       map(res => res.data)
     );
   }
 
-  activate(id: string): Observable<Supplier> {
-    return this.api.patch<ApiResponse<Supplier>>(`/suppliers/${id}/activate`).pipe(
-      map(res => res.data)
-    );
-  }
-
-  deactivate(id: string): Observable<Supplier> {
-    return this.api.patch<ApiResponse<Supplier>>(`/suppliers/${id}/deactivate`).pipe(
-      map(res => res.data)
-    );
-  }
-
-  remove(id: string): Observable<void> {
+  remove(id: number | string): Observable<void> {
     return this.api.delete<void>(`/suppliers/${id}`);
   }
 }

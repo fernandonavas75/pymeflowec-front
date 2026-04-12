@@ -4,8 +4,8 @@
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar proveedor' : 'Nuevo proveedor' }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza los datos del proveedor' : 'Registra un nuevo proveedor' }}</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar proveedor' : 'Nuevo proveedor' }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza los datos del proveedor' : 'Registra un nuevo proveedor' }}</p>
     </div>
   </div>
 
@@ -18,23 +18,26 @@
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-grid">
           <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Razón Social *</mat-label>
-            <input matInput formControlName="business_name">
-            @if (form.get('business_name')?.touched && form.get('business_name')?.invalid) {
-              <mat-error>La razón social es requerida</mat-error>
+            <mat-label>Nombre / Razón Social *</mat-label>
+            <input matInput formControlName="name">
+            @if (form.get('name')?.touched && form.get('name')?.invalid) {
+              <mat-error>El nombre es requerido (mínimo 2 caracteres)</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Nombre de contacto</mat-label>
-            <input matInput formControlName="contact_name">
+            <mat-label>RUC</mat-label>
+            <input matInput formControlName="ruc" placeholder="0000000000001" maxlength="13">
+            @if (form.get('ruc')?.touched && form.get('ruc')?.invalid) {
+              <mat-error>El RUC debe tener 13 dígitos</mat-error>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Teléfono</mat-label>
             <input matInput formControlName="phone" placeholder="0987654321">
             @if (form.get('phone')?.touched && form.get('phone')?.invalid) {
-              <mat-error>Ingresa un teléfono válido (10 dígitos)</mat-error>
+              <mat-error>Ingresa un teléfono válido</mat-error>
             }
           </mat-form-field>
 

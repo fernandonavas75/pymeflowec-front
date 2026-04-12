@@ -4,46 +4,36 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  org_name: string;
-  org_ruc: string;
-  org_email?: string;
-  org_phone?: string;
-  org_city?: string;
+  company_name: string;
+  company_ruc: string;
+  company_email?: string;
+  company_phone?: string;
   full_name: string;
   email: string;
   password: string;
 }
 
-export interface PlatformModule {
-  id: number;
-  code: string;
-  name: string;
-  description: string | null;
-  icon: string | null;
-  is_default: boolean;
-  sort_order: number;
-}
-
 export interface AuthUser {
-  id: string;
+  id: number;
+  company_id: number | null;
+  role_id: number;
   full_name: string;
   email: string;
-  status: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
   role: {
-    id?: string;
-    name: string;
-  } | null;
-  permissions: string[];
-  /** null para usuarios de sistema sin organización */
-  organization: {
-    id: string;
-    name: string;
-  } | null;
-  platform_staff: {
     id: number;
-    can_read: boolean;
-    can_write: boolean;
-    role: string | null;
+    name: 'PLATFORM_ADMIN' | 'PLATFORM_STAFF' | 'STORE_ADMIN' | 'STORE_SELLER' | string;
+    scope: 'PLATFORM' | 'STORE';
+    description?: string | null;
+  };
+  /** null para usuarios de plataforma sin empresa */
+  company: {
+    id: number;
+    name: string;
+    business_name?: string | null;
+    ruc?: string | null;
+    email?: string | null;
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
   } | null;
 }
 

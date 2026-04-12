@@ -22,7 +22,7 @@ export class ProductsService {
     );
   }
 
-  getById(id: string): Observable<Product> {
+  getById(id: number | string): Observable<Product> {
     return this.api.get<ApiResponse<Product>>(`/products/${id}`).pipe(
       map(res => res.data)
     );
@@ -34,31 +34,31 @@ export class ProductsService {
     );
   }
 
-  update(id: string, data: UpdateProductDto): Observable<Product> {
+  update(id: number | string, data: UpdateProductDto): Observable<Product> {
     return this.api.put<ApiResponse<Product>>(`/products/${id}`, data).pipe(
       map(res => res.data)
     );
   }
 
-  adjustStock(id: string, data: AdjustStockDto): Observable<Product> {
+  adjustStock(id: number | string, data: AdjustStockDto): Observable<Product> {
     return this.api.patch<ApiResponse<Product>>(`/products/${id}/stock`, data).pipe(
       map(res => res.data)
     );
   }
 
-  activate(id: string): Observable<Product> {
+  activate(id: number | string): Observable<Product> {
     return this.api.patch<ApiResponse<Product>>(`/products/${id}/activate`).pipe(
       map(res => res.data)
     );
   }
 
-  deactivate(id: string): Observable<Product> {
+  deactivate(id: number | string): Observable<Product> {
     return this.api.patch<ApiResponse<Product>>(`/products/${id}/deactivate`).pipe(
       map(res => res.data)
     );
   }
 
-  remove(id: string): Observable<void> {
+  remove(id: number | string): Observable<void> {
     return this.api.delete<void>(`/products/${id}`);
   }
 }

@@ -6,6 +6,7 @@ import { importProvidersFrom } from '@angular/core';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatPaginatorIntl } from '@angular/material/paginator';
+import { MAT_SELECT_CONFIG } from '@angular/material/select';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
@@ -33,5 +34,12 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     importProvidersFrom(MatSnackBarModule, MatDialogModule),
     { provide: MatPaginatorIntl, useFactory: spanishPaginatorIntl },
+    {
+      provide: MAT_SELECT_CONFIG,
+      useValue: {
+        disableOptionCentering: true,
+        overlayPanelClass: 'mat-select-panel-above'
+      }
+    },
   ],
 };

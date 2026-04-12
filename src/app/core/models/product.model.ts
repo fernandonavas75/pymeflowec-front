@@ -1,45 +1,44 @@
-export type ProductUnit = 'unidad' | 'kg' | 'lb' | 'litro' | 'metro' | 'paquete' | 'caja' | 'docena' | 'funda';
+export type ProductStatus = 'ACTIVE' | 'INACTIVE';
+export type StockMovementType = 'IN' | 'OUT' | 'ADJUSTMENT';
+export type StockReferenceType = 'PURCHASE' | 'SALE' | 'MANUAL';
 
 export interface Product {
-  id: string;
-  organization_id: string;
-  category_id?: string | null;
-  category?: { id: number | string; name: string } | null;
-  tax_rate_id?: string | null;
-  tax_rate?: { id: number | string; name: string; rate: number } | null;
-  name: string;
-  description?: string;
-  barcode?: string | null;
+  id: number;
+  company_id: number;
+  supplier_id?: number | null;
+  tax_rate_id?: number | null;
   sku?: string | null;
-  unit: ProductUnit;
+  name: string;
+  description?: string | null;
+  purchase_price: number;
+  sale_price: number;
   stock: number;
   min_stock: number;
-  cost_price: number;
-  unit_price: number;
-  status: 'active' | 'inactive';
+  status: ProductStatus;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+  supplier?: { id: number; name: string } | null;
+  tax_rate?: { id: number; tax_name: string; percentage: number } | null;
 }
 
 export interface CreateProductDto {
   name: string;
   description?: string;
-  unit_price: number;
-  cost_price?: number;
+  purchase_price?: number;
+  sale_price: number;
   stock?: number;
   min_stock?: number;
-  unit?: ProductUnit;
-  category_id?: string;
-  tax_rate_id?: string;
-  barcode?: string;
   sku?: string;
+  supplier_id?: number;
+  tax_rate_id?: number;
 }
 
 export interface UpdateProductDto extends Partial<CreateProductDto> {}
 
 export interface AdjustStockDto {
   quantity: number;
-  movement_type: 'in' | 'out' | 'adjustment';
-  reason?: string;
+  movement_type: StockMovementType;
+  reference_type: StockReferenceType;
+  notes?: string;
 }

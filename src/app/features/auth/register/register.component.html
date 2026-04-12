@@ -82,44 +82,38 @@
           <form [formGroup]="orgForm" class="step-form" (ngSubmit)="goStep(2)">
             <mat-form-field appearance="outline" class="field-full">
               <mat-label>Nombre de la empresa *</mat-label>
-              <input matInput formControlName="org_name" placeholder="Ej: Mi Empresa S.A.">
+              <input matInput formControlName="company_name" placeholder="Ej: Mi Empresa S.A.">
               <mat-icon matPrefix>storefront</mat-icon>
-              @if (getOrgError('org_name')) {
-                <mat-error>{{ getOrgError('org_name') }}</mat-error>
+              @if (getOrgError('company_name')) {
+                <mat-error>{{ getOrgError('company_name') }}</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="field-full">
               <mat-label>RUC *</mat-label>
-              <input matInput formControlName="org_ruc" placeholder="0000000000001" maxlength="13">
+              <input matInput formControlName="company_ruc" placeholder="0000000000001" maxlength="13">
               <mat-icon matPrefix>badge</mat-icon>
-              @if (getOrgError('org_ruc')) {
-                <mat-error>{{ getOrgError('org_ruc') }}</mat-error>
+              @if (getOrgError('company_ruc')) {
+                <mat-error>{{ getOrgError('company_ruc') }}</mat-error>
               }
             </mat-form-field>
 
             <div class="field-row">
               <mat-form-field appearance="outline" class="field-half">
                 <mat-label>Email de la empresa</mat-label>
-                <input matInput formControlName="org_email" type="email" placeholder="info@miempresa.com">
+                <input matInput formControlName="company_email" type="email" placeholder="info@miempresa.com">
                 <mat-icon matPrefix>mail_outline</mat-icon>
-                @if (getOrgError('org_email')) {
-                  <mat-error>{{ getOrgError('org_email') }}</mat-error>
+                @if (getOrgError('company_email')) {
+                  <mat-error>{{ getOrgError('company_email') }}</mat-error>
                 }
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="field-half">
                 <mat-label>Teléfono</mat-label>
-                <input matInput formControlName="org_phone" placeholder="0998765432">
+                <input matInput formControlName="company_phone" placeholder="0998765432">
                 <mat-icon matPrefix>phone</mat-icon>
               </mat-form-field>
             </div>
-
-            <mat-form-field appearance="outline" class="field-full">
-              <mat-label>Ciudad</mat-label>
-              <input matInput formControlName="org_city" placeholder="Ej: Quito">
-              <mat-icon matPrefix>location_on</mat-icon>
-            </mat-form-field>
 
             <button mat-flat-button color="primary" type="submit" class="btn-next">
               Continuar
@@ -218,14 +212,11 @@
                 <div
                   class="module-chip"
                   [class.selected]="isModuleSelected(mod.id)"
-                  [class.default-chip]="mod.is_default"
-                  (click)="mod.is_default ? null : toggleModule(mod.id)"
+                  (click)="toggleModule(mod.id)"
                 >
                   <span class="material-icons-round chip-icon">{{ getModuleIcon(mod.code) }}</span>
                   <span class="chip-name">{{ mod.name }}</span>
-                  @if (mod.is_default) {
-                    <span class="chip-badge">Incluido</span>
-                  } @else if (isModuleSelected(mod.id)) {
+                  @if (isModuleSelected(mod.id)) {
                     <span class="material-icons-round chip-check">check_circle</span>
                   }
                 </div>
@@ -237,7 +228,7 @@
 
           <p class="modules-note">
             <span class="material-icons-round">info</span>
-            Los módulos marcados como "Incluido" se activarán automáticamente. El resto quedará como solicitud pendiente.
+            Los módulos seleccionados quedarán como solicitudes pendientes. El administrador de plataforma los aprobará.
           </p>
 
           <div class="btn-row">

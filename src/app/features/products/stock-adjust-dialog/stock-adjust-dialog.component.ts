@@ -35,18 +35,18 @@ import { Product } from '../../../core/models/product.model';
             [class.text-gray-900]="product.stock > product.min_stock">
             {{ product.stock }}
           </p>
-          <p class="text-xs text-gray-400">{{ product.unit }}</p>
+          <p class="text-xs text-gray-400">unidades</p>
         </div>
         <mat-icon class="text-gray-300">arrow_forward</mat-icon>
         <div class="text-center">
           <p class="text-xs text-gray-400 mb-1">Nuevo stock</p>
           <p class="text-2xl font-bold text-indigo-600">{{ newStock() }}</p>
-          <p class="text-xs text-gray-400">{{ product.unit }}</p>
+          <p class="text-xs text-gray-400">unidades</p>
         </div>
         <div class="ml-auto text-center">
           <p class="text-xs text-gray-400 mb-1">Alerta activa en</p>
           <p class="text-xl font-bold text-amber-600">{{ form.get('min_stock')?.value ?? product.min_stock }}</p>
-          <p class="text-xs text-gray-400">{{ product.unit }}</p>
+          <p class="text-xs text-gray-400">unidades</p>
         </div>
       </div>
 
@@ -58,9 +58,9 @@ import { Product } from '../../../core/models/product.model';
         <mat-form-field appearance="outline">
           <mat-label>Tipo</mat-label>
           <mat-select formControlName="movement_type">
-            <mat-option value="in">Entrada &mdash; compra / recepcion</mat-option>
-            <mat-option value="out">Salida &mdash; merma / perdida</mat-option>
-            <mat-option value="adjustment">Ajuste manual (establece valor exacto)</mat-option>
+            <mat-option value="IN">Entrada &mdash; compra / recepcion</mat-option>
+            <mat-option value="OUT">Salida &mdash; merma / perdida</mat-option>
+            <mat-option value="ADJUSTMENT">Ajuste manual (establece valor exacto)</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -73,8 +73,8 @@ import { Product } from '../../../core/models/product.model';
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Motivo (opcional)</mat-label>
-          <input matInput formControlName="reason" placeholder="Ej: Compra proveedor, conteo fisico...">
+          <mat-label>Notas (opcional)</mat-label>
+          <input matInput formControlName="notes" placeholder="Ej: Compra proveedor, conteo físico...">
         </mat-form-field>
 
         <mat-divider />
@@ -89,7 +89,7 @@ import { Product } from '../../../core/models/product.model';
           <mat-label>Stock minimo para alertar</mat-label>
           <mat-icon matPrefix>notifications_active</mat-icon>
           <input matInput type="number" step="0.001" min="0" formControlName="min_stock">
-          <mat-hint>Actual: {{ product.min_stock }} {{ product.unit }}</mat-hint>
+          <mat-hint>Actual: {{ product.min_stock }}</mat-hint>
           @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
             <mat-error>Ingresa un valor valido (0 o mayor)</mat-error>
           }
@@ -120,18 +120,18 @@ export class StockAdjustDialogComponent {
   saving = false;
 
   form = this.fb.group({
-    movement_type: ['in', Validators.required],
-    quantity: [null as number | null, [Validators.required, Validators.min(0.001)]],
-    reason: [''],
+    movement_type: ['IN', Validators.required],
+    quantity: [null as number | null, [Validators.required, Validators.min(1)]],
+    notes: [''],
     min_stock: [this.product.min_stock, [Validators.required, Validators.min(0)]],
   });
 
   newStock(): number {
     const v = this.form.value;
     const qty = +(v.quantity ?? 0);
-    if (v.movement_type === 'in') return this.product.stock + qty;
-    if (v.movement_type === 'out') return Math.max(0, this.product.stock - qty);
-    if (v.movement_type === 'adjustment') return qty;
+    if (v.movement_type === 'IN') return this.product.stock + qty;
+    if (v.movement_type === 'OUT') return Math.max(0, this.product.stock - qty);
+    if (v.movement_type === 'ADJUSTMENT') return qty;
     return this.product.stock;
   }
 
@@ -142,8 +142,9 @@ export class StockAdjustDialogComponent {
 
     const stockCall$ = this.svc.adjustStock(this.product.id, {
       quantity: v.quantity!,
-      movement_type: v.movement_type as 'in' | 'out' | 'adjustment',
-      reason: v.reason || undefined,
+      movement_type: v.movement_type as 'IN' | 'OUT' | 'ADJUSTMENT',
+      reference_type: 'MANUAL',
+      notes: v.notes || undefined,
     });
 
     const minStockChanged = v.min_stock !== this.product.min_stock;

@@ -86,14 +86,14 @@ export class UsersListComponent implements OnInit {
   }
 
   toggleStatus(user: User): void {
-    const action = user.status === 'active'
+    const action = user.status === 'ACTIVE'
       ? this.usersService.deactivate(user.id)
       : this.usersService.activate(user.id);
 
     action.subscribe({
       next: () => {
         this.snackBar.open(
-          user.status === 'active' ? 'Usuario desactivado' : 'Usuario activado',
+          user.status === 'ACTIVE' ? 'Usuario desactivado' : 'Usuario activado',
           'OK',
           { duration: 3000, panelClass: ['success-snackbar'] }
         );
@@ -103,15 +103,15 @@ export class UsersListComponent implements OnInit {
   }
 
   confirmToggle(user: User): void {
+    const isActive = user.status === 'ACTIVE';
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: user.status === 'active' ? 'Desactivar usuario' : 'Activar usuario',
-        message: `¿${user.status === 'active' ? 'Desactivar' : 'Activar'} al usuario "${user.full_name}"?`,
-        confirmText: user.status === 'active' ? 'Desactivar' : 'Activar',
-        danger: user.status === 'active',
+        title: isActive ? 'Desactivar usuario' : 'Activar usuario',
+        message: `¿${isActive ? 'Desactivar' : 'Activar'} al usuario "${user.full_name}"?`,
+        confirmText: isActive ? 'Desactivar' : 'Activar',
+        danger: isActive,
       },
     });
-
     ref.afterClosed().subscribe(result => {
       if (result) this.toggleStatus(user);
     });

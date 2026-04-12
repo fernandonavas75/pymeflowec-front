@@ -9,7 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { AuthService } from '../../../core/services/auth.service';
 import { ModuleRequestService } from '../../../core/services/module-request.service';
-import { PlatformModule } from '../../../core/models/auth.model';
+import { PlatformModule } from '../../../core/models/module-request.model';
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password');
@@ -76,11 +76,10 @@ export class RegisterComponent implements OnInit {
   toggleShowConfirm(): void  { this.showConfirm.update(v => !v); }
 
   orgForm = this.fb.group({
-    org_name:  ['', [Validators.required, Validators.minLength(2)]],
-    org_ruc:   ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
-    org_email: ['', [Validators.email]],
-    org_phone: [''],
-    org_city:  [''],
+    company_name:  ['', [Validators.required, Validators.minLength(2)]],
+    company_ruc:   ['', [Validators.required, Validators.pattern(/^\d{13}$/)]],
+    company_email: ['', [Validators.email]],
+    company_phone: [''],
   });
 
   userForm = this.fb.group({
@@ -130,11 +129,10 @@ export class RegisterComponent implements OnInit {
     const userV = this.userForm.value;
 
     this.authService.register({
-      org_name:  orgV.org_name!,
-      org_ruc:   orgV.org_ruc!,
-      org_email: orgV.org_email || undefined,
-      org_phone: orgV.org_phone || undefined,
-      org_city:  orgV.org_city  || undefined,
+      company_name:  orgV.company_name!,
+      company_ruc:   orgV.company_ruc!,
+      company_email: orgV.company_email || undefined,
+      company_phone: orgV.company_phone || undefined,
       full_name: userV.full_name!,
       email:     userV.email!,
       password:  userV.password!,
@@ -167,10 +165,10 @@ export class RegisterComponent implements OnInit {
   getOrgError(field: string): string {
     const c = this.orgForm.get(field);
     if (!c?.touched) return '';
-    if (c.hasError('required'))   return 'Este campo es requerido';
-    if (c.hasError('minlength'))  return 'Mínimo 2 caracteres';
-    if (c.hasError('pattern'))    return 'El RUC debe tener exactamente 13 dígitos numéricos';
-    if (c.hasError('email'))      return 'Email inválido';
+    if (c.hasError('required'))  return 'Este campo es requerido';
+    if (c.hasError('minlength')) return 'Mínimo 2 caracteres';
+    if (c.hasError('pattern'))   return 'El RUC debe tener exactamente 13 dígitos numéricos';
+    if (c.hasError('email'))     return 'Email inválido';
     return '';
   }
 

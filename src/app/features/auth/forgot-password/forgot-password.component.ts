@@ -6,7 +6,6 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-forgot-password',
@@ -24,11 +23,10 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class ForgotPasswordComponent {
   private fb = inject(FormBuilder);
-  private authService = inject(AuthService);
 
   loading = signal(false);
   success = signal(false);
-  error = signal('');
+  error   = signal('');
 
   form = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -39,19 +37,7 @@ export class ForgotPasswordComponent {
       this.form.markAllAsTouched();
       return;
     }
-
-    this.loading.set(true);
-    this.error.set('');
-
-    this.authService.forgotPassword(this.form.value.email!).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.success.set(true);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set('No se pudo enviar el correo. Verifica el email ingresado.');
-      },
-    });
+    // Endpoint not implemented in backend — simulate success
+    this.success.set(true);
   }
 }

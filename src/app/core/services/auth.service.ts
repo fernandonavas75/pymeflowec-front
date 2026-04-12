@@ -18,11 +18,21 @@ export class AuthService {
   currentUser = signal<AuthUser | null>(null);
   isAuthenticated = computed(() => !!this.currentUser());
   role = computed(() => this.currentUser()?.role?.name);
-  permissions = computed(() => this.currentUser()?.permissions ?? []);
-  isPlatformStaff = computed(() => !!this.currentUser()?.platform_staff);
-  canPlatformWrite = computed(() => this.currentUser()?.platform_staff?.can_write ?? false);
-  /** Usuario de sistema: sin organización, bypasses todos los permisos en el backend */
-  isSystemUser = computed(() => !this.currentUser()?.organization);
+
+  /** Usuario sin empresa = usuario de plataforma (PLATFORM_ADMIN / PLATFORM_STAFF) */
+  isSystemUser = computed(() => !this.currentUser()?.company);
+
+  /** Tiene scope PLATFORM */
+  isPlatformUser = computed(() => this.currentUser()?.role?.scope === 'PLATFORM');
+
+  /** Es PLATFORM_ADMIN */
+  isPlatformAdmin = computed(() => this.currentUser()?.role?.name === 'PLATFORM_ADMIN');
+
+  /** Es STORE_ADMIN */
+  isStoreAdmin = computed(() => this.currentUser()?.role?.name === 'STORE_ADMIN');
+
+  /** Tiene scope STORE (STORE_ADMIN o STORE_SELLER) */
+  isStoreUser = computed(() => this.currentUser()?.role?.scope === 'STORE');
 
   constructor() {
     this.loadFromStorage();
@@ -50,7 +60,8 @@ export class AuthService {
 
   login(email: string, password: string): Observable<LoginResponse> {
     const body: LoginRequest = { email, password };
-    return this.api.post<LoginResponse>('/auth/login', body).pipe(
+    // Backend spreads tokens at top level: { success, user, access_token, refresh_token }
+    return this.api.post<LoginResponse & { success: boolean }>('/auth/login', body).pipe(
       tap(res => {
         localStorage.setItem(TOKEN_KEY, res.access_token);
         localStorage.setItem(REFRESH_KEY, res.refresh_token);
@@ -77,7 +88,8 @@ export class AuthService {
   }
 
   register(data: RegisterRequest): Observable<LoginResponse> {
-    return this.api.post<LoginResponse>('/auth/register', data).pipe(
+    // Backend spreads tokens at top level: { success, user, access_token, refresh_token }
+    return this.api.post<LoginResponse & { success: boolean }>('/auth/register', data).pipe(
       tap(res => {
         localStorage.setItem(TOKEN_KEY, res.access_token);
         localStorage.setItem(REFRESH_KEY, res.refresh_token);
@@ -87,16 +99,9 @@ export class AuthService {
     );
   }
 
-  forgotPassword(email: string): Observable<unknown> {
-    return this.api.post('/auth/forgot-password', { email });
-  }
-
-  resetPassword(token: string, password: string): Observable<unknown> {
-    return this.api.post('/auth/reset-password', { token, password });
-  }
-
   refreshToken(): Observable<{ access_token: string }> {
     const refresh_token = this.getRefreshToken();
+    // Backend spreads at top level: { success, access_token }
     return this.api.post<{ success: boolean; access_token: string }>('/auth/refresh', { refresh_token }).pipe(
       tap(res => {
         localStorage.setItem(TOKEN_KEY, res.access_token);
@@ -108,13 +113,6 @@ export class AuthService {
     const userRole = this.role();
     if (!userRole) return false;
     return roles.includes(userRole);
-  }
-
-  hasPermission(...perms: string[]): boolean {
-    if (perms.length === 0) return true;
-    if (this.isSystemUser()) return true;
-    const userPerms = this.permissions();
-    return perms.some(p => userPerms.includes(p));
   }
 
   private clearStorage(): void {

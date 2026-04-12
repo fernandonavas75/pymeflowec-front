@@ -19,31 +19,31 @@ export class StatusBadgeComponent {
 
     if (t === 'order') {
       const map: Record<string, string> = {
-        pending: 'bg-yellow-100 text-yellow-800',
-        confirmed: 'bg-blue-100 text-blue-800',
-        shipped: 'bg-indigo-100 text-indigo-800',
-        delivered: 'bg-green-100 text-green-800',
-        cancelled: 'bg-red-100 text-red-800',
+        pending:   'bg-amber-100   text-amber-800   dark:bg-amber-900/30   dark:text-amber-300',
+        confirmed: 'bg-blue-100    text-blue-800    dark:bg-blue-900/30    dark:text-blue-300',
+        shipped:   'bg-indigo-100  text-indigo-800  dark:bg-indigo-900/30  dark:text-indigo-300',
+        delivered: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+        cancelled: 'bg-red-100     text-red-800     dark:bg-red-900/30     dark:text-red-300',
       };
-      return map[s] || 'bg-gray-100 text-gray-800';
+      return map[s] || 'bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300';
     }
 
     if (t === 'invoice') {
       const map: Record<string, string> = {
-        pending: 'bg-blue-100 text-blue-800',
-        paid: 'bg-green-100 text-green-800',
-        overdue: 'bg-red-100 text-red-800',
-        cancelled: 'bg-gray-100 text-gray-800',
+        pending:   'bg-blue-100    text-blue-800    dark:bg-blue-900/30    dark:text-blue-300',
+        paid:      'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+        overdue:   'bg-red-100     text-red-800     dark:bg-red-900/30     dark:text-red-300',
+        cancelled: 'bg-slate-100   text-slate-700   dark:bg-slate-700/40   dark:text-slate-300',
       };
-      return map[s] || 'bg-gray-100 text-gray-800';
+      return map[s] || 'bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300';
     }
 
     // user, product, supplier
     const map: Record<string, string> = {
-      active: 'bg-green-100 text-green-800',
-      inactive: 'bg-gray-100 text-gray-700',
+      active:   'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+      inactive: 'bg-slate-100   text-slate-700   dark:bg-slate-700/40   dark:text-slate-300',
     };
-    return map[s] || 'bg-gray-100 text-gray-800';
+    return map[s] || 'bg-slate-100 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300';
   });
 
   badgeLabel = computed(() => {

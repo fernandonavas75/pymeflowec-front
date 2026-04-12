@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit, computed } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -38,18 +38,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   lastUpdated = new Date();
   private sub?: Subscription;
 
-  // Permisos para mostrar/ocultar secciones
-  canViewOrders   = computed(() => this.authService.hasPermission('orders.view'));
-  canViewInvoices = computed(() => this.authService.hasPermission('invoices.view'));
-  canViewProducts = computed(() => this.authService.hasPermission('products.view'));
-  canViewClients  = computed(() => this.authService.hasPermission('clients.view'));
-  canCreateOrder   = computed(() => this.authService.hasPermission('orders.create'));
-  canCreateClient  = computed(() => this.authService.hasPermission('clients.create'));
-  canCreateProduct = computed(() => this.authService.hasPermission('products.create'));
-  canCreateInvoice = computed(() => this.authService.hasPermission('invoices.create'));
-
-  ordersColumns   = ['id', 'client', 'date', 'status', 'total'];
   invoicesColumns = ['number', 'date', 'total', 'status'];
+
+  get isStoreUser(): boolean {
+    return this.authService.isStoreUser();
+  }
+
+  get isAdmin(): boolean {
+    return this.authService.isStoreAdmin();
+  }
 
   get firstName(): string {
     return this.authService.currentUser()?.full_name?.split(' ')?.[0] ?? '';
@@ -62,45 +59,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return 'Buenas noches';
   }
 
-  get donutChartOptions() {
-    if (!this.data) return {};
-    const d = this.data.ordersByStatus;
-    const total = d.pending + d.confirmed + d.shipped + d.delivered + d.cancelled;
-    return {
-      series: [d.pending, d.confirmed, d.shipped, d.delivered, d.cancelled],
-      chart: { type: 'donut' as const, height: 280, toolbar: { show: false } },
-      labels: ['Pendiente', 'Confirmado', 'Enviado', 'Entregado', 'Cancelado'],
-      colors: ['#f59e0b', '#3b82f6', '#6366f1', '#22c55e', '#ef4444'],
-      legend: { position: 'bottom' as const, fontSize: '12px', fontFamily: 'inherit' },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '68%',
-            labels: {
-              show: true,
-              total: {
-                show: true,
-                label: 'Total',
-                fontSize: '13px',
-                fontWeight: '600',
-                color: '#374151',
-                formatter: () => String(total),
-              },
-            },
-          },
-        },
-      },
-      dataLabels: { enabled: false },
-      stroke: { width: 0 },
-      responsive: [{ breakpoint: 480, options: { chart: { height: 220 } } }],
-    };
-  }
-
   get revenueChartOptions() {
     if (!this.data) return {};
     const days = this.data.revenueByDay;
     return {
-      series: [{ name: 'Ingresos cobrados', data: days.map(d => d.amount) }],
+      series: [{ name: 'Ingresos facturados', data: days.map(d => d.amount) }],
       chart: { type: 'area' as const, height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
       xaxis: {
         categories: days.map(d => d.date),

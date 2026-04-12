@@ -4,8 +4,8 @@
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}</p>
     </div>
   </div>
 
@@ -50,7 +50,7 @@
             <mat-label>Rol *</mat-label>
             <mat-select formControlName="role_id">
               @for (role of roles(); track role.id) {
-                <mat-option [value]="'' + role.id">{{ role.name }}</mat-option>
+                <mat-option [value]="role.id">{{ role.name === 'STORE_ADMIN' ? 'Administrador' : 'Vendedor' }}</mat-option>
               }
             </mat-select>
             @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {

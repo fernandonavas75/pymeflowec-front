@@ -35,16 +35,14 @@ export class SupplierFormComponent implements OnInit {
   supplierId = signal<string | null>(null);
 
   form = this.fb.group({
-    business_name: ['', [Validators.required, Validators.minLength(2)]],
-    contact_name: [''],
-    email: ['', [Validators.email]],
-    phone: ['', [Validators.minLength(10), Validators.maxLength(10)]],
+    name:    ['', [Validators.required, Validators.minLength(2)]],
+    ruc:     ['', [Validators.pattern(/^\d{13}$/)]],
+    email:   ['', [Validators.email]],
+    phone:   ['', [Validators.minLength(7), Validators.maxLength(15)]],
     address: [''],
   });
 
-  get isEdit(): boolean {
-    return !!this.supplierId();
-  }
+  get isEdit(): boolean { return !!this.supplierId(); }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -65,13 +63,16 @@ export class SupplierFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
-    const data = this.form.value as { business_name: string; contact_name?: string; email?: string; phone?: string; address?: string };
+    const v = this.form.value;
+    const data = {
+      name:    v.name!,
+      ruc:     v.ruc || undefined,
+      email:   v.email || undefined,
+      phone:   v.phone || undefined,
+      address: v.address || undefined,
+    };
 
     const obs = this.isEdit
       ? this.suppliersService.update(this.supplierId()!, data)

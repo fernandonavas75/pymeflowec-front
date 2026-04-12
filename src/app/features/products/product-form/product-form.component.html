@@ -4,8 +4,8 @@
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">{{ isEdit ? 'Editar producto' : 'Nuevo producto' }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ isEdit ? 'Actualiza la información del producto' : 'Completa los datos del nuevo producto' }}</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar producto' : 'Nuevo producto' }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza la información del producto' : 'Completa los datos del nuevo producto' }}</p>
     </div>
   </div>
 
@@ -17,8 +17,7 @@
     <div class="form-card" style="max-width:720px">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
-        <!-- Información básica -->
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Información general</h3>
+        <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Información general</h3>
         <div class="grid grid-cols-2 gap-4 mb-6">
           <mat-form-field appearance="outline" class="col-span-2">
             <mat-label>Nombre del producto *</mat-label>
@@ -29,20 +28,21 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Categoría</mat-label>
-            <mat-select formControlName="category_id">
-              <mat-option [value]="null">Sin categoría</mat-option>
-              @for (cat of categories(); track cat.id) {
-                <mat-option [value]="cat.id">{{ cat.name }}</mat-option>
+            <mat-label>Proveedor</mat-label>
+            <mat-select formControlName="supplier_id">
+              <mat-option [value]="null">Sin proveedor</mat-option>
+              @for (s of suppliers(); track s.id) {
+                <mat-option [value]="s.id">{{ s.name }}</mat-option>
               }
             </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Unidad de medida *</mat-label>
-            <mat-select formControlName="unit">
-              @for (u of units; track u.value) {
-                <mat-option [value]="u.value">{{ u.label }}</mat-option>
+            <mat-label>Tasa de impuesto</mat-label>
+            <mat-select formControlName="tax_rate_id">
+              <mat-option [value]="null">Sin impuesto</mat-option>
+              @for (t of taxRates(); track t.id) {
+                <mat-option [value]="t.id">{{ t.tax_name }} ({{ t.percentage }}%)</mat-option>
               }
             </mat-select>
           </mat-form-field>
@@ -52,69 +52,51 @@
             <input matInput formControlName="sku" placeholder="Código interno">
           </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Código de barras</mat-label>
-            <mat-icon matPrefix>qr_code</mat-icon>
-            <input matInput formControlName="barcode">
-          </mat-form-field>
-
           <mat-form-field appearance="outline" class="col-span-2">
             <mat-label>Descripción</mat-label>
             <textarea matInput formControlName="description" rows="2" placeholder="Descripción opcional"></textarea>
           </mat-form-field>
         </div>
 
-        <!-- Precios -->
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Precios</h3>
+        <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Precios</h3>
         <div class="grid grid-cols-2 gap-4 mb-6">
           <mat-form-field appearance="outline">
-            <mat-label>Costo *</mat-label>
+            <mat-label>Precio de compra</mat-label>
             <span matPrefix>$&nbsp;</span>
-            <input matInput type="number" step="0.01" min="0" formControlName="cost_price">
-            @if (form.get('cost_price')?.touched && form.get('cost_price')?.invalid) {
-              <mat-error>Ingresa un costo válido</mat-error>
-            }
+            <input matInput type="number" step="0.01" min="0" formControlName="purchase_price">
           </mat-form-field>
 
           <mat-form-field appearance="outline">
             <mat-label>Precio de venta *</mat-label>
             <span matPrefix>$&nbsp;</span>
-            <input matInput type="number" step="0.01" min="0" formControlName="unit_price">
-            @if (form.get('unit_price')?.touched && form.get('unit_price')?.invalid) {
+            <input matInput type="number" step="0.01" min="0" formControlName="sale_price">
+            @if (form.get('sale_price')?.touched && form.get('sale_price')?.invalid) {
               <mat-error>Ingresa un precio válido</mat-error>
             }
           </mat-form-field>
         </div>
 
-        <!-- Stock -->
-        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Inventario</h3>
+        <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4">Inventario</h3>
         <div class="grid grid-cols-2 gap-4 mb-6">
           @if (!isEdit) {
             <mat-form-field appearance="outline">
               <mat-label>Stock inicial</mat-label>
-              <input matInput type="number" min="0" step="0.001" formControlName="stock">
+              <input matInput type="number" min="0" formControlName="stock">
               <mat-hint>Cantidad disponible al crear el producto</mat-hint>
-              @if (form.get('stock')?.touched && form.get('stock')?.invalid) {
-                <mat-error>Ingresa una cantidad válida</mat-error>
-              }
             </mat-form-field>
           }
 
           <mat-form-field appearance="outline">
             <mat-label>Stock mínimo (alerta)</mat-label>
-            <mat-icon matSuffix matTooltip="Recibirás una alerta cuando el stock llegue a este nivel">info_outline</mat-icon>
-            <input matInput type="number" min="0" step="0.001" formControlName="min_stock">
-            <mat-hint>Umbral para la alerta de reabastecimiento</mat-hint>
-            @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
-              <mat-error>Ingresa una cantidad válida</mat-error>
-            }
+            <mat-icon matSuffix matTooltip="Alerta cuando el stock llegue a este nivel">info_outline</mat-icon>
+            <input matInput type="number" min="0" formControlName="min_stock">
           </mat-form-field>
         </div>
 
         @if (isEdit) {
-          <p class="text-xs text-gray-400 mb-6 flex items-center gap-1">
+          <p class="text-xs text-slate-400 dark:text-slate-500 mb-6 flex items-center gap-1">
             <mat-icon class="text-sm">info</mat-icon>
-            Para modificar el stock de un producto existente, usa el boton "Ajustar stock" en la lista de productos.
+            Para modificar el stock, usa el botón "Ajustar stock" en la lista de productos.
           </p>
         }
 

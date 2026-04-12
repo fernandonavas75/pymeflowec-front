@@ -6,7 +6,7 @@
       <h1 class="greeting">{{ greeting }}, <span class="name">{{ firstName }}</span></h1>
       <p class="org-name">
         <span class="material-icons-round">business</span>
-        {{ authService.currentUser()?.organization?.name }}
+        {{ authService.currentUser()?.company?.name }}
       </p>
     </div>
     <div class="header-right">
@@ -26,7 +26,6 @@
     </div>
     <div class="charts-grid mt-6">
       <div class="skeleton-card h-72"></div>
-      <div class="skeleton-card h-72"></div>
     </div>
   }
 
@@ -36,265 +35,143 @@
     <!-- KPI Cards -->
     <div class="kpi-grid">
 
-      @if (canViewOrders()) {
-        <app-stat-card
-          title="Pedidos pendientes"
-          [value]="data.pendingOrders"
-          subtitle="Requieren atención"
-          icon="pending_actions"
-          color="yellow"
-          [trend]="data.pendingOrders > 10 ? 'up' : 'neutral'"
-        />
-      }
+      <app-stat-card
+        title="Ingresos facturados"
+        [value]="'$' + data.totalRevenue.toFixed(2)"
+        subtitle="Facturas emitidas"
+        icon="attach_money"
+        color="green"
+        trend="up"
+      />
 
-      @if (canViewInvoices()) {
-        <app-stat-card
-          title="Ingresos cobrados"
-          [value]="'$' + data.totalRevenue.toFixed(2)"
-          subtitle="Facturas pagadas"
-          icon="attach_money"
-          color="green"
-          trend="up"
-        />
-      }
+      <app-stat-card
+        title="Facturas emitidas"
+        [value]="data.issuedInvoices"
+        subtitle="Este período"
+        icon="receipt_long"
+        color="indigo"
+      />
 
-      @if (canViewInvoices() && data.overdueInvoices > 0) {
-        <app-stat-card
-          title="Facturas vencidas"
-          [value]="data.overdueInvoices"
-          subtitle="Requieren seguimiento"
-          icon="warning_amber"
-          color="red"
-          trend="down"
-        />
-      }
+      <app-stat-card
+        title="Total clientes"
+        [value]="data.totalCustomers"
+        subtitle="Registrados"
+        icon="people"
+        color="blue"
+      />
 
-      @if (canViewOrders()) {
-        <app-stat-card
-          title="Total pedidos"
-          [value]="data.totalOrders"
-          subtitle="Registrados en el sistema"
-          icon="shopping_cart"
-          color="indigo"
-        />
-      }
-
-      @if (canViewClients()) {
-        <app-stat-card
-          title="Clientes activos"
-          [value]="data.totalClients"
-          subtitle="En el sistema"
-          icon="people"
-          color="blue"
-        />
-      }
-
-      @if (canViewProducts()) {
-        <app-stat-card
-          title="Total productos"
-          [value]="data.totalProducts"
-          subtitle="En catálogo"
-          icon="inventory_2"
-          color="purple"
-        />
-      }
+      <app-stat-card
+        title="Total productos"
+        [value]="data.totalProducts"
+        subtitle="En catálogo"
+        icon="inventory_2"
+        color="purple"
+      />
 
     </div>
 
     <!-- Alertas -->
-    @if (canViewProducts() && data.lowStockProducts > 0) {
+    @if (data.lowStockProducts > 0) {
       <div class="alert-warning">
         <span class="material-icons-round">warning_amber</span>
         <span>
           <strong>{{ data.lowStockProducts }}</strong>
-          producto{{ data.lowStockProducts !== 1 ? 's' : '' }} con stock bajo (menos de 5 unidades)
+          producto{{ data.lowStockProducts !== 1 ? 's' : '' }} con stock bajo del mínimo configurado
         </span>
         <a routerLink="/products" class="alert-link">Ver productos →</a>
       </div>
     }
 
     <!-- Acciones rápidas -->
-    @if (canCreateOrder() || canCreateClient() || canCreateProduct() || canCreateInvoice()) {
+    @if (isStoreUser) {
       <div class="quick-actions-bar">
         <span class="qa-label">Acciones rápidas</span>
         <div class="qa-buttons">
-          @if (canCreateOrder()) {
-            <a routerLink="/orders/new" class="qa-btn qa-indigo">
-              <span class="material-icons-round">add_shopping_cart</span>
-              Nuevo pedido
-            </a>
-          }
-          @if (canCreateClient()) {
-            <a routerLink="/clients/new" class="qa-btn qa-blue">
-              <span class="material-icons-round">person_add</span>
-              Nuevo cliente
-            </a>
-          }
-          @if (canCreateProduct()) {
+          <a routerLink="/customers/new" class="qa-btn qa-blue">
+            <span class="material-icons-round">person_add</span>
+            Nuevo cliente
+          </a>
+          @if (isAdmin) {
             <a routerLink="/products/new" class="qa-btn qa-purple">
               <span class="material-icons-round">add_box</span>
               Nuevo producto
             </a>
           }
-          @if (canCreateInvoice()) {
-            <a routerLink="/invoices" class="qa-btn qa-green">
-              <span class="material-icons-round">receipt_long</span>
-              Ver facturas
-            </a>
-          }
+          <a routerLink="/invoices/new" class="qa-btn qa-green">
+            <span class="material-icons-round">receipt_long</span>
+            Nueva factura
+          </a>
         </div>
       </div>
     }
 
-    <!-- Gráficos -->
-    @if (canViewOrders() || canViewInvoices()) {
-      <div class="charts-grid">
-
-        @if (canViewOrders()) {
-          <div class="chart-card">
-            <div class="chart-header">
-              <h3 class="chart-title">Pedidos por estado</h3>
-              <a routerLink="/orders" class="chart-link">Ver todos →</a>
-            </div>
-            <apx-chart
-              [series]="donutChartOptions.series!"
-              [chart]="donutChartOptions.chart!"
-              [labels]="donutChartOptions.labels!"
-              [colors]="donutChartOptions.colors!"
-              [legend]="donutChartOptions.legend!"
-              [plotOptions]="donutChartOptions.plotOptions!"
-              [dataLabels]="donutChartOptions.dataLabels!"
-              [stroke]="donutChartOptions.stroke!"
-              [responsive]="donutChartOptions.responsive!"
-            />
-          </div>
-        }
-
-        @if (canViewInvoices()) {
-          <div class="chart-card">
-            <div class="chart-header">
-              <h3 class="chart-title">Ingresos — Últimos 7 días</h3>
-              <a routerLink="/invoices" class="chart-link">Ver facturas →</a>
-            </div>
-            <apx-chart
-              [series]="revenueChartOptions.series!"
-              [chart]="revenueChartOptions.chart!"
-              [xaxis]="revenueChartOptions.xaxis!"
-              [yaxis]="revenueChartOptions.yaxis!"
-              [colors]="revenueChartOptions.colors!"
-              [fill]="revenueChartOptions.fill!"
-              [stroke]="revenueChartOptions.stroke!"
-              [dataLabels]="revenueChartOptions.dataLabels!"
-              [grid]="revenueChartOptions.grid!"
-              [tooltip]="revenueChartOptions.tooltip!"
-            />
-          </div>
-        }
-
+    <!-- Gráfico de ingresos -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">Ingresos — Últimos 7 días</h3>
+          <a routerLink="/invoices" class="chart-link">Ver facturas →</a>
+        </div>
+        <apx-chart
+          [series]="revenueChartOptions.series!"
+          [chart]="revenueChartOptions.chart!"
+          [xaxis]="revenueChartOptions.xaxis!"
+          [yaxis]="revenueChartOptions.yaxis!"
+          [colors]="revenueChartOptions.colors!"
+          [fill]="revenueChartOptions.fill!"
+          [stroke]="revenueChartOptions.stroke!"
+          [dataLabels]="revenueChartOptions.dataLabels!"
+          [grid]="revenueChartOptions.grid!"
+          [tooltip]="revenueChartOptions.tooltip!"
+        />
       </div>
-    }
+    </div>
 
-    <!-- Tablas recientes -->
-    @if (canViewOrders() || canViewInvoices()) {
-      <div class="tables-grid">
+    <!-- Facturas recientes -->
+    <div class="tables-grid">
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="table-title">Facturas recientes</h3>
+          <a routerLink="/invoices" class="see-all-link">Ver todas →</a>
+        </div>
+        <table mat-table [dataSource]="data.recentInvoices" class="w-full">
 
-        @if (canViewOrders()) {
-          <div class="table-card">
-            <div class="table-header">
-              <h3 class="table-title">Pedidos recientes</h3>
-              <a routerLink="/orders" class="see-all-link">Ver todos →</a>
-            </div>
-            <table mat-table [dataSource]="data.recentOrders" class="w-full">
+          <ng-container matColumnDef="number">
+            <th mat-header-cell *matHeaderCellDef>Número</th>
+            <td mat-cell *matCellDef="let inv">
+              <span class="mono-id">{{ inv.invoice_number }}</span>
+            </td>
+          </ng-container>
 
-              <ng-container matColumnDef="id">
-                <th mat-header-cell *matHeaderCellDef>#</th>
-                <td mat-cell *matCellDef="let o">
-                  <span class="mono-id">#{{ o.id.toString().slice(-6).toUpperCase() }}</span>
-                </td>
-              </ng-container>
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let inv" class="text-muted">{{ formatDate(inv.issue_date) }}</td>
+          </ng-container>
 
-              <ng-container matColumnDef="client">
-                <th mat-header-cell *matHeaderCellDef>Cliente</th>
-                <td mat-cell *matCellDef="let o">{{ o.client?.full_name || '—' }}</td>
-              </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef>Total</th>
+            <td mat-cell *matCellDef="let inv" class="font-semibold">{{ formatCurrency(inv.total) }}</td>
+          </ng-container>
 
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                <td mat-cell *matCellDef="let o" class="text-muted">{{ formatDate(o.created_at) }}</td>
-              </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let inv">
+              <app-status-badge [status]="inv.status" type="invoice" />
+            </td>
+          </ng-container>
 
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let o">
-                  <app-status-badge [status]="o.status" type="order" />
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="total">
-                <th mat-header-cell *matHeaderCellDef>Total</th>
-                <td mat-cell *matCellDef="let o" class="font-semibold">{{ formatCurrency(o.total) }}</td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="ordersColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: ordersColumns;"
-                  class="table-row-link" [routerLink]="['/orders', row.id]"></tr>
-            </table>
-            @if (data.recentOrders.length === 0) {
-              <div class="empty-state">
-                <span class="material-icons-round">inbox</span>
-                <span>No hay pedidos recientes</span>
-              </div>
-            }
+          <tr mat-header-row *matHeaderRowDef="invoicesColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: invoicesColumns;"
+              class="table-row-link" [routerLink]="['/invoices', row.id]"></tr>
+        </table>
+        @if (data.recentInvoices.length === 0) {
+          <div class="empty-state">
+            <span class="material-icons-round">inbox</span>
+            <span>No hay facturas recientes</span>
           </div>
         }
-
-        @if (canViewInvoices()) {
-          <div class="table-card">
-            <div class="table-header">
-              <h3 class="table-title">Facturas recientes</h3>
-              <a routerLink="/invoices" class="see-all-link">Ver todas →</a>
-            </div>
-            <table mat-table [dataSource]="data.recentInvoices" class="w-full">
-
-              <ng-container matColumnDef="number">
-                <th mat-header-cell *matHeaderCellDef>Número</th>
-                <td mat-cell *matCellDef="let inv">
-                  <span class="mono-id">{{ inv.invoice_number }}</span>
-                </td>
-              </ng-container>
-
-              <ng-container matColumnDef="date">
-                <th mat-header-cell *matHeaderCellDef>Fecha</th>
-                <td mat-cell *matCellDef="let inv" class="text-muted">{{ formatDate(inv.issue_date) }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="total">
-                <th mat-header-cell *matHeaderCellDef>Total</th>
-                <td mat-cell *matCellDef="let inv" class="font-semibold">{{ formatCurrency(inv.total) }}</td>
-              </ng-container>
-
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>Estado</th>
-                <td mat-cell *matCellDef="let inv">
-                  <app-status-badge [status]="inv.status" type="invoice" />
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="invoicesColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: invoicesColumns;"
-                  class="table-row-link" [routerLink]="['/invoices', row.id]"></tr>
-            </table>
-            @if (data.recentInvoices.length === 0) {
-              <div class="empty-state">
-                <span class="material-icons-round">inbox</span>
-                <span>No hay facturas recientes</span>
-              </div>
-            }
-          </div>
-        }
-
       </div>
-    }
+    </div>
 
   }
 

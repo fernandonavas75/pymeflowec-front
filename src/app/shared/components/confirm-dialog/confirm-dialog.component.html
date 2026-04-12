@@ -1,17 +1,19 @@
-<div class="p-6 max-w-md">
+<div class="p-6 max-w-md" style="background: var(--bg-surface); color: var(--text-primary);">
   <div class="flex items-start gap-4 mb-4">
     @if (data.danger) {
-      <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-        <mat-icon class="text-red-600">warning</mat-icon>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+           style="background: rgba(239,68,68,0.1);">
+        <mat-icon style="color: #ef4444;">warning</mat-icon>
       </div>
     } @else {
-      <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-        <mat-icon class="text-indigo-600">help_outline</mat-icon>
+      <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+           style="background: rgba(99,102,241,0.1);">
+        <mat-icon style="color: var(--primary);">help_outline</mat-icon>
       </div>
     }
     <div>
-      <h2 class="text-lg font-semibold text-gray-900 mb-1">{{ data.title }}</h2>
-      <p class="text-sm text-gray-600">{{ data.message }}</p>
+      <h2 class="text-lg font-semibold mb-1" style="color: var(--text-primary);">{{ data.title }}</h2>
+      <p class="text-sm" style="color: var(--text-muted);">{{ data.message }}</p>
     </div>
   </div>
 
@@ -19,11 +21,7 @@
     <button mat-stroked-button (click)="cancel()">
       {{ data.cancelText || 'Cancelar' }}
     </button>
-    <button
-      mat-flat-button
-      [color]="data.danger ? 'warn' : 'primary'"
-      (click)="confirm()"
-    >
+    <button mat-flat-button [color]="data.danger ? 'warn' : 'primary'" (click)="confirm()">
       {{ data.confirmText || 'Confirmar' }}
     </button>
   </div>

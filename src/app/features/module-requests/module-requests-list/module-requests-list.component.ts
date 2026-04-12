@@ -42,21 +42,21 @@ export class ModuleRequestsListComponent implements OnInit {
 
   requestForm = this.fb.group({
     module_id: [null as number | null, Validators.required],
-    notes: [''],
+    comments:  [''],
   });
 
-  get isPlatformStaff(): boolean {
-    return this.authService.isPlatformStaff() || this.authService.isSystemUser();
+  get isPlatformUser(): boolean {
+    return this.authService.isSystemUser();
   }
 
   ngOnInit(): void {
-    if (this.isPlatformStaff) {
+    if (this.isPlatformUser) {
       this.displayedColumns.set(['org', 'module', 'status', 'date', 'actions']);
       this.loadAll();
     } else {
+      this.svc.listPlatformModules().subscribe(mods => this.availableModules.set(mods.filter(m => m.is_active)));
       this.load();
     }
-    this.svc.listPlatformModules().subscribe(mods => this.availableModules.set(mods.filter(m => m.is_active && !m.is_default)));
   }
 
   load(): void {
@@ -82,9 +82,18 @@ export class ModuleRequestsListComponent implements OnInit {
     if (this.requestForm.invalid) { this.requestForm.markAllAsTouched(); return; }
     this.saving.set(true);
     const v = this.requestForm.value;
-    this.svc.create({ module_id: v.module_id!, notes: v.notes || undefined }).subscribe({
-      next: () => { this.snackBar.open('Solicitud enviada', 'OK', { duration: 3000 }); this.showRequestForm.set(false); this.requestForm.reset(); this.load(); this.saving.set(false); },
-      error: (err) => { this.snackBar.open(err?.error?.message || 'Error', 'OK', { duration: 4000 }); this.saving.set(false); },
+    this.svc.create({ module_id: v.module_id!, comments: v.comments || undefined }).subscribe({
+      next: () => {
+        this.snackBar.open('Solicitud enviada', 'OK', { duration: 3000 });
+        this.showRequestForm.set(false);
+        this.requestForm.reset();
+        this.load();
+        this.saving.set(false);
+      },
+      error: (err) => {
+        this.snackBar.open(err?.error?.message || 'Error al enviar', 'OK', { duration: 4000 });
+        this.saving.set(false);
+      },
     });
   }
 
@@ -93,7 +102,9 @@ export class ModuleRequestsListComponent implements OnInit {
       data: { title: 'Aprobar solicitud', message: `¿Aprobar el módulo "${req.module?.name}"?`, confirmText: 'Aprobar' },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
-      this.svc.approve(req.id).subscribe({ next: () => { this.snackBar.open('Solicitud aprobada', 'OK', { duration: 3000 }); this.loadAll(); } });
+      this.svc.approve(req.id).subscribe({
+        next: () => { this.snackBar.open('Solicitud aprobada', 'OK', { duration: 3000 }); this.loadAll(); },
+      });
     });
   }
 
@@ -102,21 +113,27 @@ export class ModuleRequestsListComponent implements OnInit {
       data: { title: 'Rechazar solicitud', message: `¿Rechazar el módulo "${req.module?.name}"?`, confirmText: 'Rechazar', danger: true },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
-      this.svc.reject(req.id).subscribe({ next: () => { this.snackBar.open('Solicitud rechazada', 'OK', { duration: 3000 }); this.loadAll(); } });
+      this.svc.reject(req.id).subscribe({
+        next: () => { this.snackBar.open('Solicitud rechazada', 'OK', { duration: 3000 }); this.loadAll(); },
+      });
     });
   }
 
-  cancel(req: ModuleRequest): void {
-    this.svc.cancel(req.id).subscribe({ next: () => { this.snackBar.open('Solicitud cancelada', 'OK', { duration: 3000 }); this.load(); } });
-  }
-
   statusClass(s: string): string {
-    const m: Record<string, string> = { pending: 'bg-amber-50 text-amber-700', approved: 'bg-green-50 text-green-700', rejected: 'bg-red-50 text-red-700', cancelled: 'bg-gray-50 text-gray-600' };
+    const m: Record<string, string> = {
+      PENDING:  'bg-amber-50 text-amber-700',
+      APPROVED: 'bg-green-50 text-green-700',
+      REJECTED: 'bg-red-50 text-red-700',
+    };
     return m[s] ?? 'bg-gray-50 text-gray-600';
   }
 
   statusLabel(s: string): string {
-    const m: Record<string, string> = { pending: 'Pendiente', approved: 'Aprobada', rejected: 'Rechazada', cancelled: 'Cancelada' };
+    const m: Record<string, string> = {
+      PENDING:  'Pendiente',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+    };
     return m[s] ?? s;
   }
 }

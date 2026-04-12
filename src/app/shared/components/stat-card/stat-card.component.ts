@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
   standalone: true,
   imports: [CommonModule, MatIconModule],
   templateUrl: './stat-card.component.html',
+  styleUrls: ['./stat-card.component.scss'],
 })
 export class StatCardComponent implements OnInit {
   title = input<string>('');
@@ -55,12 +56,12 @@ export class StatCardComponent implements OnInit {
 
   get colorClasses(): { bg: string; text: string; iconBg: string } {
     const colorMap: Record<string, { bg: string; text: string; iconBg: string }> = {
-      indigo: { bg: 'border-indigo-500', text: 'text-indigo-600', iconBg: 'bg-indigo-50' },
-      green: { bg: 'border-green-500', text: 'text-green-600', iconBg: 'bg-green-50' },
-      yellow: { bg: 'border-yellow-500', text: 'text-yellow-600', iconBg: 'bg-yellow-50' },
-      blue: { bg: 'border-blue-500', text: 'text-blue-600', iconBg: 'bg-blue-50' },
-      red: { bg: 'border-red-500', text: 'text-red-600', iconBg: 'bg-red-50' },
-      purple: { bg: 'border-purple-500', text: 'text-purple-600', iconBg: 'bg-purple-50' },
+      indigo: { bg: 'border-indigo-500', text: 'text-indigo-500 dark:text-indigo-400', iconBg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+      green:  { bg: 'border-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', iconBg: 'bg-emerald-50 dark:bg-emerald-900/30' },
+      yellow: { bg: 'border-amber-500',   text: 'text-amber-600 dark:text-amber-400',   iconBg: 'bg-amber-50 dark:bg-amber-900/30' },
+      blue:   { bg: 'border-blue-500',    text: 'text-blue-600 dark:text-blue-400',    iconBg: 'bg-blue-50 dark:bg-blue-900/30' },
+      red:    { bg: 'border-red-500',     text: 'text-red-600 dark:text-red-400',     iconBg: 'bg-red-50 dark:bg-red-900/30' },
+      purple: { bg: 'border-purple-500',  text: 'text-purple-600 dark:text-purple-400',  iconBg: 'bg-purple-50 dark:bg-purple-900/30' },
     };
     return colorMap[this.color()] || colorMap['indigo'];
   }

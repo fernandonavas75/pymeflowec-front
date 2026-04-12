@@ -1,18 +1,46 @@
 <div class="login-page">
-  <div class="login-card">
-    <!-- Brand area -->
-    <div class="brand-area">
-      <div class="brand-logo">
-        <span class="material-icons-round">bolt</span>
-      </div>
-      <h1 class="brand-name">PymeFlow<span class="brand-accent">EC</span></h1>
-      <p class="brand-tagline">Sistema de gestión empresarial</p>
-    </div>
 
-    <!-- Form -->
-    <div class="form-area">
+  <!-- Brand panel (solo desktop) -->
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <span class="material-icons-round">bolt</span>
+    </div>
+    <h1 class="brand-name">PymeFlow<span class="brand-accent">EC</span></h1>
+    <p class="brand-tagline">Sistema ERP para PYMEs ecuatorianas.<br>Gestiona tu negocio desde un solo lugar.</p>
+    <ul class="brand-features">
+      <li>
+        <span class="feat-icon"><mat-icon>receipt_long</mat-icon></span>
+        Facturación electrónica SRI
+      </li>
+      <li>
+        <span class="feat-icon"><mat-icon>inventory_2</mat-icon></span>
+        Control de inventario
+      </li>
+      <li>
+        <span class="feat-icon"><mat-icon>bar_chart</mat-icon></span>
+        Reportes y dashboards
+      </li>
+      <li>
+        <span class="feat-icon"><mat-icon>security</mat-icon></span>
+        Roles y permisos granulares
+      </li>
+    </ul>
+  </div>
+
+  <!-- Form panel -->
+  <div class="form-panel">
+    <div class="login-card">
+
+      <!-- Logo mobile -->
+      <div class="mobile-brand">
+        <div class="mobile-logo">
+          <span class="material-icons-round">bolt</span>
+        </div>
+        <p class="mobile-app-name">PymeFlow<span class="mobile-app-accent">EC</span></p>
+      </div>
+
       <h2 class="form-title">Iniciar sesión</h2>
-      <p class="form-subtitle">Ingresa tus credenciales para acceder</p>
+      <p class="form-subtitle">Ingresa tus credenciales para continuar</p>
 
       @if (error()) {
         <div class="error-alert">
@@ -44,17 +72,10 @@
         </mat-form-field>
 
         <div class="forgot-link">
-          <a routerLink="/forgot-password">¿Olvidé mi contraseña?</a>
+          <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
         </div>
 
-
-        <button
-          mat-flat-button
-          color="primary"
-          type="submit"
-          class="submit-btn"
-          [disabled]="loading()"
-        >
+        <button mat-flat-button color="primary" type="submit" class="submit-btn" [disabled]="loading()">
           @if (loading()) {
             <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
             <span>Ingresando...</span>
@@ -63,10 +84,11 @@
           }
         </button>
       </form>
-    </div>
 
-    <p class="register-link">
-      ¿No tienes cuenta? <a routerLink="/register">Crear empresa gratis</a>
-    </p>
+      <p class="register-link">
+        ¿No tienes cuenta? <a routerLink="/register">Crear empresa gratis</a>
+      </p>
+    </div>
   </div>
+
 </div>

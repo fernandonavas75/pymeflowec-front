@@ -1,9 +1,13 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1 class="text-2xl font-bold text-gray-900">Facturas</h1>
-      <p class="text-sm text-gray-500 mt-1">Historial de facturas emitidas</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Facturas</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Historial de facturas emitidas</p>
     </div>
+    <a routerLink="/invoices/new" mat-flat-button color="primary" class="flex items-center gap-2">
+      <mat-icon>add</mat-icon>
+      Nueva factura
+    </a>
   </div>
 
   <div class="filters-bar">
@@ -11,10 +15,8 @@
       <mat-label>Filtrar por estado</mat-label>
       <mat-select [formControl]="statusCtrl">
         <mat-option value="">Todos</mat-option>
-        <mat-option value="pending">Pendientes</mat-option>
-        <mat-option value="paid">Pagadas</mat-option>
-        <mat-option value="overdue">Vencidas</mat-option>
-        <mat-option value="cancelled">Canceladas</mat-option>
+        <mat-option value="ISSUED">Emitidas</mat-option>
+        <mat-option value="CANCELLED">Canceladas</mat-option>
       </mat-select>
     </mat-form-field>
   </div>
@@ -25,6 +27,7 @@
         @for (i of [1,2,3,4,5]; track i) {
           <div class="skeleton-row">
             <div class="skeleton h-4 w-28"></div>
+            <div class="skeleton h-4 w-32"></div>
             <div class="skeleton h-4 w-24"></div>
             <div class="skeleton h-4 w-20"></div>
             <div class="skeleton h-4 w-16"></div>
@@ -42,6 +45,10 @@
             <span class="font-mono text-sm font-medium text-indigo-600">{{ inv.invoice_number }}</span>
           </td>
         </ng-container>
+        <ng-container matColumnDef="customer">
+          <th mat-header-cell *matHeaderCellDef>Cliente</th>
+          <td mat-cell *matCellDef="let inv">{{ inv.customer?.full_name || 'Consumidor final' }}</td>
+        </ng-container>
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Fecha emisión</th>
           <td mat-cell *matCellDef="let inv">{{ formatDate(inv.issue_date) }}</td>
@@ -50,9 +57,9 @@
           <th mat-header-cell *matHeaderCellDef>Subtotal</th>
           <td mat-cell *matCellDef="let inv">${{ inv.subtotal | number:'1.2-2' }}</td>
         </ng-container>
-        <ng-container matColumnDef="tax">
+        <ng-container matColumnDef="tax_amount">
           <th mat-header-cell *matHeaderCellDef>IVA</th>
-          <td mat-cell *matCellDef="let inv">${{ inv.tax | number:'1.2-2' }}</td>
+          <td mat-cell *matCellDef="let inv">${{ inv.tax_amount | number:'1.2-2' }}</td>
         </ng-container>
         <ng-container matColumnDef="total">
           <th mat-header-cell *matHeaderCellDef>Total</th>
@@ -75,7 +82,7 @@
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="cursor-pointer" [routerLink]="['/invoices', row.id]"></tr>
         <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-gray-400" [attr.colspan]="displayedColumns.length">
+          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
             No se encontraron facturas
           </td>
         </tr>

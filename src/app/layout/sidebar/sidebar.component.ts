@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
@@ -9,8 +9,10 @@ interface NavItem {
   label: string;
   icon: string;
   route: string;
-  permission?: string;
-  platformStaff?: boolean;
+  /** Solo visible para STORE_ADMIN (o plataforma) */
+  adminOnly?: boolean;
+  /** Solo visible para usuarios de plataforma */
+  platformOnly?: boolean;
 }
 
 interface NavGroup {
@@ -28,66 +30,49 @@ interface NavGroup {
 export class SidebarComponent {
   authService = inject(AuthService);
   collapsed = input<boolean>(false);
-  toggleCollapse = output<void>();
 
   private navGroups: NavGroup[] = [
     {
       label: 'Ventas',
       items: [
-        { label: 'Clientes',          icon: 'people',           route: '/clients',       permission: 'clients.view'        },
-        { label: 'Pedidos',           icon: 'shopping_cart',    route: '/orders',        permission: 'orders.view'         },
-        { label: 'Facturas',          icon: 'receipt_long',     route: '/invoices',      permission: 'invoices.view'       },
-        { label: 'Pagos',             icon: 'payments',         route: '/payments',      permission: 'payments.view'       },
-        { label: 'Notas de crédito',  icon: 'note_alt',         route: '/credit-notes',  permission: 'credit_notes.manage' },
+        { label: 'Clientes',  icon: 'people',       route: '/customers' },
+        { label: 'Facturas',  icon: 'receipt_long',  route: '/invoices'  },
       ],
     },
     {
       label: 'Inventario',
       items: [
-        { label: 'Productos',   icon: 'inventory_2', route: '/products',   permission: 'products.view' },
-        { label: 'Categorías',  icon: 'category',    route: '/categories', permission: 'products.view' },
-      ],
-    },
-    {
-      label: 'Compras',
-      items: [
-        { label: 'Proveedores',         icon: 'local_shipping', route: '/suppliers',       permission: 'suppliers.view'  },
-        { label: 'Órdenes de compra',   icon: 'shopping_bag',   route: '/purchase-orders', permission: 'purchases.view'  },
-      ],
-    },
-    {
-      label: 'Finanzas',
-      items: [
-        { label: 'Caja',    icon: 'point_of_sale',          route: '/cash-registers', permission: 'cash_register.operate' },
-        { label: 'Gastos',  icon: 'account_balance_wallet', route: '/expenses',       permission: 'expenses.view'         },
+        { label: 'Productos',   icon: 'inventory_2',    route: '/products'  },
+        { label: 'Proveedores', icon: 'local_shipping', route: '/suppliers' },
       ],
     },
     {
       label: 'Administración',
       items: [
-        { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',          permission: 'users.view'          },
-        { label: 'Roles',     icon: 'security',        route: '/roles',          permission: 'roles.manage'        },
-        { label: 'Módulos',   icon: 'extension',       route: '/module-requests' },
+        { label: 'Tasas de impuesto', icon: 'percent',          route: '/tax-rates',       adminOnly: true },
+        { label: 'Usuarios',          icon: 'manage_accounts',  route: '/users',           adminOnly: true },
+        { label: 'Módulos',           icon: 'extension',        route: '/module-requests', adminOnly: true },
       ],
     },
     {
       label: 'Plataforma',
       items: [
-        { label: 'Organizaciones',  icon: 'business',              route: '/organizations',     platformStaff: true },
-        { label: 'Módulos',         icon: 'widgets',               route: '/platform/modules',  platformStaff: true },
-        { label: 'Staff',           icon: 'admin_panel_settings',  route: '/platform/staff',    platformStaff: true },
+        { label: 'Empresas',  icon: 'business', route: '/companies',       platformOnly: true },
+        { label: 'Módulos',   icon: 'widgets',  route: '/platform/modules', platformOnly: true },
       ],
     },
   ];
 
   get visibleNavGroups(): NavGroup[] {
-    const isSystem = this.authService.isSystemUser();
+    const isSystem  = this.authService.isSystemUser();
+    const isAdmin   = this.authService.isStoreAdmin();
+
     return this.navGroups
       .map(group => ({
         ...group,
         items: group.items.filter(item => {
-          if (item.platformStaff) return isSystem || this.authService.isPlatformStaff();
-          if (item.permission)   return isSystem || this.authService.hasPermission(item.permission);
+          if (item.platformOnly) return isSystem;
+          if (item.adminOnly)    return isSystem || isAdmin;
           return true;
         }),
       }))
@@ -101,9 +86,5 @@ export class SidebarComponent {
 
   logout(): void {
     this.authService.logout();
-  }
-
-  onToggle(): void {
-    this.toggleCollapse.emit();
   }
 }
