@@ -1,5 +1,5 @@
-import { Component, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule, DOCUMENT } from '@angular/common';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatInputModule } from '@angular/material/input';
@@ -26,14 +26,13 @@ import { RolesService, StoreRole } from '../../../core/services/roles.service';
   ],
   templateUrl: './user-form.component.html',
 })
-export class UserFormComponent implements OnInit, OnDestroy {
+export class UserFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private usersService = inject(UsersService);
   private rolesService = inject(RolesService);
   private snackBar = inject(MatSnackBar);
-  private document = inject(DOCUMENT);
 
   loading = signal(false);
   saving = signal(false);
@@ -87,10 +86,6 @@ export class UserFormComponent implements OnInit, OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
-    this.cleanupStaleOverlays();
-  }
-
   onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -107,7 +102,6 @@ export class UserFormComponent implements OnInit, OnDestroy {
         role_id:   role_id!,
       }).subscribe({
         next: () => {
-          this.cleanupStaleOverlays();
           this.snackBar.open('Usuario actualizado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
           this.router.navigate(['/users']);
         },
@@ -121,17 +115,11 @@ export class UserFormComponent implements OnInit, OnDestroy {
         role_id:   role_id!,
       }).subscribe({
         next: () => {
-          this.cleanupStaleOverlays();
           this.snackBar.open('Usuario creado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
           this.router.navigate(['/users']);
         },
         error: () => this.saving.set(false),
       });
     }
-  }
-
-  private cleanupStaleOverlays(): void {
-    this.document.querySelectorAll('.cdk-overlay-backdrop').forEach(backdrop => backdrop.remove());
-    this.document.body.classList.remove('cdk-global-scrollblock');
   }
 }
