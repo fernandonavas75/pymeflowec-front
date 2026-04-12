@@ -111,6 +111,21 @@ a { color: inherit; }
   color: var(--text-primary) !important;
 }
 
+.mat-mdc-menu-panel {
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--bg-surface) !important;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16) !important;
+}
+
+.mat-mdc-menu-item {
+  color: var(--text-primary) !important;
+}
+
+.mat-mdc-menu-item:hover:not([disabled]) {
+  background: var(--bg-hover) !important;
+}
+
 .mat-mdc-dialog-container {
   --mdc-dialog-container-shape: 12px;
   --mdc-dialog-container-color: var(--bg-surface) !important;
