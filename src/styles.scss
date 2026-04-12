@@ -86,11 +86,29 @@ img, video { max-width: 100%; height: auto; }
 a { color: inherit; }
 
 // ── CDK / Material Overrides ──────────────────────────────────────
-.cdk-overlay-container { z-index: 1050 !important; }
+.cdk-overlay-container {
+  z-index: 1050 !important;
+}
 
 .mat-mdc-select-panel {
   max-height: 200px !important;
   overflow-y: auto !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16) !important;
+  background: var(--bg-surface) !important;
+}
+
+.mat-mdc-option {
+  min-height: 40px !important;
+}
+
+.mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+  background-color: rgb(99 102 241 / 0.10) !important;
+}
+
+.mat-mdc-select-value {
+  color: var(--text-primary) !important;
 }
 
 .mat-mdc-dialog-container {
