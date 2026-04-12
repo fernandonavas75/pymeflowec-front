@@ -4,6 +4,7 @@
   "scripts": {
     "start": "ng serve --port 5173",
     "build": "ng build",
+    "build:gh-pages": "ng build --configuration production --base-href /pymeflowec-front/",
     "watch": "ng build --watch --configuration development"
   },
   "dependencies": {
