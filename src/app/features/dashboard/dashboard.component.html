@@ -4,37 +4,88 @@
   <div class="page-header">
     <div class="header-left">
       <h1 class="greeting">{{ greeting }}, <span class="name">{{ firstName }}</span></h1>
-      <p class="org-name">
-        <span class="material-icons-round">business</span>
-        {{ authService.currentUser()?.company?.name }}
-      </p>
-    </div>
-    <div class="header-right">
-      <span class="last-updated">Actualizado: {{ lastUpdated | date:'HH:mm' }}</span>
-      <button class="btn-refresh" (click)="refresh()" [class.spinning]="loading" matTooltip="Actualizar datos">
-        <span class="material-icons-round">refresh</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ── Skeleton ───────────────────────────────────────── -->
-  @if (loading) {
-    <div class="kpi-grid">
-      @for (i of [1,2,3,4]; track i) {
-        <div class="skeleton-card"></div>
+      @if (authService.currentUser()?.company?.name) {
+        <p class="org-name">
+          <span class="material-icons-round">business</span>
+          {{ authService.currentUser()?.company?.name }}
+        </p>
+      } @else {
+        <p class="org-name">
+          <span class="material-icons-round">admin_panel_settings</span>
+          Administrador de plataforma
+        </p>
       }
     </div>
-    <div class="charts-grid mt-6">
-      <div class="skeleton-card h-72"></div>
+    @if (hasAnalytics()) {
+      <div class="header-right">
+        <span class="last-updated">Actualizado: {{ lastUpdated | date:'HH:mm' }}</span>
+        <button class="btn-refresh" (click)="refresh()" [class.spinning]="loading" matTooltip="Actualizar datos">
+          <span class="material-icons-round">refresh</span>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ── Skeleton mientras carga catálogo / analytics ───── -->
+  @if (loading) {
+    <div class="module-cards-grid">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="skeleton-card module-card-skeleton"></div>
+      }
     </div>
+    @if (hasAnalytics()) {
+      <div class="kpi-grid mt-4">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton-card"></div>
+        }
+      </div>
+    }
   }
 
-  <!-- ── Content ────────────────────────────────────────── -->
-  @if (!loading && data) {
+  <!-- ── Tarjetas de módulos ─────────────────────────────── -->
+  @if (!loading) {
+
+    <div class="section-label">
+      <mat-icon>grid_view</mat-icon>
+      <span>{{ authService.isSystemUser() ? 'Panel de plataforma' : 'Mis módulos' }}</span>
+    </div>
+
+    @if (moduleCards().length > 0) {
+      <div class="module-cards-grid">
+        @for (card of moduleCards(); track card.route) {
+          <a [routerLink]="card.route" class="module-card module-card--{{ card.color }}">
+            <div class="module-card-icon">
+              <mat-icon>{{ card.icon }}</mat-icon>
+            </div>
+            <div class="module-card-body">
+              <p class="module-card-label">{{ card.label }}</p>
+              <p class="module-card-desc">{{ card.description }}</p>
+            </div>
+            <mat-icon class="module-card-arrow">arrow_forward</mat-icon>
+          </a>
+        }
+      </div>
+    } @else {
+      <!-- Sin módulos activos (STORE_SELLER sin módulos aprobados) -->
+      <div class="no-modules-msg">
+        <mat-icon>extension_off</mat-icon>
+        <p>Tu empresa aún no tiene módulos activos.</p>
+        <p class="no-modules-sub">Contacta a tu administrador para solicitar acceso a los módulos del ERP.</p>
+      </div>
+    }
+
+  }
+
+  <!-- ── Analytics de facturación (solo si MOD_INVOICING activo) ── -->
+  @if (!loading && hasAnalytics() && data) {
+
+    <div class="section-label mt-8">
+      <mat-icon>bar_chart</mat-icon>
+      <span>Resumen de facturación</span>
+    </div>
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
-
       <app-stat-card
         title="Ingresos facturados"
         [value]="'$' + data.totalRevenue.toFixed(2)"
@@ -43,7 +94,6 @@
         color="green"
         trend="up"
       />
-
       <app-stat-card
         title="Facturas emitidas"
         [value]="data.issuedInvoices"
@@ -51,7 +101,6 @@
         icon="receipt_long"
         color="indigo"
       />
-
       <app-stat-card
         title="Total clientes"
         [value]="data.totalCustomers"
@@ -59,7 +108,6 @@
         icon="people"
         color="blue"
       />
-
       <app-stat-card
         title="Total productos"
         [value]="data.totalProducts"
@@ -67,7 +115,6 @@
         icon="inventory_2"
         color="purple"
       />
-
     </div>
 
     <!-- Alertas -->
@@ -79,29 +126,6 @@
           producto{{ data.lowStockProducts !== 1 ? 's' : '' }} con stock bajo del mínimo configurado
         </span>
         <a routerLink="/products" class="alert-link">Ver productos →</a>
-      </div>
-    }
-
-    <!-- Acciones rápidas -->
-    @if (isStoreUser) {
-      <div class="quick-actions-bar">
-        <span class="qa-label">Acciones rápidas</span>
-        <div class="qa-buttons">
-          <a routerLink="/customers/new" class="qa-btn qa-blue">
-            <span class="material-icons-round">person_add</span>
-            Nuevo cliente
-          </a>
-          @if (isAdmin) {
-            <a routerLink="/products/new" class="qa-btn qa-purple">
-              <span class="material-icons-round">add_box</span>
-              Nuevo producto
-            </a>
-          }
-          <a routerLink="/invoices/new" class="qa-btn qa-green">
-            <span class="material-icons-round">receipt_long</span>
-            Nueva factura
-          </a>
-        </div>
       </div>
     }
 

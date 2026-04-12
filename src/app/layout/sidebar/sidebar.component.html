@@ -22,19 +22,50 @@
       @if (!collapsed()) { <span class="nav-label">Dashboard</span> }
     </a>
 
-    <!-- Grupos -->
-    @for (group of visibleNavGroups; track group.label) {
+    <!-- Skeleton mientras cargan los módulos de tienda -->
+    @if (moduleLoading()) {
+      <div class="nav-item nav-item--loading opacity-40 pointer-events-none">
+        <mat-spinner diameter="16" class="nav-icon"></mat-spinner>
+        @if (!collapsed()) { <span class="nav-label">Cargando módulos…</span> }
+      </div>
+    }
+
+    <!-- Grupos de navegación -->
+    @for (group of visibleNavGroups(); track group.label) {
+
+      <!-- Etiqueta del grupo -->
       @if (!collapsed()) {
         <div class="nav-group-label">{{ group.label }}</div>
       } @else {
         <div class="nav-group-divider"></div>
       }
+
+      <!-- Items del grupo -->
       @for (item of group.items; track item.route) {
-        <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
-           [matTooltip]="collapsed() ? item.label : ''" matTooltipPosition="right">
-          <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-          @if (!collapsed()) { <span class="nav-label">{{ item.label }}</span> }
-        </a>
+        @if (item.moduleStatus === 'PENDING') {
+          <!-- Módulo en espera de autorización: visible pero no navegable -->
+          <div class="nav-item nav-item--pending"
+               [matTooltip]="collapsed()
+                 ? (item.label + ' — pendiente de autorización')
+                 : 'Módulo pendiente de autorización por la plataforma'"
+               matTooltipPosition="right">
+            <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+            @if (!collapsed()) {
+              <span class="nav-label">{{ item.label }}</span>
+              <mat-icon class="text-amber-400 ml-auto"
+                        style="font-size:15px;width:15px;height:15px;">
+                hourglass_empty
+              </mat-icon>
+            }
+          </div>
+        } @else {
+          <!-- Item normal (activo o sin módulo requerido) -->
+          <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
+             [matTooltip]="collapsed() ? item.label : ''" matTooltipPosition="right">
+            <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+            @if (!collapsed()) { <span class="nav-label">{{ item.label }}</span> }
+          </a>
+        }
       }
     }
 

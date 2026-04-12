@@ -11,7 +11,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ModuleRequestsService } from '../../../core/services/module-requests.service';
-import { ModuleRequest, PlatformModule } from '../../../core/models/module-request.model';
+import { CompanyModulesService } from '../../../core/services/company-modules.service';
+import { ModuleRequest, ModuleCatalogItem } from '../../../core/models/module-request.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
@@ -26,18 +27,23 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
   templateUrl: './module-requests-list.component.html',
 })
 export class ModuleRequestsListComponent implements OnInit {
-  private svc = inject(ModuleRequestsService);
-  private snackBar = inject(MatSnackBar);
-  private dialog = inject(MatDialog);
-  private fb = inject(FormBuilder);
-  authService = inject(AuthService);
+  private svc        = inject(ModuleRequestsService);
+  private modulesSvc = inject(CompanyModulesService);
+  private snackBar   = inject(MatSnackBar);
+  private dialog     = inject(MatDialog);
+  private fb         = inject(FormBuilder);
+  authService        = inject(AuthService);
 
-  requests = signal<ModuleRequest[]>([]);
-  availableModules = signal<PlatformModule[]>([]);
-  loading = signal(true);
-  saving = signal(false);
+  // Vista plataforma
+  requests        = signal<ModuleRequest[]>([]);
+  // Vista tienda — catálogo completo
+  catalog         = signal<ModuleCatalogItem[]>([]);
+  requestingId    = signal<number | null>(null);
+
+  loading         = signal(true);
+  saving          = signal(false);
   showRequestForm = signal(false);
-  forbidden = signal(false);
+  forbidden       = signal(false);
   displayedColumns = signal<string[]>(['module', 'status', 'date', 'actions']);
 
   requestForm = this.fb.group({
@@ -54,46 +60,17 @@ export class ModuleRequestsListComponent implements OnInit {
       this.displayedColumns.set(['org', 'module', 'status', 'date', 'actions']);
       this.loadAll();
     } else {
-      this.svc.listPlatformModules().subscribe(mods => this.availableModules.set(mods.filter(m => m.is_active)));
-      this.load();
+      this.loadCatalog();
     }
   }
 
-  load(): void {
-    this.loading.set(true);
-    this.svc.list().subscribe({
-      next: res => { this.requests.set(res.data); this.loading.set(false); },
-      error: (err) => {
-        if (err?.status === 403) this.forbidden.set(true);
-        this.loading.set(false);
-      },
-    });
-  }
+  // ── Vista plataforma ────────────────────────────────────────────────
 
   loadAll(): void {
     this.loading.set(true);
     this.svc.listAll().subscribe({
       next: res => { this.requests.set(res.data); this.loading.set(false); },
       error: () => this.loading.set(false),
-    });
-  }
-
-  submitRequest(): void {
-    if (this.requestForm.invalid) { this.requestForm.markAllAsTouched(); return; }
-    this.saving.set(true);
-    const v = this.requestForm.value;
-    this.svc.create({ module_id: v.module_id!, comments: v.comments || undefined }).subscribe({
-      next: () => {
-        this.snackBar.open('Solicitud enviada', 'OK', { duration: 3000 });
-        this.showRequestForm.set(false);
-        this.requestForm.reset();
-        this.load();
-        this.saving.set(false);
-      },
-      error: (err) => {
-        this.snackBar.open(err?.error?.message || 'Error al enviar', 'OK', { duration: 4000 });
-        this.saving.set(false);
-      },
     });
   }
 
@@ -119,21 +96,60 @@ export class ModuleRequestsListComponent implements OnInit {
     });
   }
 
-  statusClass(s: string): string {
+  // ── Vista tienda ────────────────────────────────────────────────────
+
+  loadCatalog(): void {
+    this.loading.set(true);
+    this.modulesSvc.loadCatalog().subscribe({
+      next: items => { this.catalog.set(items); this.loading.set(false); },
+      error: (err) => {
+        if (err?.status === 403) this.forbidden.set(true);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  requestModule(item: ModuleCatalogItem): void {
+    this.requestingId.set(item.id);
+    this.svc.create({ module_id: item.id }).subscribe({
+      next: () => {
+        this.snackBar.open(`Solicitud enviada para "${item.name}"`, 'OK', { duration: 3000 });
+        this.requestingId.set(null);
+        this.loadCatalog();
+      },
+      error: (err) => {
+        this.snackBar.open(err?.error?.message || 'Error al enviar', 'OK', { duration: 4000 });
+        this.requestingId.set(null);
+      },
+    });
+  }
+
+  // ── Helpers compartidos ─────────────────────────────────────────────
+
+  statusClass(s: string | null): string {
     const m: Record<string, string> = {
       PENDING:  'bg-amber-50 text-amber-700',
       APPROVED: 'bg-green-50 text-green-700',
       REJECTED: 'bg-red-50 text-red-700',
     };
-    return m[s] ?? 'bg-gray-50 text-gray-600';
+    return s ? (m[s] ?? 'bg-gray-50 text-gray-600') : '';
   }
 
-  statusLabel(s: string): string {
+  statusLabel(s: string | null): string {
     const m: Record<string, string> = {
-      PENDING:  'Pendiente',
-      APPROVED: 'Aprobada',
-      REJECTED: 'Rechazada',
+      PENDING:  'En espera',
+      APPROVED: 'Activo',
+      REJECTED: 'Rechazado',
     };
-    return m[s] ?? s;
+    return s ? (m[s] ?? s) : 'No solicitado';
+  }
+
+  statusIcon(s: string | null): string {
+    const m: Record<string, string> = {
+      PENDING:  'hourglass_empty',
+      APPROVED: 'check_circle',
+      REJECTED: 'cancel',
+    };
+    return s ? (m[s] ?? 'circle') : 'add_circle_outline';
   }
 }

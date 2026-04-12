@@ -31,3 +31,10 @@ export interface CreateModuleRequestDto {
   module_id: number;
   comments?: string;
 }
+
+/** Módulo de la plataforma con estado de acceso para la empresa actual */
+export interface ModuleCatalogItem extends PlatformModule {
+  /** APPROVED = activo, PENDING = solicitud en espera, REJECTED = rechazado, null = sin solicitud */
+  status: ModuleRequestStatus | null;
+  request_id: number | null;
+}

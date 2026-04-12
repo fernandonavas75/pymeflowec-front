@@ -10,6 +10,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { UsersService } from '../../../core/services/users.service';
 import { RolesService, StoreRole } from '../../../core/services/roles.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { CompaniesService } from '../../../core/services/companies.service';
+import { Company } from '../../../core/models/company.model';
 
 @Component({
   selector: 'app-user-form',
@@ -27,38 +30,55 @@ import { RolesService, StoreRole } from '../../../core/services/roles.service';
   templateUrl: './user-form.component.html',
 })
 export class UserFormComponent implements OnInit {
-  private fb = inject(FormBuilder);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
-  private usersService = inject(UsersService);
-  private rolesService = inject(RolesService);
-  private snackBar = inject(MatSnackBar);
+  private fb             = inject(FormBuilder);
+  private route          = inject(ActivatedRoute);
+  private router         = inject(Router);
+  private usersService   = inject(UsersService);
+  private rolesService   = inject(RolesService);
+  private snackBar       = inject(MatSnackBar);
+  authService            = inject(AuthService);
+  private companiesSvc   = inject(CompaniesService);
 
-  loading = signal(false);
-  saving = signal(false);
-  userId = signal<string | null>(null);
-  showPassword = signal(false);
-  roles = signal<StoreRole[]>([]);
+  loading       = signal(false);
+  saving        = signal(false);
+  userId        = signal<string | null>(null);
+  showPassword  = signal(false);
+  roles         = signal<StoreRole[]>([]);
+  companies     = signal<Company[]>([]);
 
   form = this.fb.group({
-    full_name: ['', [Validators.required, Validators.minLength(3)]],
-    email:     ['', [Validators.required, Validators.email]],
-    password:  ['', [Validators.minLength(6)]],
-    role_id:   [null as number | null, [Validators.required]],
+    full_name:  ['', [Validators.required, Validators.minLength(3)]],
+    email:      ['', [Validators.required, Validators.email]],
+    password:   ['', [Validators.minLength(6)]],
+    role_id:    [null as number | null, [Validators.required]],
+    company_id: [null as number | null],   // solo se usa cuando el creador es plataforma
   });
+
+  get isEdit(): boolean { return !!this.userId(); }
+
+  /** true cuando el admin de plataforma crea usuarios para otra empresa */
+  get isPlatformCreating(): boolean {
+    return this.authService.isSystemUser() && !this.isEdit;
+  }
 
   togglePassword(): void {
     this.showPassword.update(v => !v);
   }
 
-  get isEdit(): boolean {
-    return !!this.userId();
-  }
-
   ngOnInit(): void {
+    // Cargar roles de tienda
     this.rolesService.listStoreRoles().subscribe({
       next: roles => this.roles.set(roles),
     });
+
+    // Si es admin de plataforma en modo creación: cargar lista de empresas y obligar company_id
+    if (this.isPlatformCreating) {
+      this.form.get('company_id')!.addValidators(Validators.required);
+      this.form.get('company_id')!.updateValueAndValidity();
+      this.companiesSvc.list({ limit: 200 }).subscribe({
+        next: res => this.companies.set(res.data.filter(c => c.status === 'ACTIVE')),
+      });
+    }
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -93,7 +113,7 @@ export class UserFormComponent implements OnInit {
     }
 
     this.saving.set(true);
-    const { full_name, email, password, role_id } = this.form.value;
+    const { full_name, email, password, role_id, company_id } = this.form.value;
 
     if (this.isEdit) {
       this.usersService.update(this.userId()!, {
@@ -102,21 +122,28 @@ export class UserFormComponent implements OnInit {
         role_id:   role_id!,
       }).subscribe({
         next: () => {
-          this.snackBar.open('Usuario actualizado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
-          this.router.navigate(['/users']);
+          this.saving.set(false);
+          this.router.navigate(['/users']).then(() => {
+            this.snackBar.open('Usuario actualizado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
+          });
         },
         error: () => this.saving.set(false),
       });
     } else {
       this.usersService.create({
-        full_name: full_name!,
-        email:     email!,
-        password:  password!,
-        role_id:   role_id!,
+        full_name:  full_name!,
+        email:      email!,
+        password:   password!,
+        role_id:    role_id!,
+        company_id: company_id ?? undefined,  // solo si el admin de plataforma lo especificó
       }).subscribe({
         next: () => {
-          this.snackBar.open('Usuario creado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
-          this.router.navigate(['/users']);
+          this.saving.set(false);
+          // Navegar primero y mostrar snackBar después evita que el overlay de
+          // Material quede colgado al destruirse el componente.
+          this.router.navigate(['/users']).then(() => {
+            this.snackBar.open('Usuario creado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
+          });
         },
         error: () => this.saving.set(false),
       });

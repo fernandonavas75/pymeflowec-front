@@ -4,8 +4,12 @@
       <mat-icon>arrow_back</mat-icon>
     </a>
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}</p>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        {{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        {{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}
+      </p>
     </div>
   </div>
 
@@ -17,6 +21,23 @@
     <div class="form-card" style="max-width: 600px">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="flex flex-col gap-4">
+
+          <!-- Selector de empresa: solo visible para admin de plataforma al crear -->
+          @if (isPlatformCreating) {
+            <mat-form-field appearance="outline">
+              <mat-label>Empresa *</mat-label>
+              <mat-select formControlName="company_id">
+                @for (c of companies(); track c.id) {
+                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                }
+              </mat-select>
+              @if (form.get('company_id')?.touched && form.get('company_id')?.invalid) {
+                <mat-error>Selecciona una empresa</mat-error>
+              }
+              <mat-hint>El usuario pertenecerá a esta empresa</mat-hint>
+            </mat-form-field>
+          }
+
           <mat-form-field appearance="outline">
             <mat-label>Nombre completo *</mat-label>
             <input matInput formControlName="full_name">
@@ -50,7 +71,9 @@
             <mat-label>Rol *</mat-label>
             <mat-select formControlName="role_id">
               @for (role of roles(); track role.id) {
-                <mat-option [value]="role.id">{{ role.name === 'STORE_ADMIN' ? 'Administrador' : 'Vendedor' }}</mat-option>
+                <mat-option [value]="role.id">
+                  {{ role.name === 'STORE_ADMIN' ? 'Administrador' : 'Vendedor' }}
+                </mat-option>
               }
             </mat-select>
             @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {

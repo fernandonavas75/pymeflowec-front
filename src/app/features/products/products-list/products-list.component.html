@@ -85,10 +85,10 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let p">
             <div class="flex items-center gap-1">
-              <button mat-icon-button matTooltip="Ajustar stock" (click)="openStockDialog(p)">
-                <mat-icon class="text-blue-400">inventory</mat-icon>
-              </button>
               @if (canEdit()) {
+                <button mat-icon-button matTooltip="Ajustar stock" (click)="openStockDialog(p)">
+                  <mat-icon class="text-blue-400">inventory</mat-icon>
+                </button>
                 <a [routerLink]="['/products', p.id, 'edit']" mat-icon-button matTooltip="Editar">
                   <mat-icon class="text-slate-400 dark:text-slate-500">edit</mat-icon>
                 </a>

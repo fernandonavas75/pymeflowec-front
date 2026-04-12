@@ -1,4 +1,4 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -7,10 +7,22 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService, DashboardData } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CompanyModulesService } from '../../core/services/company-modules.service';
 import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+
+interface DashboardCard {
+  icon: string;
+  label: string;
+  description: string;
+  route: string;
+  color: 'green' | 'blue' | 'purple' | 'teal' | 'amber' | 'indigo' | 'rose';
+  moduleCode?: string;
+  adminOnly?: boolean;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -23,6 +35,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatProgressSpinnerModule,
     StatCardComponent,
     StatusBadgeComponent,
   ],
@@ -31,7 +44,8 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
-  authService = inject(AuthService);
+  authService              = inject(AuthService);
+  private modulesSvc       = inject(CompanyModulesService);
 
   data: DashboardData | null = null;
   loading = true;
@@ -40,13 +54,87 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   invoicesColumns = ['number', 'date', 'total', 'status'];
 
-  get isStoreUser(): boolean {
-    return this.authService.isStoreUser();
-  }
+  // ── Definición estática de tarjetas ────────────────────────────────
 
-  get isAdmin(): boolean {
-    return this.authService.isStoreAdmin();
-  }
+  private readonly STORE_CARD_DEFS: DashboardCard[] = [
+    {
+      icon: 'people', label: 'Clientes',
+      description: 'Administra tus clientes y contactos',
+      route: '/customers', color: 'blue', moduleCode: 'MOD_INVOICING',
+    },
+    {
+      icon: 'receipt_long', label: 'Facturación',
+      description: 'Emite y controla tus facturas electrónicas',
+      route: '/invoices', color: 'green', moduleCode: 'MOD_INVOICING',
+    },
+    {
+      icon: 'inventory_2', label: 'Productos',
+      description: 'Gestiona tu inventario y catálogo',
+      route: '/products', color: 'purple', moduleCode: 'MOD_PRODUCTS',
+    },
+    {
+      icon: 'local_shipping', label: 'Proveedores',
+      description: 'Controla tus proveedores y compras',
+      route: '/suppliers', color: 'teal', moduleCode: 'MOD_SUPPLIERS',
+    },
+    {
+      icon: 'percent', label: 'Tasas de impuesto',
+      description: 'Configura impuestos y tributos',
+      route: '/tax-rates', color: 'amber', moduleCode: 'MOD_TAX', adminOnly: true,
+    },
+    {
+      icon: 'manage_accounts', label: 'Usuarios',
+      description: 'Gestiona los usuarios de tu empresa',
+      route: '/users', color: 'indigo', adminOnly: true,
+    },
+    {
+      icon: 'extension', label: 'Módulos ERP',
+      description: 'Solicita y administra módulos del ERP',
+      route: '/module-requests', color: 'rose', adminOnly: true,
+    },
+  ];
+
+  private readonly PLATFORM_CARD_DEFS: DashboardCard[] = [
+    {
+      icon: 'business', label: 'Empresas',
+      description: 'Gestiona las empresas registradas en la plataforma',
+      route: '/companies', color: 'blue',
+    },
+    {
+      icon: 'pending_actions', label: 'Solicitudes',
+      description: 'Revisa y aprueba solicitudes de módulos pendientes',
+      route: '/module-requests', color: 'amber',
+    },
+  ];
+
+  // ── Computed signals ────────────────────────────────────────────────
+
+  /** Tarjetas visibles para el usuario actual */
+  moduleCards = computed((): DashboardCard[] => {
+    if (this.authService.isSystemUser()) return this.PLATFORM_CARD_DEFS;
+
+    const approved = this.modulesSvc.approvedCodes();
+    const failed   = this.modulesSvc.loadFailed();
+    const isAdmin  = this.authService.isStoreAdmin();
+
+    return this.STORE_CARD_DEFS.filter(card => {
+      if (card.adminOnly && !isAdmin) return false;
+      if (!card.moduleCode)           return true;   // sin gate de módulo (Usuarios, Módulos ERP)
+      if (failed)                     return true;   // fallback si API falla
+      return approved.has(card.moduleCode);
+    });
+  });
+
+  /**
+   * Mostrar sección de analytics solo si la empresa tiene MOD_INVOICING aprobado.
+   * Si loadFailed (API inalcanzable) se muestra igualmente como fallback.
+   */
+  hasAnalytics = computed(() => {
+    if (!this.authService.isStoreUser()) return false;
+    return this.modulesSvc.approvedCodes().has('MOD_INVOICING') || this.modulesSvc.loadFailed();
+  });
+
+  // ── Getters de presentación ─────────────────────────────────────────
 
   get firstName(): string {
     return this.authService.currentUser()?.full_name?.split(' ')?.[0] ?? '';
@@ -63,29 +151,57 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (!this.data) return {};
     const days = this.data.revenueByDay;
     return {
-      series: [{ name: 'Ingresos facturados', data: days.map(d => d.amount) }],
-      chart: { type: 'area' as const, height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
-      xaxis: {
+      series:      [{ name: 'Ingresos facturados', data: days.map(d => d.amount) }],
+      chart:       { type: 'area' as const, height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
+      xaxis:       {
         categories: days.map(d => d.date),
-        labels: { style: { fontSize: '11px', colors: '#64748b' } },
+        labels:     { style: { fontSize: '11px', colors: '#64748b' } },
         axisBorder: { show: false },
-        axisTicks: { show: false },
+        axisTicks:  { show: false },
       },
-      yaxis: {
+      yaxis:       {
         min: 0,
         labels: { formatter: (v: number) => `$${v.toFixed(0)}`, style: { fontSize: '11px', colors: '#64748b' } },
       },
-      colors: ['#22c55e'],
-      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.01, stops: [0, 100] } },
-      stroke: { curve: 'smooth' as const, width: 2 },
-      dataLabels: { enabled: false },
-      grid: { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { left: 0, right: 0 } },
-      tooltip: { y: { formatter: (v: number) => `$${v.toFixed(2)}` } },
+      colors:      ['#22c55e'],
+      fill:        { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.01, stops: [0, 100] } },
+      stroke:      { curve: 'smooth' as const, width: 2 },
+      dataLabels:  { enabled: false },
+      grid:        { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { left: 0, right: 0 } },
+      tooltip:     { y: { formatter: (v: number) => `$${v.toFixed(2)}` } },
     };
   }
 
+  // ── Ciclo de vida ───────────────────────────────────────────────────
+
   ngOnInit(): void {
-    this.load();
+    // Usuarios de plataforma: no necesitan analytics
+    if (!this.authService.isStoreUser()) {
+      this.loading = false;
+      return;
+    }
+
+    // Si el catálogo ya fue cargado por el sidebar, usarlo directamente
+    if (this.modulesSvc.catalogReady()) {
+      this.afterCatalogReady();
+      return;
+    }
+
+    // Catálogo aún en vuelo (sidebar lo está cargando en paralelo);
+    // llamamos nosotros también para tener un callback propio.
+    this.modulesSvc.loadCatalog().subscribe({
+      next:  () => this.afterCatalogReady(),
+      error: () => this.afterCatalogReady(),
+    });
+  }
+
+  /** Decide si cargar analytics una vez que el catálogo de módulos está listo */
+  private afterCatalogReady(): void {
+    if (this.hasAnalytics()) {
+      this.load();
+    } else {
+      this.loading = false;
+    }
   }
 
   load(): void {

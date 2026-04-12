@@ -55,7 +55,10 @@ export class ProductsListComponent implements OnInit {
   searchCtrl = new FormControl('');
   statusCtrl = new FormControl('');
 
-  displayedColumns = ['name', 'stock', 'sale_price', 'status', 'actions'];
+  get displayedColumns(): string[] {
+    const base = ['name', 'stock', 'sale_price', 'status'];
+    return this.canEdit() ? [...base, 'actions'] : base;
+  }
 
   ngOnInit(): void {
     this.loadProducts();

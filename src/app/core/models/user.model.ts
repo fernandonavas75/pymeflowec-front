@@ -24,6 +24,8 @@ export interface CreateUserDto {
   email: string;
   password: string;
   role_id: number;
+  /** Requerido solo cuando el creador es admin de plataforma (sin empresa propia) */
+  company_id?: number;
 }
 
 export interface UpdateUserDto {

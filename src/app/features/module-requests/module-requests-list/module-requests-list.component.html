@@ -1,87 +1,62 @@
 <div class="page-container">
   <div class="page-header">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Solicitudes de módulos</h1>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        {{ isPlatformUser ? 'Solicitudes de módulos' : 'Módulos del sistema' }}
+      </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        {{ isPlatformUser ? 'Gestiona solicitudes de todas las empresas' : 'Solicita nuevos módulos para tu empresa' }}
+        {{ isPlatformUser
+          ? 'Gestiona solicitudes de todas las empresas'
+          : 'Activa módulos para ampliar las funcionalidades de tu empresa' }}
       </p>
     </div>
-    @if (!isPlatformUser) {
-      <button mat-flat-button color="primary" (click)="showRequestForm.set(true)" class="flex items-center gap-2">
-        <mat-icon>add</mat-icon>
-        Solicitar módulo
-      </button>
-    }
   </div>
 
-  @if (showRequestForm()) {
-    <div class="form-card mb-6" style="max-width:500px">
-      <h3 class="text-base font-semibold text-slate-800 dark:text-slate-100 mb-4">Nueva solicitud</h3>
-      <form [formGroup]="requestForm" (ngSubmit)="submitRequest()" class="flex flex-col gap-4">
-        <mat-form-field appearance="outline">
-          <mat-label>Módulo *</mat-label>
-          <mat-select formControlName="module_id">
-            @for (m of availableModules(); track m.id) {
-              <mat-option [value]="m.id">{{ m.name }}</mat-option>
-            }
-          </mat-select>
-          @if (requestForm.get('module_id')?.touched && requestForm.get('module_id')?.invalid) {
-            <mat-error>Selecciona un módulo</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Comentarios (opcional)</mat-label>
-          <textarea matInput rows="2" formControlName="comments"></textarea>
-        </mat-form-field>
-        <div class="flex gap-2">
-          <button mat-stroked-button type="button" (click)="showRequestForm.set(false)">Cancelar</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-            @if (saving()) {
-              <mat-spinner diameter="18" class="inline-block"></mat-spinner>
-            } @else {
-              Enviar solicitud
-            }
-          </button>
-        </div>
-      </form>
-    </div>
-  }
+  @if (loading()) {
+    <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
 
-  <div class="table-container">
-    @if (loading()) {
-      <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
-    } @else if (forbidden()) {
-      <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-        <mat-icon class="text-5xl">lock</mat-icon>
-        <p class="text-base font-medium">Sin permiso para ver solicitudes</p>
-      </div>
-    } @else {
+  } @else if (forbidden()) {
+    <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+      <mat-icon class="text-5xl">lock</mat-icon>
+      <p class="text-base font-medium">Sin permiso para ver esta sección</p>
+    </div>
+
+  } @else if (isPlatformUser) {
+    <!-- ══════════════════════════════════════════════════════════════
+         VISTA PLATAFORMA: tabla de solicitudes pendientes
+    ═══════════════════════════════════════════════════════════════ -->
+    <div class="table-container">
       <table mat-table [dataSource]="requests()" class="w-full">
-        @if (isPlatformUser) {
-          <ng-container matColumnDef="org">
-            <th mat-header-cell *matHeaderCellDef>Empresa</th>
-            <td mat-cell *matCellDef="let r" class="font-medium">{{ r.company?.name || '#' + r.company_id }}</td>
-          </ng-container>
-        }
+
+        <ng-container matColumnDef="org">
+          <th mat-header-cell *matHeaderCellDef>Empresa</th>
+          <td mat-cell *matCellDef="let r" class="font-medium">{{ r.company?.name || '#' + r.company_id }}</td>
+        </ng-container>
+
         <ng-container matColumnDef="module">
           <th mat-header-cell *matHeaderCellDef>Módulo</th>
           <td mat-cell *matCellDef="let r">{{ r.module?.name || '#' + r.module_id }}</td>
         </ng-container>
+
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Estado</th>
           <td mat-cell *matCellDef="let r">
             <span class="badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
           </td>
         </ng-container>
+
         <ng-container matColumnDef="date">
           <th mat-header-cell *matHeaderCellDef>Fecha</th>
-          <td mat-cell *matCellDef="let r" class="text-sm text-slate-500 dark:text-slate-400">{{ r.created_at | date:'dd/MM/yyyy' }}</td>
+          <td mat-cell *matCellDef="let r" class="text-sm text-slate-500 dark:text-slate-400">
+            {{ r.created_at | date:'dd/MM/yyyy' }}
+          </td>
         </ng-container>
+
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let r">
             <div class="flex items-center gap-1">
-              @if (isPlatformUser && r.status === 'PENDING') {
+              @if (r.status === 'PENDING') {
                 <button mat-icon-button matTooltip="Aprobar" (click)="approve(r)">
                   <mat-icon class="text-green-500">check_circle</mat-icon>
                 </button>
@@ -92,12 +67,100 @@
             </div>
           </td>
         </ng-container>
+
         <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
         <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns().length">No hay solicitudes</td>
+          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500"
+              [attr.colspan]="displayedColumns().length">
+            No hay solicitudes
+          </td>
         </tr>
       </table>
+    </div>
+
+  } @else {
+    <!-- ══════════════════════════════════════════════════════════════
+         VISTA TIENDA: catálogo de módulos con estado
+    ═══════════════════════════════════════════════════════════════ -->
+    @if (catalog().length === 0) {
+      <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+        <mat-icon class="text-5xl">extension_off</mat-icon>
+        <p class="text-base font-medium">No hay módulos disponibles</p>
+      </div>
+    } @else {
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+        @for (item of catalog(); track item.id) {
+          <div class="form-card flex flex-col gap-3"
+               [class.opacity-60]="item.status === 'REJECTED'">
+
+            <!-- Cabecera -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center w-10 h-10 rounded-lg"
+                     [ngClass]="{
+                       'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400': item.status === 'APPROVED',
+                       'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400': item.status === 'PENDING',
+                       'bg-red-100   text-red-500   dark:bg-red-900/40   dark:text-red-400':   item.status === 'REJECTED',
+                       'bg-slate-100 text-slate-400 dark:bg-slate-800    dark:text-slate-500': !item.status
+                     }">
+                  <mat-icon style="font-size:20px;width:20px;height:20px;">{{ statusIcon(item.status) }}</mat-icon>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{{ item.name }}</p>
+                  <p class="text-xs text-slate-400 font-mono">{{ item.code }}</p>
+                </div>
+              </div>
+
+              <!-- Badge de estado -->
+              @if (item.status) {
+                <span class="badge shrink-0" [ngClass]="statusClass(item.status)">
+                  {{ statusLabel(item.status) }}
+                </span>
+              }
+            </div>
+
+            <!-- Descripción -->
+            @if (item.description) {
+              <p class="text-sm text-slate-500 dark:text-slate-400">{{ item.description }}</p>
+            }
+
+            <!-- Acción -->
+            <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
+              @if (item.status === 'APPROVED') {
+                <p class="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <mat-icon style="font-size:14px;width:14px;height:14px;">check</mat-icon>
+                  Módulo activo en tu empresa
+                </p>
+              } @else if (item.status === 'PENDING') {
+                <p class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <mat-icon style="font-size:14px;width:14px;height:14px;">hourglass_empty</mat-icon>
+                  Solicitud enviada — en espera de autorización
+                </p>
+              } @else if (item.status === 'REJECTED') {
+                <button mat-stroked-button class="w-full text-sm"
+                        [disabled]="requestingId() === item.id"
+                        (click)="requestModule(item)">
+                  @if (requestingId() === item.id) {
+                    <mat-spinner diameter="16" class="inline-block mr-2"></mat-spinner>
+                  }
+                  Volver a solicitar
+                </button>
+              } @else {
+                <button mat-flat-button color="primary" class="w-full text-sm"
+                        [disabled]="requestingId() === item.id"
+                        (click)="requestModule(item)">
+                  @if (requestingId() === item.id) {
+                    <mat-spinner diameter="16" class="inline-block mr-2"></mat-spinner>Enviando…
+                  } @else {
+                    Solicitar módulo
+                  }
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
     }
-  </div>
+  }
 </div>

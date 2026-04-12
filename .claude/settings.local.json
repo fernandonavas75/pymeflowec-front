@@ -4,7 +4,8 @@
       "Bash(npx ng:*)",
       "Bash(grep -E \"\\\\.js$\")",
       "Bash(xargs grep:*)",
-      "Bash(grep -A3 'TS2339\\\\|NG9.*$index\\\\|NG8001\\\\|NG8002\\\\|TS2345\\\\|TS2304\\\\|TS2322')"
+      "Bash(grep -A3 'TS2339\\\\|NG9.*$index\\\\|NG8001\\\\|NG8002\\\\|TS2345\\\\|TS2304\\\\|TS2322')",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }

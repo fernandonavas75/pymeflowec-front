@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, forkJoin, map } from 'rxjs';
+import { Observable, forkJoin, map, catchError, of } from 'rxjs';
 import { InvoicesService } from './invoices.service';
 import { ProductsService } from './products.service';
 import { CustomersService } from './customers.service';
@@ -28,10 +28,11 @@ export class DashboardService {
   private customersService = inject(CustomersService);
 
   getDashboardData(): Observable<DashboardData> {
+    const emptyList = { data: [] as any[], total: 0 };
     return forkJoin({
-      invoices:  this.invoicesService.list({ page: 1, limit: 50 }),
-      products:  this.productsService.list({ page: 1, limit: 50 }),
-      customers: this.customersService.list({ page: 1, limit: 1 }),
+      invoices:  this.invoicesService.list({ page: 1, limit: 50 }).pipe(catchError(() => of(emptyList))),
+      products:  this.productsService.list({ page: 1, limit: 50 }).pipe(catchError(() => of(emptyList))),
+      customers: this.customersService.list({ page: 1, limit: 1 }).pipe(catchError(() => of(emptyList))),
     }).pipe(
       map(({ invoices, products, customers }) => {
         const allInvoices = invoices.data;
