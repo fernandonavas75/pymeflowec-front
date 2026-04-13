@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -120,14 +121,15 @@ export class UserFormComponent implements OnInit {
         full_name: full_name!,
         email:     email!,
         role_id:   role_id!,
-      }).subscribe({
+      }).pipe(
+        finalize(() => this.saving.set(false))
+      ).subscribe({
         next: () => {
-          this.saving.set(false);
           this.router.navigate(['/users']).then(() => {
             this.snackBar.open('Usuario actualizado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
           });
         },
-        error: () => this.saving.set(false),
+        error: () => {},
       });
     } else {
       this.usersService.create({
@@ -136,16 +138,17 @@ export class UserFormComponent implements OnInit {
         password:   password!,
         role_id:    role_id!,
         company_id: company_id ?? undefined,  // solo si el admin de plataforma lo especificó
-      }).subscribe({
+      }).pipe(
+        finalize(() => this.saving.set(false))
+      ).subscribe({
         next: () => {
-          this.saving.set(false);
           // Navegar primero y mostrar snackBar después evita que el overlay de
           // Material quede colgado al destruirse el componente.
           this.router.navigate(['/users']).then(() => {
             this.snackBar.open('Usuario creado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
           });
         },
-        error: () => this.saving.set(false),
+        error: () => {},
       });
     }
   }

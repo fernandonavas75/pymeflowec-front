@@ -185,6 +185,32 @@
   height: 78px;
 }
 
+// ── Banner módulos pendientes (Opción C) ──────────────────────────
+.pending-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left: 4px solid #f59e0b;
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #92400e;
+  font-size: 0.875rem;
+  margin-bottom: 16px;
+
+  .material-icons-round { color: #f59e0b; font-size: 20px; flex-shrink: 0; }
+}
+
+.banner-link {
+  margin-left: auto;
+  color: #d97706;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  &:hover { text-decoration: underline; }
+}
+
 // ── Sin módulos ────────────────────────────────────────────────────
 .no-modules-msg {
   display: flex;
@@ -216,6 +242,24 @@
   font-weight: 400 !important;
   color: var(--text-muted) !important;
   max-width: 360px;
+}
+
+.no-modules-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--primary);
+  transition: background 0.15s ease;
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  &:hover { background: rgba(99, 102, 241, 0.15); }
 }
 
 // ── KPI Grid ──────────────────────────────────────────────────────

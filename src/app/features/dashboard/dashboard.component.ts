@@ -125,6 +125,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   });
 
+  /** true si la empresa tiene al menos un módulo en estado PENDING */
+  hasPendingModules = computed(() => {
+    if (!this.authService.isStoreUser()) return false;
+    return this.modulesSvc.pendingCodes().size > 0;
+  });
+
+  /** Cantidad de módulos PENDING (para mostrar en mensajes) */
+  pendingModulesCount = computed(() => this.modulesSvc.pendingCodes().size);
+
   /**
    * Mostrar sección de analytics solo si la empresa tiene MOD_INVOICING aprobado.
    * Si loadFailed (API inalcanzable) se muestra igualmente como fallback.

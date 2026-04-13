@@ -50,6 +50,18 @@
       <span>{{ authService.isSystemUser() ? 'Panel de plataforma' : 'Mis módulos' }}</span>
     </div>
 
+    <!-- ── Opción C: banner módulos pendientes (solo admin de tienda) ── -->
+    @if (hasPendingModules() && authService.isStoreAdmin()) {
+      <div class="pending-banner">
+        <span class="material-icons-round">hourglass_top</span>
+        <span>
+          Tienes <strong>{{ pendingModulesCount() }}</strong>
+          módulo{{ pendingModulesCount() !== 1 ? 's' : '' }} en espera de aprobación por el administrador de la plataforma.
+        </span>
+        <a routerLink="/module-requests" class="banner-link">Ver solicitudes →</a>
+      </div>
+    }
+
     @if (moduleCards().length > 0) {
       <div class="module-cards-grid">
         @for (card of moduleCards(); track card.route) {
@@ -66,11 +78,35 @@
         }
       </div>
     } @else {
-      <!-- Sin módulos activos (STORE_SELLER sin módulos aprobados) -->
+      <!-- ── Opción A: empty state inteligente (STORE_SELLER sin módulos aprobados) ── -->
       <div class="no-modules-msg">
-        <mat-icon>extension_off</mat-icon>
-        <p>Tu empresa aún no tiene módulos activos.</p>
-        <p class="no-modules-sub">Contacta a tu administrador para solicitar acceso a los módulos del ERP.</p>
+        @if (hasPendingModules()) {
+          <mat-icon>hourglass_top</mat-icon>
+          <p>Tus módulos están en revisión</p>
+          <p class="no-modules-sub">
+            {{ pendingModulesCount() }} solicitud{{ pendingModulesCount() !== 1 ? 'es' : '' }}
+            pendiente{{ pendingModulesCount() !== 1 ? 's' : '' }} de aprobación —
+            recibirás acceso una vez que sean aprobadas por el administrador de la plataforma.
+          </p>
+          @if (authService.isStoreAdmin()) {
+            <a routerLink="/module-requests" class="no-modules-action">
+              <mat-icon>visibility</mat-icon>
+              Ver mis solicitudes
+            </a>
+          }
+        } @else {
+          <mat-icon>extension_off</mat-icon>
+          <p>Tu empresa aún no tiene módulos activos.</p>
+          @if (authService.isStoreAdmin()) {
+            <p class="no-modules-sub">Solicita acceso a los módulos del ERP para comenzar a usar la plataforma.</p>
+            <a routerLink="/module-requests" class="no-modules-action">
+              <mat-icon>add_circle_outline</mat-icon>
+              Solicitar módulos
+            </a>
+          } @else {
+            <p class="no-modules-sub">Contacta a tu administrador para solicitar acceso a los módulos del ERP.</p>
+          }
+        }
       </div>
     }
 
