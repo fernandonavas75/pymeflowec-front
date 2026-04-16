@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
-import { debounceTime, distinctUntilChanged } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -65,13 +65,11 @@ export class SuppliersListComponent implements OnInit {
     };
     if (this.searchCtrl.value) params['search'] = this.searchCtrl.value;
 
-    this.suppliersService.list(params).subscribe({
-      next: res => {
-        this.suppliers.set(res.data);
-        this.total.set(res.total);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
+    this.suppliersService.list(params).pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: res => { this.suppliers.set(res.data ?? []); this.total.set(res.total ?? 0); },
+      error: ()  => this.suppliers.set([]),
     });
   }
 
@@ -102,6 +100,7 @@ export class SuppliersListComponent implements OnInit {
             this.snackBar.open('Proveedor eliminado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
             this.loadSuppliers();
           },
+          error: () => {},
         });
       }
     });

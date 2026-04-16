@@ -71,11 +71,14 @@ export class UsersListComponent implements OnInit {
 
     this.usersService.list(params).subscribe({
       next: res => {
-        this.users.set(res.data);
-        this.total.set(res.total);
+        this.users.set(res.data ?? []);
+        this.total.set(res.total ?? 0);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.users.set([]);
+        this.loading.set(false);
+      },
     });
   }
 

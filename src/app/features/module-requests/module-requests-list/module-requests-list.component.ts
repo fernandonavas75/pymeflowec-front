@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -68,9 +69,11 @@ export class ModuleRequestsListComponent implements OnInit {
 
   loadAll(): void {
     this.loading.set(true);
-    this.svc.listAll().subscribe({
-      next: res => { this.requests.set(res.data); this.loading.set(false); },
-      error: () => this.loading.set(false),
+    this.svc.listAll().pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: res => this.requests.set(res.data ?? []),
+      error: ()  => this.requests.set([]),
     });
   }
 
@@ -81,6 +84,7 @@ export class ModuleRequestsListComponent implements OnInit {
       if (!ok) return;
       this.svc.approve(req.id).subscribe({
         next: () => { this.snackBar.open('Solicitud aprobada', 'OK', { duration: 3000 }); this.loadAll(); },
+        error: () => {},
       });
     });
   }
@@ -92,6 +96,7 @@ export class ModuleRequestsListComponent implements OnInit {
       if (!ok) return;
       this.svc.reject(req.id).subscribe({
         next: () => { this.snackBar.open('Solicitud rechazada', 'OK', { duration: 3000 }); this.loadAll(); },
+        error: () => {},
       });
     });
   }
@@ -100,11 +105,12 @@ export class ModuleRequestsListComponent implements OnInit {
 
   loadCatalog(): void {
     this.loading.set(true);
-    this.modulesSvc.loadCatalog().subscribe({
-      next: items => { this.catalog.set(items); this.loading.set(false); },
+    this.modulesSvc.loadCatalog().pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: items => this.catalog.set(items ?? []),
       error: (err) => {
         if (err?.status === 403) this.forbidden.set(true);
-        this.loading.set(false);
       },
     });
   }

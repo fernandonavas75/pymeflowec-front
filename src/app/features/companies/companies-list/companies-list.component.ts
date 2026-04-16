@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -37,9 +38,11 @@ export class CompaniesListComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.svc.list({ page: this.page(), limit: this.limit() }).subscribe({
-      next: res => { this.companies.set(res.data); this.total.set(res.total); this.loading.set(false); },
-      error: () => this.loading.set(false),
+    this.svc.list({ page: this.page(), limit: this.limit() }).pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: res => { this.companies.set(res.data ?? []); this.total.set(res.total ?? 0); },
+      error: ()  => this.companies.set([]),
     });
   }
 

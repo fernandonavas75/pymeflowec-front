@@ -36,7 +36,7 @@ export class CompanyModulesService {
     return this.http
       .get<{ success: boolean; data: ModuleCatalogItem[] }>(`${this.base}/company-catalog`)
       .pipe(
-        map(r => r.data),
+        map(r => r?.data ?? []),
         tap(items => {
           this.catalog.set(items);
           this.approvedCodes.set(new Set(items.filter(m => m.status === 'APPROVED').map(m => m.code)));

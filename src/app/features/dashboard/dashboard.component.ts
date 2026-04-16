@@ -1,7 +1,7 @@
 import { Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, finalize } from 'rxjs';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -215,13 +215,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   load(): void {
     this.loading = !this.data;
-    this.sub = this.dashboardService.getDashboardData().subscribe({
+    this.sub = this.dashboardService.getDashboardData().pipe(
+      finalize(() => { this.loading = false; })
+    ).subscribe({
       next: data => {
         this.data = data;
-        this.loading = false;
         this.lastUpdated = new Date();
       },
-      error: () => { this.loading = false; },
+      error: () => {},
     });
   }
 

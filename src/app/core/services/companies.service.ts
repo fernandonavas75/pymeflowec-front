@@ -13,11 +13,11 @@ export class CompaniesService {
   list(params: Record<string, string | number | boolean | undefined> = {}): Observable<PaginatedResponse<Company>> {
     return this.http.get<ApiListResponse<Company>>(this.base, { params: params as Record<string, string> }).pipe(
       map(res => ({
-        data: res.data,
-        total: res.pagination.total,
-        page: res.pagination.current_page,
-        limit: res.pagination.per_page,
-        totalPages: res.pagination.total_pages,
+        data: res.data ?? [],
+        total: res.pagination?.total ?? 0,
+        page: res.pagination?.current_page ?? 1,
+        limit: res.pagination?.per_page ?? 20,
+        totalPages: res.pagination?.total_pages ?? 0,
       }))
     );
   }

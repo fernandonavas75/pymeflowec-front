@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -98,12 +99,11 @@ export class TaxRatesListComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.taxRatesService.list().subscribe({
-      next: res => {
-        this.taxRates.set(res.data);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
+    this.taxRatesService.list().pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: res => this.taxRates.set(res.data ?? []),
+      error: ()  => this.taxRates.set([]),
     });
   }
 }

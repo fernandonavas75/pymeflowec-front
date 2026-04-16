@@ -13,11 +13,11 @@ export class ModuleRequestsService {
   list(params: Record<string, string | number | boolean | undefined> = {}): Observable<PaginatedResponse<ModuleRequest>> {
     return this.http.get<ApiListResponse<ModuleRequest>>(this.base, { params: params as Record<string, string> }).pipe(
       map(res => ({
-        data: res.data,
-        total: res.pagination.total,
-        page: res.pagination.current_page,
-        limit: res.pagination.per_page,
-        totalPages: res.pagination.total_pages,
+        data: res.data ?? [],
+        total: res.pagination?.total ?? 0,
+        page: res.pagination?.current_page ?? 1,
+        limit: res.pagination?.per_page ?? 20,
+        totalPages: res.pagination?.total_pages ?? 0,
       }))
     );
   }
@@ -25,11 +25,11 @@ export class ModuleRequestsService {
   listAll(params: Record<string, string | number | boolean | undefined> = {}): Observable<PaginatedResponse<ModuleRequest>> {
     return this.http.get<ApiListResponse<ModuleRequest>>(`${this.base}/all`, { params: params as Record<string, string> }).pipe(
       map(res => ({
-        data: res.data,
-        total: res.pagination.total,
-        page: res.pagination.current_page,
-        limit: res.pagination.per_page,
-        totalPages: res.pagination.total_pages,
+        data: res.data ?? [],
+        total: res.pagination?.total ?? 0,
+        page: res.pagination?.current_page ?? 1,
+        limit: res.pagination?.per_page ?? 20,
+        totalPages: res.pagination?.total_pages ?? 0,
       }))
     );
   }
@@ -38,12 +38,12 @@ export class ModuleRequestsService {
     return this.http.post<ApiResponse<ModuleRequest>>(this.base, dto).pipe(map(r => r.data));
   }
 
-  approve(id: number): Observable<ModuleRequest> {
-    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/approve`, {}).pipe(map(r => r.data));
+  approve(id: number): Observable<void> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/approve`, {}).pipe(map(() => void 0));
   }
 
-  reject(id: number, comments?: string): Observable<ModuleRequest> {
-    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/reject`, { comments }).pipe(map(r => r.data));
+  reject(id: number, comments?: string): Observable<void> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/reject`, { comments }).pipe(map(() => void 0));
   }
 
   listPlatformModules(): Observable<PlatformModule[]> {

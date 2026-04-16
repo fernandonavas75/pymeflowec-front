@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
+import { finalize } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -58,13 +59,11 @@ export class InvoicesListComponent implements OnInit {
     };
     if (this.statusCtrl.value) params['status'] = this.statusCtrl.value;
 
-    this.invoicesService.list(params).subscribe({
-      next: res => {
-        this.invoices.set(res.data);
-        this.total.set(res.total);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
+    this.invoicesService.list(params).pipe(
+      finalize(() => this.loading.set(false))
+    ).subscribe({
+      next: res => { this.invoices.set(res.data ?? []); this.total.set(res.total ?? 0); },
+      error: ()  => this.invoices.set([]),
     });
   }
 
