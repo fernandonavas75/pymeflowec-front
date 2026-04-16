@@ -173,16 +173,16 @@
           <a routerLink="/invoices" class="chart-link">Ver facturas →</a>
         </div>
         <apx-chart
-          [series]="revenueChartOptions.series!"
-          [chart]="revenueChartOptions.chart!"
-          [xaxis]="revenueChartOptions.xaxis!"
-          [yaxis]="revenueChartOptions.yaxis!"
-          [colors]="revenueChartOptions.colors!"
-          [fill]="revenueChartOptions.fill!"
-          [stroke]="revenueChartOptions.stroke!"
-          [dataLabels]="revenueChartOptions.dataLabels!"
-          [grid]="revenueChartOptions.grid!"
-          [tooltip]="revenueChartOptions.tooltip!"
+          [series]="chartOptions.series"
+          [chart]="chartOptions.chart"
+          [xaxis]="chartOptions.xaxis"
+          [yaxis]="chartOptions.yaxis"
+          [colors]="chartOptions.colors"
+          [fill]="chartOptions.fill"
+          [stroke]="chartOptions.stroke"
+          [dataLabels]="chartOptions.dataLabels"
+          [grid]="chartOptions.grid"
+          [tooltip]="chartOptions.tooltip"
         />
       </div>
     </div>

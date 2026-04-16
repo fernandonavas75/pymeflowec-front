@@ -50,6 +50,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   data: DashboardData | null = null;
   loading = true;
   lastUpdated = new Date();
+  chartOptions: any = {};
   private sub?: Subscription;
 
   invoicesColumns = ['number', 'date', 'total', 'status'];
@@ -156,9 +157,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return 'Buenas noches';
   }
 
-  get revenueChartOptions() {
-    if (!this.data) return {};
-    const days = this.data.revenueByDay;
+  private buildChartOptions(data: DashboardData): any {
+    const days = data.revenueByDay;
     return {
       series:      [{ name: 'Ingresos facturados', data: days.map(d => d.amount) }],
       chart:       { type: 'area' as const, height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
@@ -215,6 +215,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: data => {
         this.data = data;
         this.lastUpdated = new Date();
+        this.chartOptions = this.buildChartOptions(data);
       },
       error: () => {},
     });
@@ -223,6 +224,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   refresh(): void {
     this.sub?.unsubscribe();
     this.data = null;
+    this.chartOptions = {};
     this.load();
   }
 
