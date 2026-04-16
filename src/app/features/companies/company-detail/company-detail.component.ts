@@ -11,10 +11,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../core/services/auth.service';
+import { ApiService } from '../../../core/services/api.service';
 import { CompaniesService } from '../../../core/services/companies.service';
 import { CompanyModulesService } from '../../../core/services/company-modules.service';
-import { UsersService } from '../../../core/services/users.service';
 import { AdminViewService } from '../../../core/services/admin-view.service';
+import { ApiListResponse } from '../../../core/models/pagination.model';
 import { Company } from '../../../core/models/company.model';
 import { ModuleCatalogItem } from '../../../core/models/module-request.model';
 import { User } from '../../../core/models/user.model';
@@ -40,11 +41,11 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 })
 export class CompanyDetailComponent implements OnInit {
   authService         = inject(AuthService);
+  private api         = inject(ApiService);
   private route       = inject(ActivatedRoute);
   private router      = inject(Router);
   private companiesSvc = inject(CompaniesService);
   private modulesSvc  = inject(CompanyModulesService);
-  private usersSvc    = inject(UsersService);
   private adminView   = inject(AdminViewService);
   private snackBar    = inject(MatSnackBar);
   private dialog      = inject(MatDialog);
@@ -92,10 +93,12 @@ export class CompanyDetailComponent implements OnInit {
 
   private loadUsers(): void {
     this.loadingUsers.set(true);
-    this.usersSvc.list({ page: 1, limit: 100, company_id: this.companyId }).pipe(finalize(() => this.loadingUsers.set(false))).subscribe({
-      next: res => this.users.set(res.data),
-      error: ()  => this.users.set([]),
-    });
+    this.api.get<ApiListResponse<User>>(`/platform/companies/${this.companyId}/users`, { page: 1, limit: 100 })
+      .pipe(finalize(() => this.loadingUsers.set(false)))
+      .subscribe({
+        next: res => this.users.set(res.data ?? []),
+        error: ()  => this.users.set([]),
+      });
   }
 
   enterClientView(): void {

@@ -213,6 +213,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Decide si cargar analytics una vez que el catálogo de módulos está listo */
   private afterCatalogReady(): void {
+    // En modo cliente el platform admin no tiene company_id en el token,
+    // las llamadas a invoices/products/customers darían 403 — no cargar analytics.
+    if (this.adminViewSvc.isClientViewMode()) {
+      this.loading = false;
+      return;
+    }
     if (this.hasAnalytics()) {
       this.load();
     } else {
