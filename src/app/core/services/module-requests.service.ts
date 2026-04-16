@@ -35,7 +35,7 @@ export class ModuleRequestsService {
   }
 
   create(dto: CreateModuleRequestDto): Observable<ModuleRequest> {
-    return this.http.post<ApiResponse<ModuleRequest>>(this.base, dto).pipe(map(r => r.data));
+    return this.http.post<ApiResponse<ModuleRequest>>(this.base, dto).pipe(map(r => r?.data));
   }
 
   approve(id: number): Observable<void> {
@@ -47,6 +47,6 @@ export class ModuleRequestsService {
   }
 
   listPlatformModules(): Observable<PlatformModule[]> {
-    return this.http.get<{ success: boolean; data: PlatformModule[] }>(`${environment.apiUrl}/platform/modules/public`).pipe(map(r => r.data));
+    return this.http.get<{ success: boolean; data: PlatformModule[] }>(`${environment.apiUrl}/platform/modules/public`).pipe(map(r => r?.data ?? []));
   }
 }
