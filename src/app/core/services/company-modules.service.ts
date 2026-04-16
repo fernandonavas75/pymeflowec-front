@@ -31,6 +31,15 @@ export class CompanyModulesService {
    */
   catalogReady = signal(false);
 
+  /** Resetea todos los signals — llamar en logout para evitar datos de sesión anterior */
+  reset(): void {
+    this.catalog.set([]);
+    this.approvedCodes.set(new Set());
+    this.pendingCodes.set(new Set());
+    this.loadFailed.set(false);
+    this.catalogReady.set(false);
+  }
+
   /** Carga el catálogo completo con estado de la empresa */
   loadCatalog(): Observable<ModuleCatalogItem[]> {
     return this.http

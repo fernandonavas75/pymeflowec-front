@@ -195,6 +195,7 @@ export class SidebarComponent implements OnInit {
   }
 
   logout(): void {
+    this.modulesSvc.reset();
     this.authService.logout();
   }
 }

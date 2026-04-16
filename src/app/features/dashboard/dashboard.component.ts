@@ -190,14 +190,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Si el catálogo ya fue cargado por el sidebar, usarlo directamente
-    if (this.modulesSvc.catalogReady()) {
-      this.afterCatalogReady();
-      return;
-    }
-
-    // Catálogo aún en vuelo (sidebar lo está cargando en paralelo);
-    // llamamos nosotros también para tener un callback propio.
+    // Siempre refresca el catálogo al entrar al dashboard para que los módulos
+    // recién aprobados por la plataforma se reflejen sin necesidad de recargar.
     this.modulesSvc.loadCatalog().subscribe({
       next:  () => this.afterCatalogReady(),
       error: () => this.afterCatalogReady(),
