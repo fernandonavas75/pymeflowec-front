@@ -5,19 +5,22 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { AdminViewService } from '../../core/services/admin-view.service';
 
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule, MatMenuModule],
+  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule, MatMenuModule, MatDividerModule],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.scss'],
 })
 export class TopbarComponent {
-  authService  = inject(AuthService);
-  themeService = inject(ThemeService);
+  authService   = inject(AuthService);
+  themeService  = inject(ThemeService);
+  adminViewSvc  = inject(AdminViewService);
   private router = inject(Router);
 
   sidebarCollapsed = input<boolean>(false);

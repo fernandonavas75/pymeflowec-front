@@ -12,6 +12,24 @@
     }
   </div>
 
+  <!-- Banner modo cliente -->
+  @if (adminViewSvc.isClientViewMode()) {
+    <div class="client-view-banner" [class.collapsed]="collapsed()"
+         [matTooltip]="collapsed() ? ('Modo cliente: ' + adminViewSvc.viewedCompany()!.name) : ''"
+         matTooltipPosition="right">
+      <mat-icon class="text-amber-400">visibility</mat-icon>
+      @if (!collapsed()) {
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-amber-600 dark:text-amber-400 truncate">Modo cliente</p>
+          <p class="text-xs text-amber-700 dark:text-amber-300 truncate font-medium">{{ adminViewSvc.viewedCompany()!.name }}</p>
+        </div>
+        <button class="exit-client-btn" (click)="adminViewSvc.exitClientView()" matTooltip="Salir del modo cliente">
+          <mat-icon style="font-size:16px;width:16px;height:16px;">close</mat-icon>
+        </button>
+      }
+    </div>
+  }
+
   <!-- Navegación -->
   <nav class="sidebar-nav">
 
@@ -22,8 +40,8 @@
       @if (!collapsed()) { <span class="nav-label">Dashboard</span> }
     </a>
 
-    <!-- Skeleton mientras cargan los módulos de tienda -->
-    @if (moduleLoading()) {
+    <!-- Skeleton mientras cargan los módulos -->
+    @if (moduleLoading() || adminViewSvc.loading()) {
       <div class="nav-item nav-item--loading opacity-40 pointer-events-none">
         <mat-spinner diameter="16" class="nav-icon"></mat-spinner>
         @if (!collapsed()) { <span class="nav-label">Cargando módulos…</span> }

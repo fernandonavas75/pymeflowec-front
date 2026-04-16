@@ -1,0 +1,113 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Usuarios de soporte</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Administradores y personal de soporte de la plataforma</p>
+    </div>
+  </div>
+
+  <!-- Buscador -->
+  <div class="table-container mb-4 p-4">
+    <mat-form-field appearance="outline" class="w-full max-w-sm">
+      <mat-label>Buscar usuario</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [formControl]="searchCtrl" placeholder="Nombre o email…" />
+    </mat-form-field>
+  </div>
+
+  <!-- Tabla -->
+  <div class="table-container">
+    @if (loading()) {
+      <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
+    } @else {
+      <table mat-table [dataSource]="users()" class="w-full">
+
+        <!-- Avatar -->
+        <ng-container matColumnDef="avatar">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let u">
+            <div class="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold">
+              {{ getInitials(u.full_name) }}
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Nombre -->
+        <ng-container matColumnDef="full_name">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let u" class="font-medium">{{ u.full_name }}</td>
+        </ng-container>
+
+        <!-- Email -->
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>Email</th>
+          <td mat-cell *matCellDef="let u" class="text-sm text-slate-500">{{ u.email }}</td>
+        </ng-container>
+
+        <!-- Rol -->
+        <ng-container matColumnDef="role">
+          <th mat-header-cell *matHeaderCellDef>Rol</th>
+          <td mat-cell *matCellDef="let u">
+            <span class="badge text-xs" [ngClass]="roleClass(u.role?.name ?? '')">
+              {{ roleLabel(u.role?.name ?? '') }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Estado -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let u">
+            <app-status-badge [status]="u.status" />
+          </td>
+        </ng-container>
+
+        <!-- Fecha -->
+        <ng-container matColumnDef="created">
+          <th mat-header-cell *matHeaderCellDef>Registrado</th>
+          <td mat-cell *matCellDef="let u" class="text-sm text-slate-500">
+            {{ u.created_at | date:'dd/MM/yyyy' }}
+          </td>
+        </ng-container>
+
+        <!-- Acciones -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let u">
+            <div class="flex gap-1 justify-end">
+              <button mat-icon-button
+                      [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                      (click)="confirmToggle(u)">
+                <mat-icon [class.text-green-500]="u.status === 'ACTIVE'"
+                          [class.text-slate-400]="u.status !== 'ACTIVE'">
+                  {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
+                </mat-icon>
+              </button>
+              @if (u.status !== 'LOCKED') {
+                <button mat-icon-button matTooltip="Bloquear cuenta" (click)="confirmLock(u)">
+                  <mat-icon class="text-red-400">lock</mat-icon>
+                </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        <tr class="mat-row" *matNoDataRow>
+          <td class="mat-cell text-center py-12 text-slate-400" [attr.colspan]="displayedColumns.length">
+            No hay usuarios de soporte registrados
+          </td>
+        </tr>
+      </table>
+
+      <mat-paginator
+        [length]="total()"
+        [pageSize]="limit()"
+        [pageIndex]="page() - 1"
+        [pageSizeOptions]="[10, 20, 50]"
+        (page)="onPageChange($event)"
+        showFirstLastButtons />
+    }
+  </div>
+</div>

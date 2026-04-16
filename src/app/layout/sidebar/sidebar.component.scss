@@ -61,6 +61,48 @@
 
 .logo-accent { color: var(--primary); }
 
+// ── Banner modo cliente ────────────────────────────────────────────
+.client-view-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px;
+  padding: 8px 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  min-width: 0;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  &.collapsed {
+    justify-content: center;
+    padding: 8px;
+  }
+}
+
+.exit-client-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  background: rgba(245, 158, 11, 0.2);
+  border: none;
+  border-radius: 4px;
+  color: #d97706;
+  cursor: pointer;
+  transition: background 0.12s ease;
+
+  &:hover { background: rgba(245, 158, 11, 0.35); }
+}
+
 // ── Nav ────────────────────────────────────────────────────────────
 .sidebar-nav {
   flex: 1;

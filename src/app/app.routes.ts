@@ -151,6 +151,12 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: { platform: true },
       },
+      {
+        path: 'companies/:id',
+        loadComponent: () => import('./features/companies/company-detail/company-detail.component').then(m => m.CompanyDetailComponent),
+        canActivate: [permissionGuard],
+        data: { platform: true },
+      },
 
       // Módulos de plataforma
       {
@@ -158,6 +164,22 @@ export const routes: Routes = [
         loadComponent: () => import('./shared/components/coming-soon/coming-soon.component').then(m => m.ComingSoonComponent),
         canActivate: [permissionGuard],
         data: { platform: true, title: 'Módulos de plataforma' },
+      },
+
+      // Usuarios de soporte — solo plataforma
+      {
+        path: 'platform/support-users',
+        loadComponent: () => import('./features/platform/support-users/support-users-list.component').then(m => m.SupportUsersListComponent),
+        canActivate: [permissionGuard],
+        data: { platform: true },
+      },
+
+      // Registros de auditoría — solo plataforma
+      {
+        path: 'platform/audit-logs',
+        loadComponent: () => import('./features/platform/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent),
+        canActivate: [permissionGuard],
+        data: { platform: true },
       },
     ],
   },

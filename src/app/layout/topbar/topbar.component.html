@@ -5,8 +5,17 @@
     <mat-icon>{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</mat-icon>
   </button>
 
-  <!-- Company name (solo si tiene empresa) -->
-  @if (companyName) {
+  <!-- Indicador modo cliente -->
+  @if (adminViewSvc.isClientViewMode()) {
+    <div class="client-view-chip" matTooltip="Estás visualizando la aplicación como cliente de esta empresa">
+      <mat-icon>visibility</mat-icon>
+      <span>{{ adminViewSvc.viewedCompany()!.name }}</span>
+      <button class="chip-exit" (click)="adminViewSvc.exitClientView()" matTooltip="Salir del modo cliente">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  } @else if (companyName) {
+    <!-- Company name (solo si tiene empresa y NO está en modo cliente) -->
     <span class="company-name">
       <mat-icon class="company-icon">business</mat-icon>
       {{ companyName }}
@@ -33,6 +42,13 @@
   </button>
 
   <mat-menu #userMenu="matMenu" xPosition="before">
+    @if (adminViewSvc.isClientViewMode()) {
+      <button mat-menu-item (click)="adminViewSvc.exitClientView()">
+        <mat-icon>exit_to_app</mat-icon>
+        <span>Salir del modo cliente</span>
+      </button>
+      <mat-divider />
+    }
     <button mat-menu-item (click)="logout()">
       <mat-icon>logout</mat-icon>
       <span>Cerrar sesión</span>

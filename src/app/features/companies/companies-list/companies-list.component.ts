@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,7 +18,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
   selector: 'app-companies-list',
   standalone: true,
   imports: [
-    CommonModule, MatTableModule, MatButtonModule, MatIconModule,
+    CommonModule, RouterLink, MatTableModule, MatButtonModule, MatIconModule,
     MatPaginatorModule, MatTooltipModule, MatProgressSpinnerModule, MatDialogModule,
   ],
   templateUrl: './companies-list.component.html',
@@ -33,6 +34,7 @@ export class CompaniesListComponent implements OnInit {
   page             = signal(1);
   limit            = signal(20);
   displayedColumns = ['name', 'ruc', 'email', 'status', 'created', 'actions'];
+  search = signal('');
 
   ngOnInit(): void { this.load(); }
 

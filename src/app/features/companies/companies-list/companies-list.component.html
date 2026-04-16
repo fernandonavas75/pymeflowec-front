@@ -36,11 +36,16 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let c">
-            <button mat-icon-button [matTooltip]="c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(c)">
-              <mat-icon [class.text-green-500]="c.status === 'ACTIVE'" [class.text-slate-400]="c.status !== 'ACTIVE'">
-                {{ c.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-              </mat-icon>
-            </button>
+            <div class="flex gap-1 justify-end">
+              <a mat-icon-button [routerLink]="['/companies', c.id]" matTooltip="Ver detalle">
+                <mat-icon class="text-slate-400">open_in_new</mat-icon>
+              </a>
+              <button mat-icon-button [matTooltip]="c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(c)">
+                <mat-icon [class.text-green-500]="c.status === 'ACTIVE'" [class.text-slate-400]="c.status !== 'ACTIVE'">
+                  {{ c.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
+                </mat-icon>
+              </button>
+            </div>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

@@ -61,4 +61,30 @@ export class CompanyModulesService {
         }),
       );
   }
+
+  /**
+   * Versión para administrador de plataforma: carga el catálogo de módulos
+   * de una empresa específica pasando su ID como query param.
+   */
+  loadCatalogForCompany(companyId: number): Observable<ModuleCatalogItem[]> {
+    return this.http
+      .get<{ success: boolean; data: ModuleCatalogItem[] }>(`${this.base}/company-catalog`, {
+        params: { company_id: companyId.toString() },
+      })
+      .pipe(
+        map(r => r?.data ?? []),
+        tap(items => {
+          this.catalog.set(items);
+          this.approvedCodes.set(new Set(items.filter(m => m.status === 'APPROVED').map(m => m.code)));
+          this.pendingCodes.set(new Set(items.filter(m => m.status === 'PENDING').map(m => m.code)));
+          this.loadFailed.set(false);
+          this.catalogReady.set(true);
+        }),
+        catchError(err => {
+          this.loadFailed.set(true);
+          this.catalogReady.set(true);
+          return throwError(() => err);
+        }),
+      );
+  }
 }

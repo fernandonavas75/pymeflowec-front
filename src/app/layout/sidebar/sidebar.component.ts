@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyModulesService } from '../../core/services/company-modules.service';
+import { AdminViewService } from '../../core/services/admin-view.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -52,6 +53,7 @@ interface RenderedGroup {
 })
 export class SidebarComponent implements OnInit {
   authService        = inject(AuthService);
+  adminViewSvc       = inject(AdminViewService);
   private modulesSvc = inject(CompanyModulesService);
   collapsed          = input<boolean>(false);
 
@@ -104,16 +106,16 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Plataforma',
       items: [
-        { label: 'Empresas',    icon: 'business',        route: '/companies',       platformOnly: true },
-        { label: 'Solicitudes', icon: 'pending_actions', route: '/module-requests', platformOnly: true },
+        { label: 'Empresas',           icon: 'business',        route: '/companies',                platformOnly: true },
+        { label: 'Solicitudes',        icon: 'pending_actions', route: '/module-requests',           platformOnly: true },
+        { label: 'Usuarios soporte',   icon: 'support_agent',   route: '/platform/support-users',   platformOnly: true },
+        { label: 'Auditoría',          icon: 'manage_search',   route: '/platform/audit-logs',      platformOnly: true },
       ],
     },
   ];
 
   ngOnInit(): void {
     // Todos los usuarios de tienda cargan el catálogo de módulos.
-    // STORE_SELLER lo usa para ver solo módulos aprobados.
-    // STORE_ADMIN lo usa para ver aprobados + pendientes (con indicador).
     if (this.authService.isStoreUser()) {
       this.moduleLoading.set(true);
       this.modulesSvc.loadCatalog().subscribe({
@@ -124,11 +126,18 @@ export class SidebarComponent implements OnInit {
   }
 
   visibleNavGroups = computed((): RenderedGroup[] => {
-    const isSystem   = this.authService.isSystemUser();
-    const isAdmin    = this.authService.isStoreAdmin();
+    const isClientView = this.adminViewSvc.isClientViewMode();
+    const clientLoading = this.adminViewSvc.loading();
+
+    // En modo cliente el administrador de plataforma se comporta como STORE_ADMIN
+    const isSystem   = isClientView ? false : this.authService.isSystemUser();
+    const isAdmin    = isClientView ? true  : this.authService.isStoreAdmin();
     const approved   = this.modulesSvc.approvedCodes();
     const pending    = this.modulesSvc.pendingCodes();
     const loadFailed = this.modulesSvc.loadFailed();
+
+    // Mientras cargan los módulos en modo cliente, no renderizamos los grupos de tienda
+    if (isClientView && clientLoading) return [];
 
     const groups: RenderedGroup[] = [];
 
@@ -139,11 +148,12 @@ export class SidebarComponent implements OnInit {
 
         // ── 1. Items de plataforma ──────────────────────────────────
         if (item.platformOnly) {
-          if (isSystem) items.push({ ...item, moduleStatus: null });
+          // En modo cliente ocultamos la sección de plataforma
+          if (!isClientView && isSystem) items.push({ ...item, moduleStatus: null });
           continue;
         }
 
-        // Los usuarios de plataforma no ven nada más
+        // Los usuarios de plataforma no ven nada más (salvo que estén en modo cliente)
         if (isSystem) continue;
 
         // ── 2. Items con código de módulo ───────────────────────────
@@ -195,6 +205,7 @@ export class SidebarComponent implements OnInit {
   }
 
   logout(): void {
+    this.adminViewSvc.exitClientView();
     this.modulesSvc.reset();
     this.authService.logout();
   }
