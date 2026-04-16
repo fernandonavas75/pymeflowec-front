@@ -11,6 +11,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DashboardService, DashboardData } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyModulesService } from '../../core/services/company-modules.service';
+import { AdminViewService } from '../../core/services/admin-view.service';
 import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
 
@@ -46,6 +47,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   authService              = inject(AuthService);
   private modulesSvc       = inject(CompanyModulesService);
+  private adminViewSvc     = inject(AdminViewService);
 
   data: DashboardData | null = null;
   loading = true;
@@ -112,11 +114,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   /** Tarjetas visibles para el usuario actual */
   moduleCards = computed((): DashboardCard[] => {
-    if (this.authService.isSystemUser()) return this.PLATFORM_CARD_DEFS;
+    const isClientView = this.adminViewSvc.isClientViewMode();
 
+    // Usuarios de plataforma fuera del modo cliente → tarjetas de plataforma
+    if (!isClientView && this.authService.isSystemUser()) return this.PLATFORM_CARD_DEFS;
+
+    // Modo cliente (plataforma viendo empresa) o usuario de tienda → tarjetas de tienda
     const approved = this.modulesSvc.approvedCodes();
     const failed   = this.modulesSvc.loadFailed();
-    const isAdmin  = this.authService.isStoreAdmin();
+    const isAdmin  = isClientView ? true : this.authService.isStoreAdmin();
 
     return this.STORE_CARD_DEFS.filter(card => {
       if (card.adminOnly && !isAdmin) return false;
@@ -140,7 +146,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Si loadFailed (API inalcanzable) se muestra igualmente como fallback.
    */
   hasAnalytics = computed(() => {
-    if (!this.authService.isStoreUser()) return false;
+    const isClientView = this.adminViewSvc.isClientViewMode();
+    if (!isClientView && !this.authService.isStoreUser()) return false;
     return this.modulesSvc.approvedCodes().has('MOD_INVOICING') || this.modulesSvc.loadFailed();
   });
 
@@ -184,18 +191,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // ── Ciclo de vida ───────────────────────────────────────────────────
 
   ngOnInit(): void {
-    // Usuarios de plataforma: no necesitan analytics
-    if (!this.authService.isStoreUser()) {
+    const isClientView = this.adminViewSvc.isClientViewMode();
+
+    // Usuarios de plataforma fuera del modo cliente: no necesitan analytics
+    if (!isClientView && !this.authService.isStoreUser()) {
       this.loading = false;
       return;
     }
 
-    // Siempre refresca el catálogo al entrar al dashboard para que los módulos
-    // recién aprobados por la plataforma se reflejen sin necesidad de recargar.
-    this.modulesSvc.loadCatalog().subscribe({
-      next:  () => this.afterCatalogReady(),
-      error: () => this.afterCatalogReady(),
-    });
+    // En modo cliente el catálogo ya fue cargado por AdminViewService; solo continuamos.
+    // Para usuarios de tienda siempre refrescamos el catálogo.
+    if (isClientView) {
+      this.afterCatalogReady();
+    } else {
+      this.modulesSvc.loadCatalog().subscribe({
+        next:  () => this.afterCatalogReady(),
+        error: () => this.afterCatalogReady(),
+      });
+    }
   }
 
   /** Decide si cargar analytics una vez que el catálogo de módulos está listo */

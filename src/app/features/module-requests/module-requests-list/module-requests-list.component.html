@@ -56,7 +56,8 @@
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let r">
             <div class="flex items-center gap-1">
-              @if (r.status === 'PENDING') {
+              <!-- Solo PLATFORM_ADMIN puede aprobar/rechazar; PLATFORM_STAFF es solo lectura -->
+              @if (r.status === 'PENDING' && authService.isPlatformAdmin()) {
                 <button mat-icon-button matTooltip="Aprobar" (click)="approve(r)">
                   <mat-icon class="text-green-500">check_circle</mat-icon>
                 </button>
