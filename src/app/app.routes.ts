@@ -166,12 +166,12 @@ export const routes: Routes = [
         data: { platform: true, title: 'Módulos de plataforma' },
       },
 
-      // Usuarios de soporte — solo plataforma
+      // Usuarios de soporte — solo PLATFORM_ADMIN
       {
         path: 'platform/support-users',
         loadComponent: () => import('./features/platform/support-users/support-users-list.component').then(m => m.SupportUsersListComponent),
         canActivate: [permissionGuard],
-        data: { platform: true },
+        data: { platformAdmin: true },
       },
 
       // Registros de auditoría — solo plataforma

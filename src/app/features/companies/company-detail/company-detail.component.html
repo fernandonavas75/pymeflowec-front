@@ -37,12 +37,14 @@
             Ver como cliente
           </button>
         }
-        <button mat-stroked-button
-                [color]="company()!.status === 'ACTIVE' ? 'warn' : 'primary'"
-                (click)="toggleStatus(company()!)">
-          <mat-icon>{{ company()!.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}</mat-icon>
-          {{ company()!.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}
-        </button>
+        @if (authService.isPlatformAdmin()) {
+          <button mat-stroked-button
+                  [color]="company()!.status === 'ACTIVE' ? 'warn' : 'primary'"
+                  (click)="toggleStatus(company()!)">
+            <mat-icon>{{ company()!.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}</mat-icon>
+            {{ company()!.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}
+          </button>
+        }
       </div>
     </div>
 

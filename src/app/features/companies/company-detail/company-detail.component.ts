@@ -10,6 +10,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { AuthService } from '../../../core/services/auth.service';
 import { CompaniesService } from '../../../core/services/companies.service';
 import { CompanyModulesService } from '../../../core/services/company-modules.service';
 import { UsersService } from '../../../core/services/users.service';
@@ -38,6 +39,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   templateUrl: './company-detail.component.html',
 })
 export class CompanyDetailComponent implements OnInit {
+  authService         = inject(AuthService);
   private route       = inject(ActivatedRoute);
   private router      = inject(Router);
   private companiesSvc = inject(CompaniesService);

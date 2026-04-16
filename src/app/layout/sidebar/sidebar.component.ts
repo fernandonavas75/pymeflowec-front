@@ -19,6 +19,8 @@ interface NavItem {
   adminOnly?: boolean;
   /** Solo visible para usuarios de plataforma (company_id = null) */
   platformOnly?: boolean;
+  /** Solo visible para PLATFORM_ADMIN (no para PLATFORM_STAFF) */
+  platformAdminOnly?: boolean;
   /**
    * Código del módulo en la BD. Para STORE_ADMIN gatea la visibilidad del item
    * en base al estado del módulo en la empresa (APPROVED = activo, PENDING = en espera).
@@ -108,7 +110,7 @@ export class SidebarComponent implements OnInit {
       items: [
         { label: 'Empresas',           icon: 'business',        route: '/companies',                platformOnly: true },
         { label: 'Solicitudes',        icon: 'pending_actions', route: '/module-requests',           platformOnly: true },
-        { label: 'Usuarios soporte',   icon: 'support_agent',   route: '/platform/support-users',   platformOnly: true },
+        { label: 'Usuarios soporte',   icon: 'support_agent',   route: '/platform/support-users',   platformOnly: true, platformAdminOnly: true },
         { label: 'Auditoría',          icon: 'manage_search',   route: '/platform/audit-logs',      platformOnly: true },
       ],
     },
@@ -126,12 +128,13 @@ export class SidebarComponent implements OnInit {
   }
 
   visibleNavGroups = computed((): RenderedGroup[] => {
-    const isClientView = this.adminViewSvc.isClientViewMode();
-    const clientLoading = this.adminViewSvc.loading();
+    const isClientView    = this.adminViewSvc.isClientViewMode();
+    const clientLoading   = this.adminViewSvc.loading();
 
     // En modo cliente el administrador de plataforma se comporta como STORE_ADMIN
-    const isSystem   = isClientView ? false : this.authService.isSystemUser();
-    const isAdmin    = isClientView ? true  : this.authService.isStoreAdmin();
+    const isSystem        = isClientView ? false : this.authService.isSystemUser();
+    const isAdmin         = isClientView ? true  : this.authService.isStoreAdmin();
+    const isPlatformAdmin = this.authService.isPlatformAdmin();
     const approved   = this.modulesSvc.approvedCodes();
     const pending    = this.modulesSvc.pendingCodes();
     const loadFailed = this.modulesSvc.loadFailed();
@@ -149,7 +152,11 @@ export class SidebarComponent implements OnInit {
         // ── 1. Items de plataforma ──────────────────────────────────
         if (item.platformOnly) {
           // En modo cliente ocultamos la sección de plataforma
-          if (!isClientView && isSystem) items.push({ ...item, moduleStatus: null });
+          if (!isClientView && isSystem) {
+            // platformAdminOnly → solo PLATFORM_ADMIN puede verlo
+            if (item.platformAdminOnly && !isPlatformAdmin) continue;
+            items.push({ ...item, moduleStatus: null });
+          }
           continue;
         }
 
