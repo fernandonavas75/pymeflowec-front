@@ -11,8 +11,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { UsersService } from '../../../core/services/users.service';
+import { ApiService } from '../../../core/services/api.service';
 import { User } from '../../../core/models/user.model';
+import { PaginatedResponse, ApiListResponse } from '../../../core/models/pagination.model';
+import { map } from 'rxjs';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
@@ -35,9 +37,9 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
   templateUrl: './support-users-list.component.html',
 })
 export class SupportUsersListComponent implements OnInit {
-  private usersService = inject(UsersService);
-  private dialog       = inject(MatDialog);
-  private snackBar     = inject(MatSnackBar);
+  private api      = inject(ApiService);
+  private dialog   = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
   users            = signal<User[]>([]);
   loading          = signal(true);
@@ -65,11 +67,19 @@ export class SupportUsersListComponent implements OnInit {
     const params: Record<string, string | number | boolean | undefined> = {
       page:  this.page(),
       limit: this.limit(),
-      scope: 'PLATFORM',
     };
     if (this.searchCtrl.value) params['search'] = this.searchCtrl.value;
 
-    this.usersService.list(params).pipe(finalize(() => this.loading.set(false))).subscribe({
+    this.api.get<ApiListResponse<User>>('/platform/users', params).pipe(
+      map(res => ({
+        data:       res.data ?? [],
+        total:      res.pagination?.total ?? 0,
+        page:       res.pagination?.current_page ?? 1,
+        limit:      res.pagination?.per_page ?? 20,
+        totalPages: res.pagination?.total_pages ?? 0,
+      } as PaginatedResponse<User>)),
+      finalize(() => this.loading.set(false)),
+    ).subscribe({
       next: res => { this.users.set(res.data); this.total.set(res.total); },
       error: ()  => this.users.set([]),
     });
@@ -86,14 +96,16 @@ export class SupportUsersListComponent implements OnInit {
     this.dialog.open(ConfirmDialogComponent, {
       data: {
         title:       isActive ? 'Desactivar usuario' : 'Activar usuario',
-        message:     `¿${isActive ? 'Desactivar' : 'Activar'} al usuario de soporte "${user.full_name}"?`,
+        message:     `¿${isActive ? 'Desactivar' : 'Activar'} al usuario "${user.full_name}"?`,
         confirmText: isActive ? 'Desactivar' : 'Activar',
         danger:      isActive,
       },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
-      const obs = isActive ? this.usersService.deactivate(user.id) : this.usersService.activate(user.id);
-      obs.subscribe({
+      const path = isActive
+        ? `/platform/users/${user.id}/deactivate`
+        : `/platform/users/${user.id}/activate`;
+      this.api.patch<{ success: boolean; data: User }>(path).subscribe({
         next: () => {
           this.snackBar.open(isActive ? 'Usuario desactivado' : 'Usuario activado', 'OK', { duration: 3000 });
           this.loadUsers();
@@ -107,13 +119,13 @@ export class SupportUsersListComponent implements OnInit {
     this.dialog.open(ConfirmDialogComponent, {
       data: {
         title:       'Bloquear usuario',
-        message:     `¿Bloquear la cuenta de "${user.full_name}"? El usuario no podrá iniciar sesión hasta que sea desbloqueado.`,
+        message:     `¿Bloquear la cuenta de "${user.full_name}"? No podrá iniciar sesión hasta que sea desbloqueado.`,
         confirmText: 'Bloquear',
         danger:      true,
       },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
-      this.usersService.lock(user.id).subscribe({
+      this.api.patch<{ success: boolean; data: User }>(`/platform/users/${user.id}/lock`).subscribe({
         next: () => { this.snackBar.open('Cuenta bloqueada', 'OK', { duration: 3000 }); this.loadUsers(); },
         error: err => this.snackBar.open(err?.error?.message || 'Error', 'OK', { duration: 4000 }),
       });
