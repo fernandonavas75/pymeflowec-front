@@ -29,6 +29,8 @@ interface NavItem {
    * Si además tiene adminOnly=true, también filtra por rol STORE_ADMIN.
    */
   moduleCode?: string;
+  /** Oculto para STORE_WAREHOUSE (bodeguero no factura ni atiende clientes). */
+  warehouseHidden?: boolean;
 }
 
 interface NavGroup {
@@ -77,8 +79,8 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Facturación',
       items: [
-        { label: 'Clientes', icon: 'people',      route: '/customers', moduleCode: 'MOD_INVOICING' },
-        { label: 'Facturas', icon: 'receipt_long', route: '/invoices',  moduleCode: 'MOD_INVOICING' },
+        { label: 'Clientes', icon: 'people',      route: '/customers', moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Facturas', icon: 'receipt_long', route: '/invoices',  moduleCode: 'MOD_INVOICING', warehouseHidden: true },
       ],
     },
     // ── Catálogo (productos requiere MOD_PRODUCTS, prov. MOD_SUPPLIERS) ─
@@ -135,6 +137,7 @@ export class SidebarComponent implements OnInit {
     const isSystem        = isClientView ? false : this.authService.isSystemUser();
     const isAdmin         = isClientView ? true  : this.authService.isStoreAdmin();
     const isPlatformAdmin = this.authService.isPlatformAdmin();
+    const isWarehouse     = this.authService.isStoreWarehouse();
     const approved   = this.modulesSvc.approvedCodes();
     const pending    = this.modulesSvc.pendingCodes();
     const loadFailed = this.modulesSvc.loadFailed();
@@ -148,6 +151,9 @@ export class SidebarComponent implements OnInit {
       const items: RenderedItem[] = [];
 
       for (const item of group.items) {
+
+        // ── 0. Items ocultos para bodeguero ────────────────────────
+        if (item.warehouseHidden && isWarehouse) continue;
 
         // ── 1. Items de plataforma ──────────────────────────────────
         if (item.platformOnly) {

@@ -34,6 +34,9 @@ export class AuthService {
   /** Tiene scope STORE (STORE_ADMIN o STORE_SELLER) */
   isStoreUser = computed(() => this.currentUser()?.role?.scope === 'STORE');
 
+  /** Es STORE_WAREHOUSE */
+  isStoreWarehouse = computed(() => this.currentUser()?.role?.name === 'STORE_WAREHOUSE');
+
   constructor() {
     this.loadFromStorage();
   }

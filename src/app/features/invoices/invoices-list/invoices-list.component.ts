@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { InvoicesService } from '../../../core/services/invoices.service';
 import { Invoice } from '../../../core/models/invoice.model';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-invoices-list',
@@ -32,6 +33,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 })
 export class InvoicesListComponent implements OnInit {
   private invoicesService = inject(InvoicesService);
+  authService = inject(AuthService);
 
   invoices = signal<Invoice[]>([]);
   loading = signal(true);

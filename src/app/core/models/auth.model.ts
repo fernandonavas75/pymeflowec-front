@@ -22,7 +22,7 @@ export interface AuthUser {
   status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
   role: {
     id: number;
-    name: 'PLATFORM_ADMIN' | 'PLATFORM_STAFF' | 'STORE_ADMIN' | 'STORE_SELLER' | string;
+    name: 'PLATFORM_ADMIN' | 'PLATFORM_STAFF' | 'STORE_ADMIN' | 'STORE_SELLER' | 'STORE_WAREHOUSE' | string;
     scope: 'PLATFORM' | 'STORE';
     description?: string | null;
   };

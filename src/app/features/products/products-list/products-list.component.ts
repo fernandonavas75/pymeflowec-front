@@ -57,7 +57,7 @@ export class ProductsListComponent implements OnInit {
 
   get displayedColumns(): string[] {
     const base = ['name', 'stock', 'sale_price', 'status'];
-    return this.canEdit() ? [...base, 'actions'] : base;
+    return (this.canEdit() || this.canAdjustStock()) ? [...base, 'actions'] : base;
   }
 
   ngOnInit(): void {
@@ -148,5 +148,9 @@ export class ProductsListComponent implements OnInit {
 
   canEdit(): boolean {
     return this.authService.isSystemUser() || this.authService.isStoreAdmin();
+  }
+
+  canAdjustStock(): boolean {
+    return this.authService.isStoreAdmin() || this.authService.isStoreWarehouse();
   }
 }
