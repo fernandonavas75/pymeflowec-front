@@ -40,7 +40,7 @@ export class DashboardService {
 
         const issuedInvoices = allInvoices.filter(i => i.status === 'ISSUED');
 
-        const totalRevenue = issuedInvoices.reduce((sum, i) => sum + i.total, 0);
+        const totalRevenue = issuedInvoices.reduce((sum, i) => sum + Number(i.total), 0);
 
         const last7Days = Array.from({ length: 7 }, (_, i) => {
           const d = new Date();
@@ -52,7 +52,7 @@ export class DashboardService {
           date: day.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric' }),
           amount: issuedInvoices
             .filter(inv => new Date(inv.issue_date).toDateString() === day.toDateString())
-            .reduce((sum, inv) => sum + inv.total, 0),
+            .reduce((sum, inv) => sum + Number(inv.total), 0),
         }));
 
         const recentInvoices = [...allInvoices]
