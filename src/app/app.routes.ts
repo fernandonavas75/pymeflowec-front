@@ -149,13 +149,13 @@ export const routes: Routes = [
         path: 'companies',
         loadComponent: () => import('./features/companies/companies-list/companies-list.component').then(m => m.CompaniesListComponent),
         canActivate: [permissionGuard],
-        data: { platform: true },
+        data: { platformAdmin: true },
       },
       {
         path: 'companies/:id',
         loadComponent: () => import('./features/companies/company-detail/company-detail.component').then(m => m.CompanyDetailComponent),
         canActivate: [permissionGuard],
-        data: { platform: true },
+        data: { platformAdmin: true },
       },
 
       // Módulos de plataforma

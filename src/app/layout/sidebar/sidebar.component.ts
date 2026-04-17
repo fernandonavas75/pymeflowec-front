@@ -108,8 +108,8 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Plataforma',
       items: [
-        { label: 'Empresas',           icon: 'business',        route: '/companies',                platformOnly: true },
-        { label: 'Solicitudes',        icon: 'pending_actions', route: '/module-requests',           platformOnly: true },
+        { label: 'Empresas',           icon: 'business',        route: '/companies',                platformOnly: true, platformAdminOnly: true },
+        { label: 'Solicitudes',        icon: 'pending_actions', route: '/module-requests',           platformOnly: true, platformAdminOnly: true },
         { label: 'Usuarios soporte',   icon: 'support_agent',   route: '/platform/support-users',   platformOnly: true, platformAdminOnly: true },
         { label: 'Auditoría',          icon: 'manage_search',   route: '/platform/audit-logs',      platformOnly: true },
       ],

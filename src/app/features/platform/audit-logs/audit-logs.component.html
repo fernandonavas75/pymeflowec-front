@@ -12,16 +12,18 @@
   <div class="table-container mb-4 p-4" [formGroup]="filters">
     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
 
-      <!-- Empresa -->
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Empresa</mat-label>
-        <mat-select formControlName="company_id">
-          <mat-option [value]="null">Todas</mat-option>
-          @for (c of companies(); track c.id) {
-            <mat-option [value]="c.id">{{ c.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <!-- Empresa — solo PLATFORM_ADMIN tiene acceso a /api/companies -->
+      @if (authService.isPlatformAdmin()) {
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Empresa</mat-label>
+          <mat-select formControlName="company_id">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (c of companies(); track c.id) {
+              <mat-option [value]="c.id">{{ c.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
 
       <!-- Acción -->
       <mat-form-field appearance="outline" class="w-full">

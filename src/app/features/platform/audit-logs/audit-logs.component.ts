@@ -15,6 +15,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuditLogsService } from '../../../core/services/audit-logs.service';
 import { CompaniesService } from '../../../core/services/companies.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { AuditLog } from '../../../core/models/audit-log.model';
 import { Company } from '../../../core/models/company.model';
 
@@ -40,6 +41,7 @@ import { Company } from '../../../core/models/company.model';
 export class AuditLogsComponent implements OnInit {
   private auditSvc     = inject(AuditLogsService);
   private companiesSvc = inject(CompaniesService);
+  authService          = inject(AuthService);
 
   logs            = signal<AuditLog[]>([]);
   loading         = signal(true);
@@ -63,7 +65,7 @@ export class AuditLogsComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.loadCompanies();
+    if (this.authService.isPlatformAdmin()) this.loadCompanies();
     this.load();
     this.filters.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
       this.page.set(1);
