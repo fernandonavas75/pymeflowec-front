@@ -4,7 +4,68 @@
       <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Usuarios de soporte</h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Administradores y personal de soporte de la plataforma</p>
     </div>
+    <!-- Solo PLATFORM_ADMIN puede crear usuarios -->
+    @if (authService.isPlatformAdmin()) {
+      <button mat-flat-button color="primary" (click)="toggleForm()">
+        <mat-icon>{{ showForm() ? 'close' : 'person_add' }}</mat-icon>
+        {{ showForm() ? 'Cancelar' : 'Nuevo usuario' }}
+      </button>
+    }
   </div>
+
+  <!-- Formulario de creación -->
+  @if (showForm()) {
+    <div class="form-card mb-4">
+      <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Crear usuario de soporte</h2>
+      <form [formGroup]="createForm" (ngSubmit)="submitCreate()"
+            class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Nombre completo</mat-label>
+          <input matInput formControlName="full_name" />
+          @if (createForm.get('full_name')?.hasError('required') && createForm.get('full_name')?.touched) {
+            <mat-error>Requerido</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email" />
+          @if (createForm.get('email')?.hasError('email') && createForm.get('email')?.touched) {
+            <mat-error>Email inválido</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Contraseña</mat-label>
+          <input matInput formControlName="password" type="password" />
+          @if (createForm.get('password')?.hasError('minlength') && createForm.get('password')?.touched) {
+            <mat-error>Mínimo 8 caracteres</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Rol</mat-label>
+          <mat-select formControlName="role_id">
+            @for (r of roles(); track r.id) {
+              <mat-option [value]="r.id">{{ roleLabel(r.name) }}</mat-option>
+            }
+          </mat-select>
+          @if (createForm.get('role_id')?.hasError('required') && createForm.get('role_id')?.touched) {
+            <mat-error>Selecciona un rol</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="md:col-span-2 flex justify-end gap-2">
+          <button mat-stroked-button type="button" (click)="toggleForm()">Cancelar</button>
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+            @if (saving()) { <mat-spinner diameter="18" class="inline-block mr-2"></mat-spinner> }
+            Crear usuario
+          </button>
+        </div>
+      </form>
+    </div>
+  }
 
   <!-- Buscador -->
   <div class="table-container mb-4 p-4">
@@ -70,25 +131,27 @@
           </td>
         </ng-container>
 
-        <!-- Acciones -->
+        <!-- Acciones — solo PLATFORM_ADMIN -->
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let u">
-            <div class="flex gap-1 justify-end">
-              <button mat-icon-button
-                      [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
-                      (click)="confirmToggle(u)">
-                <mat-icon [class.text-green-500]="u.status === 'ACTIVE'"
-                          [class.text-slate-400]="u.status !== 'ACTIVE'">
-                  {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-                </mat-icon>
-              </button>
-              @if (u.status !== 'LOCKED') {
-                <button mat-icon-button matTooltip="Bloquear cuenta" (click)="confirmLock(u)">
-                  <mat-icon class="text-red-400">lock</mat-icon>
+            @if (authService.isPlatformAdmin()) {
+              <div class="flex gap-1 justify-end">
+                <button mat-icon-button
+                        [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                        (click)="confirmToggle(u)">
+                  <mat-icon [class.text-green-500]="u.status === 'ACTIVE'"
+                            [class.text-slate-400]="u.status !== 'ACTIVE'">
+                    {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
+                  </mat-icon>
                 </button>
-              }
-            </div>
+                @if (u.status !== 'LOCKED') {
+                  <button mat-icon-button matTooltip="Bloquear cuenta" (click)="confirmLock(u)">
+                    <mat-icon class="text-red-400">lock</mat-icon>
+                  </button>
+                }
+              </div>
+            }
           </td>
         </ng-container>
 
