@@ -1,7 +1,8 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormControl, Validators } from '@angular/forms';
-import { finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -16,17 +17,11 @@ import { ModuleRequest, ModuleCatalogItem } from '../../../core/models/module-re
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
-interface CompanyGroup {
-  id: number;
-  name: string;
-  requests: ModuleRequest[];
-}
-
 @Component({
   selector: 'app-module-requests-list',
   standalone: true,
   imports: [
-    CommonModule, ReactiveFormsModule,
+    CommonModule, RouterLink, ReactiveFormsModule,
     MatButtonModule, MatIconModule, MatProgressSpinnerModule,
     MatInputModule, MatSelectModule, MatDialogModule, MatTooltipModule,
   ],
@@ -46,23 +41,24 @@ export class ModuleRequestsListComponent implements OnInit {
   loading      = signal(true);
   forbidden    = signal(false);
 
-  companySearch = new FormControl('');
+  // Señales para los filtros (compatibles con computed)
+  private searchSignal = signal('');
+  private statusSignal = signal('');
 
-  private grouped = computed((): CompanyGroup[] => {
-    const map = new Map<number, CompanyGroup>();
-    for (const r of this.requests()) {
-      const id   = r.company_id;
-      const name = r.company?.name ?? `Empresa #${id}`;
-      if (!map.has(id)) map.set(id, { id, name, requests: [] });
-      map.get(id)!.requests.push(r);
-    }
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  });
+  searchControl = new FormControl('');
+  statusControl = new FormControl('');
 
-  filteredGroups = computed((): CompanyGroup[] => {
-    const q = (this.companySearch.value ?? '').toLowerCase().trim();
-    if (!q) return this.grouped();
-    return this.grouped().filter(g => g.name.toLowerCase().includes(q));
+  filteredRequests = computed((): ModuleRequest[] => {
+    const q = this.searchSignal().toLowerCase().trim();
+    const s = this.statusSignal();
+    return this.requests().filter(r => {
+      const matchSearch = !q
+        || (r.company?.name ?? '').toLowerCase().includes(q)
+        || (r.module?.name  ?? '').toLowerCase().includes(q)
+        || (r.module?.code  ?? '').toLowerCase().includes(q);
+      const matchStatus = !s || r.status === s;
+      return matchSearch && matchStatus;
+    });
   });
 
   requestForm = this.fb.group({
@@ -70,13 +66,15 @@ export class ModuleRequestsListComponent implements OnInit {
     comments:  [''],
   });
 
-  get isPlatformUser(): boolean {
-    return this.authService.isSystemUser();
-  }
+  get isPlatformUser(): boolean { return this.authService.isSystemUser(); }
 
   ngOnInit(): void {
     if (this.isPlatformUser) {
       this.loadAll();
+      this.searchControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe(v => this.searchSignal.set(v ?? ''));
+      this.statusControl.valueChanges
+        .subscribe(v => this.statusSignal.set(v ?? ''));
     } else {
       this.loadCatalog();
     }
@@ -92,25 +90,34 @@ export class ModuleRequestsListComponent implements OnInit {
     });
   }
 
-  approve(req: ModuleRequest): void {
+  activate(req: ModuleRequest): void {
     this.dialog.open(ConfirmDialogComponent, {
-      data: { title: 'Aprobar solicitud', message: `¿Aprobar el módulo "${req.module?.name}" para ${req.company?.name}?`, confirmText: 'Aprobar' },
+      data: {
+        title:       'Activar módulo',
+        message:     `¿Activar "${req.module?.name}" para ${req.company?.name}?`,
+        confirmText: 'Activar',
+      },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
       this.svc.approve(req.id).subscribe({
-        next:  () => { this.snackBar.open('Solicitud aprobada', 'OK', { duration: 3000 }); this.loadAll(); },
+        next:  () => { this.snackBar.open('Módulo activado', 'OK', { duration: 3000 }); this.loadAll(); },
         error: () => {},
       });
     });
   }
 
-  reject(req: ModuleRequest): void {
+  deactivate(req: ModuleRequest): void {
     this.dialog.open(ConfirmDialogComponent, {
-      data: { title: 'Rechazar solicitud', message: `¿Rechazar el módulo "${req.module?.name}" para ${req.company?.name}?`, confirmText: 'Rechazar', danger: true },
+      data: {
+        title:       'Desactivar módulo',
+        message:     `¿Desactivar "${req.module?.name}" para ${req.company?.name}?`,
+        confirmText: 'Desactivar',
+        danger:      true,
+      },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
       this.svc.reject(req.id).subscribe({
-        next:  () => { this.snackBar.open('Solicitud rechazada', 'OK', { duration: 3000 }); this.loadAll(); },
+        next:  () => { this.snackBar.open('Módulo desactivado', 'OK', { duration: 3000 }); this.loadAll(); },
         error: () => {},
       });
     });

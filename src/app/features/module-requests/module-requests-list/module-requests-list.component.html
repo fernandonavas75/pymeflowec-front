@@ -6,7 +6,7 @@
       </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
         {{ isPlatformUser
-          ? 'Solicitudes agrupadas por empresa'
+          ? 'Vista de plataforma — módulos solicitados por empresa'
           : 'Activa módulos para ampliar las funcionalidades de tu empresa' }}
       </p>
     </div>
@@ -23,65 +23,104 @@
 
   } @else if (isPlatformUser) {
     <!-- ══════════════════════════════════════════════════════════════
-         VISTA PLATAFORMA: cards agrupadas por empresa
+         VISTA PLATAFORMA: grid de cards por solicitud
     ═══════════════════════════════════════════════════════════════ -->
 
-    <!-- Búsqueda por empresa -->
-    <mat-form-field appearance="outline" class="w-full max-w-sm mb-5">
-      <mat-label>Filtrar por empresa</mat-label>
-      <mat-icon matPrefix class="mr-1 text-slate-400">search</mat-icon>
-      <input matInput [formControl]="companySearch" placeholder="Nombre de empresa…" />
-    </mat-form-field>
+    <!-- Filtros -->
+    <div class="flex flex-wrap gap-3 mb-6">
+      <mat-form-field appearance="outline" class="flex-1" style="min-width: 200px">
+        <mat-label>Buscar</mat-label>
+        <mat-icon matPrefix class="mr-1 text-slate-400">search</mat-icon>
+        <input matInput [formControl]="searchControl" placeholder="Empresa, módulo…" />
+      </mat-form-field>
 
-    @if (filteredGroups().length === 0) {
-      <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+      <mat-form-field appearance="outline" style="width: 160px">
+        <mat-label>Estado</mat-label>
+        <mat-select [formControl]="statusControl">
+          <mat-option value="">Todos</mat-option>
+          <mat-option value="PENDING">En espera</mat-option>
+          <mat-option value="APPROVED">Activo</mat-option>
+          <mat-option value="REJECTED">Rechazado</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    @if (filteredRequests().length === 0) {
+      <div class="flex flex-col items-center py-20 text-slate-400 dark:text-slate-500 gap-3">
         <mat-icon style="font-size:48px;width:48px;height:48px">inbox</mat-icon>
-        <p class="text-base font-medium">No hay solicitudes</p>
+        <p class="text-base font-medium">No se encontraron solicitudes</p>
       </div>
     } @else {
-      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))">
-        @for (group of filteredGroups(); track group.id) {
-          <div class="form-card flex flex-col gap-3">
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
+        @for (r of filteredRequests(); track r.id) {
+          <div class="form-card flex flex-col gap-3 hover:shadow-md transition-shadow duration-150">
 
-            <!-- Cabecera de empresa -->
-            <div class="flex items-center gap-3">
-              <div class="flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm shrink-0"
-                   [ngClass]="avatarColor(group.name)">
-                {{ initials(group.name) }}
+            <!-- Cabecera: avatar empresa + nombre + estado módulo -->
+            <div class="flex items-start gap-3">
+              <div class="flex items-center justify-center w-11 h-11 rounded-xl font-bold text-base shrink-0"
+                   [ngClass]="avatarColor(r.company?.name ?? '')">
+                {{ initials(r.company?.name ?? '') }}
               </div>
               <div class="flex-1 min-w-0">
-                <p class="font-semibold text-slate-800 dark:text-slate-100 truncate" [title]="group.name">
-                  {{ group.name }}
+                <p class="font-semibold text-slate-800 dark:text-slate-100 truncate"
+                   [title]="r.company?.name">
+                  {{ r.company?.name ?? 'Empresa #' + r.company_id }}
                 </p>
-                <p class="text-xs text-slate-400 dark:text-slate-500">
-                  {{ group.requests.length }} solicitud{{ group.requests.length !== 1 ? 'es' : '' }}
+                <p class="text-xs text-slate-400 dark:text-slate-500 truncate" [title]="r.module?.name">
+                  {{ r.module?.name ?? 'Módulo #' + r.module_id }}
                 </p>
               </div>
+              <span class="badge shrink-0 mt-0.5" [ngClass]="statusClass(r.status)">
+                {{ statusLabel(r.status) }}
+              </span>
             </div>
 
-            <!-- Lista de módulos solicitados -->
-            <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
-              @for (r of group.requests; track r.id) {
-                <div class="flex items-center justify-between py-2 gap-2">
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ r.module?.name }}</p>
-                    <p class="text-xs font-mono text-slate-400 dark:text-slate-500">{{ r.module?.code }}</p>
+            <!-- Info del módulo -->
+            <div class="flex flex-col gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+              @if (r.module?.code) {
+                <span class="flex items-center gap-2">
+                  <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">tag</mat-icon>
+                  <span class="font-mono">{{ r.module?.code }}</span>
+                </span>
+              }
+              @if (r.user?.full_name) {
+                <span class="flex items-center gap-2 truncate" [title]="r.user?.full_name">
+                  <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">person</mat-icon>
+                  {{ r.user?.full_name }}
+                </span>
+              }
+              <span class="flex items-center gap-2">
+                <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">calendar_today</mat-icon>
+                Solicitado {{ r.created_at | date:'dd/MM/yyyy' }}
+              </span>
+            </div>
+
+            <!-- Acciones -->
+            <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+              <a mat-button [routerLink]="['/companies', r.company_id]" class="text-sm">
+                <mat-icon>open_in_new</mat-icon> Ver empresa
+              </a>
+              @if (authService.isPlatformAdmin()) {
+                @if (r.status === 'APPROVED') {
+                  <button mat-icon-button matTooltip="Desactivar módulo" (click)="deactivate(r)">
+                    <mat-icon class="text-green-500">toggle_on</mat-icon>
+                  </button>
+                } @else if (r.status === 'REJECTED') {
+                  <button mat-icon-button matTooltip="Activar módulo" (click)="activate(r)">
+                    <mat-icon class="text-slate-400">toggle_off</mat-icon>
+                  </button>
+                } @else {
+                  <div class="flex">
+                    <button mat-icon-button matTooltip="Activar módulo" (click)="activate(r)">
+                      <mat-icon class="text-green-500">check_circle</mat-icon>
+                    </button>
+                    <button mat-icon-button matTooltip="Rechazar solicitud" (click)="deactivate(r)">
+                      <mat-icon class="text-red-400">cancel</mat-icon>
+                    </button>
                   </div>
-                  <div class="flex items-center gap-1 shrink-0">
-                    <span class="badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
-                    @if (r.status === 'PENDING' && authService.isPlatformAdmin()) {
-                      <button mat-icon-button matTooltip="Aprobar" (click)="approve(r)" style="width:32px;height:32px;line-height:32px">
-                        <mat-icon class="text-green-500" style="font-size:18px;width:18px;height:18px">check_circle</mat-icon>
-                      </button>
-                      <button mat-icon-button matTooltip="Rechazar" (click)="reject(r)" style="width:32px;height:32px;line-height:32px">
-                        <mat-icon class="text-red-400" style="font-size:18px;width:18px;height:18px">cancel</mat-icon>
-                      </button>
-                    }
-                  </div>
-                </div>
+                }
               }
             </div>
-
           </div>
         }
       </div>
@@ -101,7 +140,6 @@
         @for (item of catalog(); track item.id) {
           <div class="form-card flex flex-col gap-3" [class.opacity-60]="item.status === 'REJECTED'">
 
-            <!-- Cabecera -->
             <div class="flex items-start justify-between gap-2">
               <div class="flex items-center gap-3">
                 <div class="flex items-center justify-center w-10 h-10 rounded-lg"
