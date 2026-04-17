@@ -6,7 +6,7 @@
       </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
         {{ isPlatformUser
-          ? 'Gestiona solicitudes de todas las empresas'
+          ? 'Solicitudes agrupadas por empresa'
           : 'Activa módulos para ampliar las funcionalidades de tu empresa' }}
       </p>
     </div>
@@ -17,68 +17,75 @@
 
   } @else if (forbidden()) {
     <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-      <mat-icon class="text-5xl">lock</mat-icon>
+      <mat-icon style="font-size:48px;width:48px;height:48px">lock</mat-icon>
       <p class="text-base font-medium">Sin permiso para ver esta sección</p>
     </div>
 
   } @else if (isPlatformUser) {
     <!-- ══════════════════════════════════════════════════════════════
-         VISTA PLATAFORMA: tabla de solicitudes pendientes
+         VISTA PLATAFORMA: cards agrupadas por empresa
     ═══════════════════════════════════════════════════════════════ -->
-    <div class="table-container">
-      <table mat-table [dataSource]="requests()" class="w-full">
 
-        <ng-container matColumnDef="org">
-          <th mat-header-cell *matHeaderCellDef>Empresa</th>
-          <td mat-cell *matCellDef="let r" class="font-medium">{{ r.company?.name || '#' + r.company_id }}</td>
-        </ng-container>
+    <!-- Búsqueda por empresa -->
+    <mat-form-field appearance="outline" class="w-full max-w-sm mb-5">
+      <mat-label>Filtrar por empresa</mat-label>
+      <mat-icon matPrefix class="mr-1 text-slate-400">search</mat-icon>
+      <input matInput [formControl]="companySearch" placeholder="Nombre de empresa…" />
+    </mat-form-field>
 
-        <ng-container matColumnDef="module">
-          <th mat-header-cell *matHeaderCellDef>Módulo</th>
-          <td mat-cell *matCellDef="let r">{{ r.module?.name || '#' + r.module_id }}</td>
-        </ng-container>
+    @if (filteredGroups().length === 0) {
+      <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+        <mat-icon style="font-size:48px;width:48px;height:48px">inbox</mat-icon>
+        <p class="text-base font-medium">No hay solicitudes</p>
+      </div>
+    } @else {
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))">
+        @for (group of filteredGroups(); track group.id) {
+          <div class="form-card flex flex-col gap-3">
 
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let r">
-            <span class="badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
-          </td>
-        </ng-container>
+            <!-- Cabecera de empresa -->
+            <div class="flex items-center gap-3">
+              <div class="flex items-center justify-center w-10 h-10 rounded-xl font-bold text-sm shrink-0"
+                   [ngClass]="avatarColor(group.name)">
+                {{ initials(group.name) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-slate-800 dark:text-slate-100 truncate" [title]="group.name">
+                  {{ group.name }}
+                </p>
+                <p class="text-xs text-slate-400 dark:text-slate-500">
+                  {{ group.requests.length }} solicitud{{ group.requests.length !== 1 ? 'es' : '' }}
+                </p>
+              </div>
+            </div>
 
-        <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Fecha</th>
-          <td mat-cell *matCellDef="let r" class="text-sm text-slate-500 dark:text-slate-400">
-            {{ r.created_at | date:'dd/MM/yyyy' }}
-          </td>
-        </ng-container>
-
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let r">
-            <div class="flex items-center gap-1">
-              <!-- Solo PLATFORM_ADMIN puede aprobar/rechazar; PLATFORM_STAFF es solo lectura -->
-              @if (r.status === 'PENDING' && authService.isPlatformAdmin()) {
-                <button mat-icon-button matTooltip="Aprobar" (click)="approve(r)">
-                  <mat-icon class="text-green-500">check_circle</mat-icon>
-                </button>
-                <button mat-icon-button matTooltip="Rechazar" (click)="reject(r)">
-                  <mat-icon class="text-red-400">cancel</mat-icon>
-                </button>
+            <!-- Lista de módulos solicitados -->
+            <div class="flex flex-col divide-y divide-slate-100 dark:divide-slate-700">
+              @for (r of group.requests; track r.id) {
+                <div class="flex items-center justify-between py-2 gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{{ r.module?.name }}</p>
+                    <p class="text-xs font-mono text-slate-400 dark:text-slate-500">{{ r.module?.code }}</p>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <span class="badge" [ngClass]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
+                    @if (r.status === 'PENDING' && authService.isPlatformAdmin()) {
+                      <button mat-icon-button matTooltip="Aprobar" (click)="approve(r)" style="width:32px;height:32px;line-height:32px">
+                        <mat-icon class="text-green-500" style="font-size:18px;width:18px;height:18px">check_circle</mat-icon>
+                      </button>
+                      <button mat-icon-button matTooltip="Rechazar" (click)="reject(r)" style="width:32px;height:32px;line-height:32px">
+                        <mat-icon class="text-red-400" style="font-size:18px;width:18px;height:18px">cancel</mat-icon>
+                      </button>
+                    }
+                  </div>
+                </div>
               }
             </div>
-          </td>
-        </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns();"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500"
-              [attr.colspan]="displayedColumns().length">
-            No hay solicitudes
-          </td>
-        </tr>
-      </table>
-    </div>
+          </div>
+        }
+      </div>
+    }
 
   } @else {
     <!-- ══════════════════════════════════════════════════════════════
@@ -86,14 +93,13 @@
     ═══════════════════════════════════════════════════════════════ -->
     @if (catalog().length === 0) {
       <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-        <mat-icon class="text-5xl">extension_off</mat-icon>
+        <mat-icon style="font-size:48px;width:48px;height:48px">extension_off</mat-icon>
         <p class="text-base font-medium">No hay módulos disponibles</p>
       </div>
     } @else {
       <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
         @for (item of catalog(); track item.id) {
-          <div class="form-card flex flex-col gap-3"
-               [class.opacity-60]="item.status === 'REJECTED'">
+          <div class="form-card flex flex-col gap-3" [class.opacity-60]="item.status === 'REJECTED'">
 
             <!-- Cabecera -->
             <div class="flex items-start justify-between gap-2">
@@ -112,21 +118,15 @@
                   <p class="text-xs text-slate-400 font-mono">{{ item.code }}</p>
                 </div>
               </div>
-
-              <!-- Badge de estado -->
               @if (item.status) {
-                <span class="badge shrink-0" [ngClass]="statusClass(item.status)">
-                  {{ statusLabel(item.status) }}
-                </span>
+                <span class="badge shrink-0" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
               }
             </div>
 
-            <!-- Descripción -->
             @if (item.description) {
               <p class="text-sm text-slate-500 dark:text-slate-400">{{ item.description }}</p>
             }
 
-            <!-- Acción -->
             <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
               @if (item.status === 'APPROVED') {
                 <p class="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">

@@ -2,60 +2,113 @@
   <div class="page-header">
     <div>
       <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Empresas</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Vista de plataforma — todas las empresas registradas</p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        Vista de plataforma —
+        @if (!loading()) { {{ total() }} empresa{{ total() !== 1 ? 's' : '' }} registrada{{ total() !== 1 ? 's' : '' }} }
+      </p>
     </div>
   </div>
 
-  <div class="table-container">
-    @if (loading()) {
-      <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
-    } @else {
-      <table mat-table [dataSource]="companies()" class="w-full">
-        <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Nombre</th>
-          <td mat-cell *matCellDef="let c"><span class="font-medium">{{ c.name }}</span></td>
-        </ng-container>
-        <ng-container matColumnDef="ruc">
-          <th mat-header-cell *matHeaderCellDef>RUC</th>
-          <td mat-cell *matCellDef="let c" class="font-mono text-sm">{{ c.ruc }}</td>
-        </ng-container>
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let c">{{ c.email }}</td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let c">
-            <span class="badge" [ngClass]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="created">
-          <th mat-header-cell *matHeaderCellDef>Registrada</th>
-          <td mat-cell *matCellDef="let c" class="text-sm">{{ c.created_at | date:'dd/MM/yyyy' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let c">
-            <div class="flex gap-1 justify-end">
-              <a mat-icon-button [routerLink]="['/companies', c.id]" matTooltip="Ver detalle">
-                <mat-icon class="text-slate-400">open_in_new</mat-icon>
-              </a>
-              <button mat-icon-button [matTooltip]="c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(c)">
-                <mat-icon [class.text-green-500]="c.status === 'ACTIVE'" [class.text-slate-400]="c.status !== 'ACTIVE'">
+  <!-- Filtros -->
+  <div class="flex flex-wrap gap-3 mb-6" [formGroup]="filters">
+    <mat-form-field appearance="outline" class="flex-1" style="min-width: 200px">
+      <mat-label>Buscar empresa</mat-label>
+      <mat-icon matPrefix class="mr-1 text-slate-400">search</mat-icon>
+      <input matInput formControlName="search" placeholder="Nombre, RUC, email…" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" style="width: 160px">
+      <mat-label>Estado</mat-label>
+      <mat-select formControlName="status">
+        <mat-option value="">Todos</mat-option>
+        <mat-option value="ACTIVE">Activa</mat-option>
+        <mat-option value="PENDING">Pendiente</mat-option>
+        <mat-option value="SUSPENDED">Suspendida</mat-option>
+        <mat-option value="INACTIVE">Inactiva</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  @if (loading()) {
+    <div class="flex justify-center py-20">
+      <mat-spinner diameter="40"></mat-spinner>
+    </div>
+
+  } @else if (companies().length === 0) {
+    <div class="flex flex-col items-center py-20 text-slate-400 dark:text-slate-500 gap-3">
+      <mat-icon style="font-size: 48px; width: 48px; height: 48px">business</mat-icon>
+      <p class="text-base font-medium">No se encontraron empresas</p>
+    </div>
+
+  } @else {
+    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
+      @for (c of companies(); track c.id) {
+        <div class="form-card flex flex-col gap-3 hover:shadow-md transition-shadow duration-150">
+
+          <!-- Cabecera: avatar + nombre + estado -->
+          <div class="flex items-start gap-3">
+            <div class="flex items-center justify-center w-11 h-11 rounded-xl font-bold text-base shrink-0"
+                 [ngClass]="avatarColor(c.name)">
+              {{ initials(c.name) }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-slate-800 dark:text-slate-100 truncate" [title]="c.name">{{ c.name }}</p>
+              @if (c.ruc) {
+                <p class="text-xs font-mono text-slate-400 dark:text-slate-500">RUC {{ c.ruc }}</p>
+              }
+            </div>
+            <span class="badge shrink-0 mt-0.5" [ngClass]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
+          </div>
+
+          <!-- Datos de contacto -->
+          <div class="flex flex-col gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+            @if (c.email) {
+              <span class="flex items-center gap-2 truncate" [title]="c.email">
+                <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">email</mat-icon>
+                {{ c.email }}
+              </span>
+            }
+            @if (c.phone) {
+              <span class="flex items-center gap-2">
+                <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">phone</mat-icon>
+                {{ c.phone }}
+              </span>
+            }
+            <span class="flex items-center gap-2">
+              <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">calendar_today</mat-icon>
+              Registrada {{ c.created_at | date:'dd/MM/yyyy' }}
+            </span>
+          </div>
+
+          <!-- Acciones -->
+          <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+            <a mat-button [routerLink]="['/companies', c.id]" class="text-sm">
+              <mat-icon>open_in_new</mat-icon> Ver detalle
+            </a>
+            @if (authService.isPlatformAdmin()) {
+              <button mat-icon-button
+                      [matTooltip]="c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                      (click)="toggleStatus(c)">
+                <mat-icon [class.text-green-500]="c.status === 'ACTIVE'"
+                          [class.text-slate-400]="c.status !== 'ACTIVE'">
                   {{ c.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
                 </mat-icon>
               </button>
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12" [attr.colspan]="displayedColumns.length">No hay empresas registradas</td>
-        </tr>
-      </table>
-      <mat-paginator [length]="total()" [pageSize]="limit()" [pageIndex]="page()-1"
-        [pageSizeOptions]="[10,20,50]" (page)="onPageChange($event)" showFirstLastButtons />
-    }
-  </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Paginación -->
+    <mat-paginator
+      [length]="total()"
+      [pageSize]="limit()"
+      [pageIndex]="page() - 1"
+      [pageSizeOptions]="[12, 24, 48]"
+      (page)="onPageChange($event)"
+      showFirstLastButtons
+      class="mt-4">
+    </mat-paginator>
+  }
 </div>
