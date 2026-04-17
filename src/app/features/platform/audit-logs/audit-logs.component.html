@@ -8,8 +8,12 @@
     </div>
   </div>
 
+  <mat-tab-group animationDuration="200ms" class="mb-2">
+
+  <!-- ═══ TAB 1: Auditoría DB ═══ -->
+  <mat-tab label="Auditoría DB">
   <!-- Filtros -->
-  <div class="table-container mb-4 p-4" [formGroup]="filters">
+  <div class="table-container mb-4 mt-4 p-4" [formGroup]="filters">
     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
 
       <!-- Empresa — solo PLATFORM_ADMIN tiene acceso a /api/companies -->
@@ -206,4 +210,60 @@
       }
     </div>
   }
+  </mat-tab>
+  <!-- ═══ TAB 2: Logs del servidor (solo PLATFORM_ADMIN) ═══ -->
+  @if (authService.isPlatformAdmin()) {
+    <mat-tab label="Logs del servidor">
+      <div class="pt-4">
+        <!-- Controles -->
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <mat-form-field appearance="outline" class="w-36">
+            <mat-label>Nivel</mat-label>
+            <mat-select [formControl]="serverLogsLevel">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="info">INFO</mat-option>
+              <mat-option value="warn">WARN</mat-option>
+              <mat-option value="error">ERROR</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-36">
+            <mat-label>Últimas entradas</mat-label>
+            <mat-select [formControl]="serverLogsLimit">
+              <mat-option [value]="100">100</mat-option>
+              <mat-option [value]="200">200</mat-option>
+              <mat-option [value]="500">500</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-stroked-button (click)="loadServerLogs()" class="h-10">
+            <mat-icon>refresh</mat-icon>
+            Actualizar
+          </button>
+          <span class="text-xs text-slate-400 ml-auto">
+            {{ serverLogs().length }} entradas — más recientes primero
+          </span>
+        </div>
+
+        <!-- Visor tipo terminal -->
+        <div class="table-container font-mono text-xs overflow-auto rounded-lg" style="max-height:65vh">
+          @if (serverLogsLoading()) {
+            <div class="flex justify-center py-16"><mat-spinner diameter="36"></mat-spinner></div>
+          } @else if (serverLogs().length === 0) {
+            <div class="text-center py-12 text-slate-400">No hay entradas de log</div>
+          } @else {
+            @for (log of serverLogs(); track $index) {
+              <div class="flex gap-3 px-4 py-1.5 border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30"
+                   [ngClass]="serverLogRowClass(log.level)">
+                <span class="text-slate-400 whitespace-nowrap shrink-0 w-36">{{ log.timestamp || '—' }}</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 self-start"
+                      [ngClass]="serverLogBadgeClass(log.level)">{{ log.level }}</span>
+                <span class="break-all text-slate-700 dark:text-slate-300 leading-5">{{ log.message }}</span>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </mat-tab>
+  }
+
+  </mat-tab-group>
 </div>

@@ -13,7 +13,8 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AuditLogsService } from '../../../core/services/audit-logs.service';
+import { MatTabsModule } from '@angular/material/tabs';
+import { AuditLogsService, ServerLog } from '../../../core/services/audit-logs.service';
 import { CompaniesService } from '../../../core/services/companies.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AuditLog } from '../../../core/models/audit-log.model';
@@ -35,6 +36,7 @@ import { Company } from '../../../core/models/company.model';
     MatPaginatorModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    MatTabsModule,
   ],
   templateUrl: './audit-logs.component.html',
 })
@@ -64,8 +66,16 @@ export class AuditLogsComponent implements OnInit {
     date_to:     new FormControl<Date | null>(null),
   });
 
+  serverLogs        = signal<ServerLog[]>([]);
+  serverLogsLoading = signal(false);
+  serverLogsLevel   = new FormControl('');
+  serverLogsLimit   = new FormControl<number>(200);
+
   ngOnInit(): void {
-    if (this.authService.isPlatformAdmin()) this.loadCompanies();
+    if (this.authService.isPlatformAdmin()) {
+      this.loadCompanies();
+      this.loadServerLogs();
+    }
     this.load();
     this.filters.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
       this.page.set(1);
@@ -137,5 +147,34 @@ export class AuditLogsComponent implements OnInit {
 
   hasValues(log: AuditLog): boolean {
     return !!(log.old_values || log.new_values);
+  }
+
+  loadServerLogs(): void {
+    this.serverLogsLoading.set(true);
+    const level = this.serverLogsLevel.value ?? '';
+    const limit = this.serverLogsLimit.value ?? 200;
+    this.auditSvc.serverLogs({ level: level || undefined, limit })
+      .pipe(finalize(() => this.serverLogsLoading.set(false)))
+      .subscribe({
+        next: logs => this.serverLogs.set(logs),
+        error: ()   => this.serverLogs.set([]),
+      });
+  }
+
+  serverLogRowClass(level: string): string {
+    const map: Record<string, string> = {
+      error: 'bg-red-50/50 dark:bg-red-900/10',
+      warn:  'bg-amber-50/50 dark:bg-amber-900/10',
+    };
+    return map[level] ?? '';
+  }
+
+  serverLogBadgeClass(level: string): string {
+    const map: Record<string, string> = {
+      error: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+      warn:  'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+      info:  'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+    };
+    return map[level] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
   }
 }
