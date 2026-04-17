@@ -10,6 +10,7 @@ import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { MAT_SELECT_CONFIG } from '@angular/material/select';
 import { routes } from './app.routes';
 import { tokenInterceptor } from './core/interceptors/token.interceptor';
+import { clientViewInterceptor } from './core/interceptors/client-view.interceptor';
 import { errorInterceptor } from './core/interceptors/error.interceptor';
 
 function spanishPaginatorIntl(): MatPaginatorIntl {
@@ -31,7 +32,7 @@ function spanishPaginatorIntl(): MatPaginatorIntl {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideHttpClient(withInterceptors([tokenInterceptor, errorInterceptor])),
+    provideHttpClient(withInterceptors([tokenInterceptor, clientViewInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
     importProvidersFrom(MatSnackBarModule, MatDialogModule),
     { provide: MatPaginatorIntl, useFactory: spanishPaginatorIntl },
