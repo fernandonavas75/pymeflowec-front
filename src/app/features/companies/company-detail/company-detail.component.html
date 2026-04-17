@@ -183,6 +183,22 @@
                   </td>
                 </ng-container>
 
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let u">
+                    @if (authService.isPlatformAdmin()) {
+                      <button mat-icon-button
+                              [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar usuario' : 'Activar usuario'"
+                              (click)="toggleUserStatus(u)">
+                        <mat-icon [class.text-green-500]="u.status === 'ACTIVE'"
+                                  [class.text-slate-400]="u.status !== 'ACTIVE'">
+                          {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
+                        </mat-icon>
+                      </button>
+                    }
+                  </td>
+                </ng-container>
+
                 <tr mat-header-row *matHeaderRowDef="userColumns"></tr>
                 <tr mat-row *matRowDef="let row; columns: userColumns;"></tr>
                 <tr class="mat-row" *matNoDataRow>

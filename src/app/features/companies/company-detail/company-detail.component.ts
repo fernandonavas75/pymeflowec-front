@@ -60,7 +60,7 @@ export class CompanyDetailComponent implements OnInit {
   loadingUsers   = signal(false);
 
   moduleColumns = ['name', 'code', 'status'];
-  userColumns   = ['avatar', 'full_name', 'email', 'role', 'status'];
+  userColumns   = ['avatar', 'full_name', 'email', 'role', 'status', 'actions'];
 
   get companyId(): number { return Number(this.route.snapshot.paramMap.get('id')); }
 
@@ -91,7 +91,7 @@ export class CompanyDetailComponent implements OnInit {
     });
   }
 
-  private loadUsers(): void {
+  loadUsers(): void {
     this.loadingUsers.set(true);
     this.api.get<ApiListResponse<User>>(`/platform/companies/${this.companyId}/users`, { page: 1, limit: 100 })
       .pipe(finalize(() => this.loadingUsers.set(false)))
@@ -211,5 +211,29 @@ export class CompanyDetailComponent implements OnInit {
       STORE_SELLER: 'Vendedor',
     };
     return map[name] ?? name;
+  }
+
+  toggleUserStatus(user: User): void {
+    const isActive = user.status === 'ACTIVE';
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title:       isActive ? 'Desactivar usuario' : 'Activar usuario',
+        message:     `¿${isActive ? 'Desactivar' : 'Activar'} al usuario "${user.full_name}"?`,
+        confirmText: isActive ? 'Desactivar' : 'Activar',
+        danger:      isActive,
+      },
+    }).afterClosed().subscribe(ok => {
+      if (!ok) return;
+      const path = isActive
+        ? `/platform/users/${user.id}/deactivate`
+        : `/platform/users/${user.id}/activate`;
+      this.api.patch<{ success: boolean; data: User }>(path).subscribe({
+        next: () => {
+          this.snackBar.open(isActive ? 'Usuario desactivado' : 'Usuario activado', 'OK', { duration: 3000 });
+          this.loadUsers();
+        },
+        error: err => this.snackBar.open(err?.error?.message || 'Error', 'OK', { duration: 4000 }),
+      });
+    });
   }
 }
