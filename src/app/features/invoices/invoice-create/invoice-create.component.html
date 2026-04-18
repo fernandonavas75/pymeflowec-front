@@ -88,68 +88,70 @@
         </div>
         <div class="ic-card-body ic-card-body--no-pad">
 
-          <!-- Tabla header -->
-          <div class="ic-table-head">
-            <span class="ic-th ic-th-product">Producto del catálogo</span>
-            <span class="ic-th ic-th-name">Descripción *</span>
-            <span class="ic-th ic-th-qty">Cant.</span>
-            <span class="ic-th ic-th-price">Precio unit.</span>
-            <span class="ic-th ic-th-sub">Subtotal</span>
-            <span class="ic-th ic-th-del"></span>
-          </div>
+          <div class="ic-table-wrap">
+            <!-- Tabla header -->
+            <div class="ic-table-head">
+              <span class="ic-th ic-th-product">Producto del catálogo</span>
+              <span class="ic-th ic-th-name">Descripción *</span>
+              <span class="ic-th ic-th-qty">Cant.</span>
+              <span class="ic-th ic-th-price">Precio unit.</span>
+              <span class="ic-th ic-th-sub">Subtotal</span>
+              <span class="ic-th ic-th-del"></span>
+            </div>
 
-          <!-- Filas dinámicas -->
-          <div formArrayName="items" class="ic-table-body">
-            @for (item of items.controls; track item; let i = $index) {
-              <div [formGroupName]="i" class="ic-table-row">
+            <!-- Filas dinámicas -->
+            <div formArrayName="items" class="ic-table-body">
+              @for (item of items.controls; track item; let i = $index) {
+                <div [formGroupName]="i" class="ic-table-row">
 
-                <div class="ic-td ic-th-product">
-                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                    <mat-select formControlName="product_id"
-                      (selectionChange)="onProductSelect(i, $event.value)">
-                      <mat-option [value]="null">— Manual —</mat-option>
-                      @for (p of products(); track p.id) {
-                        <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                  <div class="ic-td ic-th-product">
+                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                      <mat-select formControlName="product_id"
+                        (selectionChange)="onProductSelect(i, $event.value)">
+                        <mat-option [value]="null">— Manual —</mat-option>
+                        @for (p of products(); track p.id) {
+                          <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <div class="ic-td ic-th-name">
+                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                      <input matInput formControlName="product_name" placeholder="Nombre del producto o servicio">
+                      @if (items.at(i).get('product_name')?.touched && items.at(i).get('product_name')?.invalid) {
+                        <mat-error>Requerido</mat-error>
                       }
-                    </mat-select>
-                  </mat-form-field>
-                </div>
+                    </mat-form-field>
+                  </div>
 
-                <div class="ic-td ic-th-name">
-                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                    <input matInput formControlName="product_name" placeholder="Nombre del producto o servicio">
-                    @if (items.at(i).get('product_name')?.touched && items.at(i).get('product_name')?.invalid) {
-                      <mat-error>Requerido</mat-error>
-                    }
-                  </mat-form-field>
-                </div>
+                  <div class="ic-td ic-th-qty">
+                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                      <input matInput type="number" formControlName="quantity" min="1">
+                    </mat-form-field>
+                  </div>
 
-                <div class="ic-td ic-th-qty">
-                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                    <input matInput type="number" formControlName="quantity" min="1">
-                  </mat-form-field>
-                </div>
+                  <div class="ic-td ic-th-price">
+                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                      <span matTextPrefix>$&nbsp;</span>
+                      <input matInput type="number" formControlName="unit_price" min="0" step="0.01">
+                    </mat-form-field>
+                  </div>
 
-                <div class="ic-td ic-th-price">
-                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                    <span matTextPrefix>$&nbsp;</span>
-                    <input matInput type="number" formControlName="unit_price" min="0" step="0.01">
-                  </mat-form-field>
-                </div>
+                  <div class="ic-td ic-th-sub">
+                    <span class="ic-line-sub">${{ lineSubtotal(i) | number:'1.2-2' }}</span>
+                  </div>
 
-                <div class="ic-td ic-th-sub">
-                  <span class="ic-line-sub">${{ lineSubtotal(i) | number:'1.2-2' }}</span>
-                </div>
+                  <div class="ic-td ic-th-del">
+                    <button type="button" class="ic-del-btn"
+                      (click)="removeItem(i)" [disabled]="items.length === 1">
+                      <span class="material-icons-round">delete_outline</span>
+                    </button>
+                  </div>
 
-                <div class="ic-td ic-th-del">
-                  <button type="button" class="ic-del-btn"
-                    (click)="removeItem(i)" [disabled]="items.length === 1">
-                    <span class="material-icons-round">delete_outline</span>
-                  </button>
                 </div>
-
-              </div>
-            }
+              }
+            </div>
           </div>
 
           <!-- Agregar ítem -->
