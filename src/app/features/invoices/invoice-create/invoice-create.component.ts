@@ -80,24 +80,29 @@ export class InvoiceCreateComponent implements OnInit {
     if (this.items.length > 1) this.items.removeAt(i);
   }
 
-  onProductSelect(i: number, productId: number): void {
-    const product = this.products().find(p => p.id === productId);
-    if (product) {
-      this.items.at(i).patchValue({
-        product_name: product.name,
-        unit_price: product.sale_price,
-      });
+  onProductSelect(i: number, productId: number | null): void {
+    const priceCtrl = this.items.at(i).get('unit_price')!;
+    if (productId) {
+      const product = this.products().find(p => p.id === productId);
+      if (product) {
+        this.items.at(i).patchValue({ product_name: product.name, unit_price: product.sale_price });
+        priceCtrl.disable();
+      }
+    } else {
+      priceCtrl.enable();
     }
   }
 
   lineSubtotal(i: number): number {
-    const ctrl = this.items.at(i).value;
-    return (ctrl.quantity ?? 0) * (ctrl.unit_price ?? 0);
+    const raw = (this.items.at(i) as any).getRawValue();
+    return (raw.quantity ?? 0) * (raw.unit_price ?? 0);
   }
 
   get subtotal(): number {
-    return this.items.controls.reduce((sum, ctrl) =>
-      sum + (ctrl.value.quantity ?? 0) * (ctrl.value.unit_price ?? 0), 0);
+    return this.items.controls.reduce((sum, ctrl) => {
+      const raw = (ctrl as any).getRawValue();
+      return sum + (raw.quantity ?? 0) * (raw.unit_price ?? 0);
+    }, 0);
   }
 
   get selectedTaxRate(): TaxRate | null {
@@ -119,7 +124,7 @@ export class InvoiceCreateComponent implements OnInit {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
 
-    const raw = this.form.value;
+    const raw = this.form.getRawValue();
     const taxRateId = raw.tax_rate_id ?? undefined;
 
     this.invoicesService.create({
