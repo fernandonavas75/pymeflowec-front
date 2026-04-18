@@ -14,8 +14,11 @@ export interface DashboardData {
   totalInvoices: number;
   issuedInvoices: number;
   totalRevenue: number;
+  totalExpenses: number;
+  netBalance: number;
   recentInvoices: Invoice[];
   revenueByDay: RevenueByDay[];
+  expensesByDay: RevenueByDay[];
   totalProducts: number;
   lowStockProducts: number;
   totalCustomers: number;
@@ -38,9 +41,15 @@ export class DashboardService {
         const allInvoices = invoices.data;
         const allProducts = products.data;
 
-        const issuedInvoices = allInvoices.filter(i => i.status === 'ISSUED');
+        const issuedInvoices = allInvoices.filter((i: any) => i.status === 'ISSUED');
+        const totalRevenue = issuedInvoices.reduce((sum: number, i: any) => sum + Number(i.total), 0);
 
-        const totalRevenue = issuedInvoices.reduce((sum, i) => sum + Number(i.total), 0);
+        // Gastos: valor del inventario al precio de compra
+        const totalExpenses = allProducts
+          .filter((p: any) => p.status === 'ACTIVE')
+          .reduce((sum: number, p: any) => sum + Number(p.purchase_price ?? 0) * Number(p.stock ?? 0), 0);
+
+        const netBalance = totalRevenue - totalExpenses;
 
         const last7Days = Array.from({ length: 7 }, (_, i) => {
           const d = new Date();
@@ -51,22 +60,33 @@ export class DashboardService {
         const revenueByDay: RevenueByDay[] = last7Days.map(day => ({
           date: day.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric' }),
           amount: issuedInvoices
-            .filter(inv => new Date(inv.issue_date).toDateString() === day.toDateString())
-            .reduce((sum, inv) => sum + Number(inv.total), 0),
+            .filter((inv: any) => new Date(inv.issue_date).toDateString() === day.toDateString())
+            .reduce((sum: number, inv: any) => sum + Number(inv.total), 0),
+        }));
+
+        // Gastos del día: productos creados ese día × costo × stock inicial
+        const expensesByDay: RevenueByDay[] = last7Days.map(day => ({
+          date: day.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric' }),
+          amount: allProducts
+            .filter((p: any) => new Date(p.created_at).toDateString() === day.toDateString())
+            .reduce((sum: number, p: any) => sum + Number(p.purchase_price ?? 0) * Number(p.stock ?? 0), 0),
         }));
 
         const recentInvoices = [...allInvoices]
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           .slice(0, 5);
 
         return {
           totalInvoices:    invoices.total,
           issuedInvoices:   issuedInvoices.length,
           totalRevenue,
+          totalExpenses,
+          netBalance,
           recentInvoices,
           revenueByDay,
+          expensesByDay,
           totalProducts:    products.total,
-          lowStockProducts: allProducts.filter(p => (p.stock ?? 0) < (p.min_stock ?? 5)).length,
+          lowStockProducts: allProducts.filter((p: any) => (p.stock ?? 0) < (p.min_stock ?? 5)).length,
           totalCustomers:   customers.total,
         };
       })

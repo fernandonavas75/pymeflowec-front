@@ -116,19 +116,35 @@
   @if (!loading && hasAnalytics() && data) {
 
     <div class="section-label mt-8">
-      <mat-icon>bar_chart</mat-icon>
-      <span>Resumen de facturación</span>
+      <mat-icon>account_balance_wallet</mat-icon>
+      <span>Resumen financiero</span>
     </div>
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
       <app-stat-card
-        title="Ingresos facturados"
+        title="Ingresos"
         [value]="'$' + data.totalRevenue.toFixed(2)"
-        subtitle="Facturas emitidas"
-        icon="attach_money"
+        subtitle="Total ventas emitidas"
+        icon="trending_up"
         color="green"
         trend="up"
+      />
+      <app-stat-card
+        title="Gastos en inventario"
+        [value]="'$' + data.totalExpenses.toFixed(2)"
+        subtitle="Costo de productos en stock"
+        icon="shopping_cart"
+        color="red"
+        trend="down"
+      />
+      <app-stat-card
+        title="Balance estimado"
+        [value]="'$' + data.netBalance.toFixed(2)"
+        subtitle="Ingresos − costo inventario"
+        icon="account_balance_wallet"
+        [color]="data.netBalance >= 0 ? 'green' : 'red'"
+        [trend]="data.netBalance >= 0 ? 'up' : 'down'"
       />
       <app-stat-card
         title="Facturas emitidas"
@@ -138,14 +154,14 @@
         color="indigo"
       />
       <app-stat-card
-        title="Total clientes"
+        title="Clientes"
         [value]="data.totalCustomers"
         subtitle="Registrados"
         icon="people"
         color="blue"
       />
       <app-stat-card
-        title="Total productos"
+        title="Productos"
         [value]="data.totalProducts"
         subtitle="En catálogo"
         icon="inventory_2"
@@ -169,7 +185,7 @@
     <div class="charts-grid">
       <div class="chart-card">
         <div class="chart-header">
-          <h3 class="chart-title">Ingresos — Últimos 7 días</h3>
+          <h3 class="chart-title">Ingresos y gastos — Últimos 7 días</h3>
           <a routerLink="/invoices" class="chart-link">Ver facturas →</a>
         </div>
         <apx-chart

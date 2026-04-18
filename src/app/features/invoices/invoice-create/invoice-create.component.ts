@@ -30,6 +30,7 @@ import { TaxRate } from '../../../core/models/tax-rate.model';
     MatProgressSpinnerModule,
   ],
   templateUrl: './invoice-create.component.html',
+  styleUrls: ['./invoice-create.component.scss'],
 })
 export class InvoiceCreateComponent implements OnInit {
   private fb = inject(FormBuilder);
@@ -41,13 +42,14 @@ export class InvoiceCreateComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
 
   customers = signal<Customer[]>([]);
-  products = signal<Product[]>([]);
-  taxRates = signal<TaxRate[]>([]);
-  saving = signal(false);
+  products  = signal<Product[]>([]);
+  taxRates  = signal<TaxRate[]>([]);
+  saving    = signal(false);
 
   form = this.fb.group({
-    customer_id: [null as number | null],
-    issue_date: [new Date().toISOString().split('T')[0]],
+    customer_id: [null as number | null, [Validators.required]],
+    issue_date:  [new Date().toISOString().split('T')[0]],
+    tax_rate_id: [null as number | null],
     items: this.fb.array([this.buildItem()]),
   });
 
@@ -63,11 +65,10 @@ export class InvoiceCreateComponent implements OnInit {
 
   buildItem() {
     return this.fb.group({
-      product_id: [null as number | null],
+      product_id:   [null as number | null],
       product_name: ['', Validators.required],
-      quantity: [1, [Validators.required, Validators.min(1)]],
-      unit_price: [0, [Validators.required, Validators.min(0)]],
-      tax_rate_id: [null as number | null],
+      quantity:     [1, [Validators.required, Validators.min(1)]],
+      unit_price:   [0, [Validators.required, Validators.min(0)]],
     });
   }
 
@@ -85,15 +86,33 @@ export class InvoiceCreateComponent implements OnInit {
       this.items.at(i).patchValue({
         product_name: product.name,
         unit_price: product.sale_price,
-        tax_rate_id: product.tax_rate_id ?? null,
       });
     }
   }
 
+  lineSubtotal(i: number): number {
+    const ctrl = this.items.at(i).value;
+    return (ctrl.quantity ?? 0) * (ctrl.unit_price ?? 0);
+  }
+
   get subtotal(): number {
-    return this.items.controls.reduce((sum, ctrl) => {
-      return sum + (ctrl.value.quantity ?? 0) * (ctrl.value.unit_price ?? 0);
-    }, 0);
+    return this.items.controls.reduce((sum, ctrl) =>
+      sum + (ctrl.value.quantity ?? 0) * (ctrl.value.unit_price ?? 0), 0);
+  }
+
+  get selectedTaxRate(): TaxRate | null {
+    const id = this.form.value.tax_rate_id;
+    return this.taxRates().find(t => t.id === id) ?? null;
+  }
+
+  get taxAmount(): number {
+    return this.selectedTaxRate
+      ? this.subtotal * (this.selectedTaxRate.percentage / 100)
+      : 0;
+  }
+
+  get invoiceTotal(): number {
+    return this.subtotal + this.taxAmount;
   }
 
   onSubmit(): void {
@@ -101,19 +120,21 @@ export class InvoiceCreateComponent implements OnInit {
     this.saving.set(true);
 
     const raw = this.form.value;
+    const taxRateId = raw.tax_rate_id ?? undefined;
+
     this.invoicesService.create({
-      customer_id: raw.customer_id ?? undefined,
-      issue_date: raw.issue_date ?? undefined,
+      customer_id: raw.customer_id!,
+      issue_date:  raw.issue_date ?? undefined,
       items: (raw.items ?? []).map((item: any) => ({
-        product_id: item.product_id ?? undefined,
+        product_id:   item.product_id   ?? undefined,
         product_name: item.product_name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        tax_rate_id: item.tax_rate_id ?? undefined,
+        quantity:     item.quantity,
+        unit_price:   item.unit_price,
+        tax_rate_id:  taxRateId,
       })),
     }).subscribe({
       next: inv => {
-        this.snackBar.open('Factura creada', 'OK', { duration: 3000 });
+        this.snackBar.open('Factura creada correctamente', 'OK', { duration: 3000 });
         this.router.navigate(['/invoices', inv.id]);
       },
       error: () => this.saving.set(false),

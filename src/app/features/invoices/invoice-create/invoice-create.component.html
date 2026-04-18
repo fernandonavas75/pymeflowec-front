@@ -1,112 +1,230 @@
-<div class="page-container">
-  <div class="page-header">
-    <a routerLink="/invoices" mat-icon-button>
-      <mat-icon>arrow_back</mat-icon>
+<div class="ic-page">
+
+  <!-- Header -->
+  <div class="ic-header">
+    <a routerLink="/invoices" class="ic-back">
+      <span class="material-icons-round">arrow_back</span>
     </a>
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Nueva factura</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Registra una nueva factura de venta</p>
+    <div class="ic-header-text">
+      <h1 class="ic-title">Nueva factura</h1>
+      <p class="ic-subtitle">Completa los datos para registrar la venta</p>
     </div>
   </div>
 
-  <div class="form-card">
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="ic-layout">
 
-      <!-- Cabecera -->
-      <div class="form-grid mb-6">
-        <mat-form-field appearance="outline">
-          <mat-label>Cliente (opcional)</mat-label>
-          <mat-select formControlName="customer_id">
-            <mat-option [value]="null">Consumidor final</mat-option>
-            @for (c of customers(); track c.id) {
-              <mat-option [value]="c.id">{{ c.full_name }} — {{ c.document_number }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+    <!-- ── COLUMNA PRINCIPAL ──────────────────────────────── -->
+    <div class="ic-main">
 
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha de emisión</mat-label>
-          <input matInput type="date" formControlName="issue_date">
-        </mat-form-field>
-      </div>
+      <!-- SECCIÓN 1: Datos de la factura -->
+      <div class="ic-card">
+        <div class="ic-card-header">
+          <span class="material-icons-round">article</span>
+          <h2>Datos de la factura</h2>
+        </div>
+        <div class="ic-card-body">
+          <div class="ic-fields-row">
 
-      <!-- Ítems -->
-      <h2 class="text-base font-semibold text-slate-700 dark:text-slate-300 mb-3">Productos / servicios</h2>
-
-      <div formArrayName="items" class="flex flex-col gap-4">
-        @for (item of items.controls; track item; let i = $index) {
-          <div [formGroupName]="i" class="grid grid-cols-12 gap-3 items-end border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-
-            <mat-form-field appearance="outline" class="col-span-3">
-              <mat-label>Producto (opcional)</mat-label>
-              <mat-select formControlName="product_id" (selectionChange)="onProductSelect(i, $event.value)">
-                <mat-option [value]="null">— Manual —</mat-option>
-                @for (p of products(); track p.id) {
-                  <mat-option [value]="p.id">{{ p.name }}</mat-option>
+            <div class="ic-field-group ic-field-grow">
+              <label class="ic-label">Cliente <span class="ic-required">*</span></label>
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Seleccionar cliente</mat-label>
+                <mat-select formControlName="customer_id">
+                  @for (c of customers(); track c.id) {
+                    <mat-option [value]="c.id">
+                      {{ c.full_name }} — {{ c.document_number }}
+                    </mat-option>
+                  }
+                </mat-select>
+                @if (form.get('customer_id')?.touched && form.get('customer_id')?.hasError('required')) {
+                  <mat-error>Debes seleccionar un cliente</mat-error>
                 }
-              </mat-select>
-            </mat-form-field>
+              </mat-form-field>
+            </div>
 
-            <mat-form-field appearance="outline" class="col-span-3">
-              <mat-label>Descripción *</mat-label>
-              <input matInput formControlName="product_name" placeholder="Nombre del producto/servicio">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="col-span-2">
-              <mat-label>Cantidad *</mat-label>
-              <input matInput type="number" formControlName="quantity" min="1">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="col-span-2">
-              <mat-label>Precio unitario *</mat-label>
-              <input matInput type="number" formControlName="unit_price" min="0" step="0.01">
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="col-span-1">
-              <mat-label>IVA</mat-label>
-              <mat-select formControlName="tax_rate_id">
-                <mat-option [value]="null">Sin IVA</mat-option>
-                @for (t of taxRates(); track t.id) {
-                  <mat-option [value]="t.id">{{ t.tax_name }} ({{ t.percentage }}%)</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-
-            <div class="col-span-1 flex justify-end pb-5">
-              <button type="button" mat-icon-button (click)="removeItem(i)" [disabled]="items.length === 1">
-                <mat-icon class="text-red-400">delete</mat-icon>
-              </button>
+            <div class="ic-field-group">
+              <label class="ic-label">Fecha de emisión</label>
+              <mat-form-field appearance="outline" class="w-full">
+                <mat-label>Fecha</mat-label>
+                <input matInput type="date" formControlName="issue_date">
+              </mat-form-field>
             </div>
 
           </div>
-        }
-      </div>
-
-      <button type="button" mat-stroked-button class="mt-4" (click)="addItem()">
-        <mat-icon>add</mat-icon>
-        Agregar ítem
-      </button>
-
-      <!-- Totales -->
-      <div class="mt-6 flex justify-end">
-        <div class="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 min-w-48 text-right">
-          <p class="text-sm text-slate-500">Subtotal</p>
-          <p class="text-xl font-bold text-slate-900 dark:text-slate-100">${{ subtotal | number:'1.2-2' }}</p>
         </div>
       </div>
 
-      <div class="form-actions mt-6">
-        <a routerLink="/invoices" mat-stroked-button>Cancelar</a>
-        <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-          @if (saving()) {
-            <mat-spinner diameter="20" class="inline-block"></mat-spinner>
-          } @else {
-            <mat-icon>receipt_long</mat-icon>
-            Emitir factura
-          }
-        </button>
+      <!-- SECCIÓN 2: IVA global -->
+      <div class="ic-card">
+        <div class="ic-card-header">
+          <span class="material-icons-round">percent</span>
+          <h2>Impuesto (IVA)</h2>
+        </div>
+        <div class="ic-card-body">
+          <div class="ic-tax-row">
+            <mat-form-field appearance="outline" class="ic-tax-select">
+              <mat-label>Tasa de IVA</mat-label>
+              <mat-select formControlName="tax_rate_id">
+                <mat-option [value]="null">Sin IVA (0%)</mat-option>
+                @for (t of taxRates(); track t.id) {
+                  <mat-option [value]="t.id">{{ t.tax_name }} — {{ t.percentage }}%</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+            <p class="ic-tax-note">
+              <span class="material-icons-round">info</span>
+              El IVA seleccionado se aplica sobre el subtotal total de la factura
+            </p>
+          </div>
+        </div>
       </div>
 
-    </form>
-  </div>
+      <!-- SECCIÓN 3: Productos -->
+      <div class="ic-card">
+        <div class="ic-card-header">
+          <span class="material-icons-round">inventory_2</span>
+          <h2>Productos / Servicios</h2>
+          <span class="ic-items-count">{{ items.length }} ítem{{ items.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="ic-card-body ic-card-body--no-pad">
+
+          <!-- Tabla header -->
+          <div class="ic-table-head">
+            <span class="ic-th ic-th-product">Producto del catálogo</span>
+            <span class="ic-th ic-th-name">Descripción *</span>
+            <span class="ic-th ic-th-qty">Cant.</span>
+            <span class="ic-th ic-th-price">Precio unit.</span>
+            <span class="ic-th ic-th-sub">Subtotal</span>
+            <span class="ic-th ic-th-del"></span>
+          </div>
+
+          <!-- Filas dinámicas -->
+          <div formArrayName="items" class="ic-table-body">
+            @for (item of items.controls; track item; let i = $index) {
+              <div [formGroupName]="i" class="ic-table-row">
+
+                <div class="ic-td ic-th-product">
+                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                    <mat-select formControlName="product_id"
+                      (selectionChange)="onProductSelect(i, $event.value)">
+                      <mat-option [value]="null">— Manual —</mat-option>
+                      @for (p of products(); track p.id) {
+                        <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                </div>
+
+                <div class="ic-td ic-th-name">
+                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                    <input matInput formControlName="product_name" placeholder="Nombre del producto o servicio">
+                    @if (items.at(i).get('product_name')?.touched && items.at(i).get('product_name')?.invalid) {
+                      <mat-error>Requerido</mat-error>
+                    }
+                  </mat-form-field>
+                </div>
+
+                <div class="ic-td ic-th-qty">
+                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                    <input matInput type="number" formControlName="quantity" min="1">
+                  </mat-form-field>
+                </div>
+
+                <div class="ic-td ic-th-price">
+                  <mat-form-field appearance="outline" class="w-full ic-field-compact">
+                    <span matTextPrefix>$&nbsp;</span>
+                    <input matInput type="number" formControlName="unit_price" min="0" step="0.01">
+                  </mat-form-field>
+                </div>
+
+                <div class="ic-td ic-th-sub">
+                  <span class="ic-line-sub">${{ lineSubtotal(i) | number:'1.2-2' }}</span>
+                </div>
+
+                <div class="ic-td ic-th-del">
+                  <button type="button" class="ic-del-btn"
+                    (click)="removeItem(i)" [disabled]="items.length === 1">
+                    <span class="material-icons-round">delete_outline</span>
+                  </button>
+                </div>
+
+              </div>
+            }
+          </div>
+
+          <!-- Agregar ítem -->
+          <div class="ic-add-row">
+            <button type="button" class="ic-add-btn" (click)="addItem()">
+              <span class="material-icons-round">add_circle_outline</span>
+              Agregar ítem
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── PANEL RESUMEN ──────────────────────────────────── -->
+    <aside class="ic-aside">
+      <div class="ic-summary">
+
+        <div class="ic-summary-header">
+          <span class="material-icons-round">receipt_long</span>
+          <h3>Resumen</h3>
+        </div>
+
+        <div class="ic-summary-body">
+
+          <div class="ic-sum-row">
+            <span class="ic-sum-label">Subtotal</span>
+            <span class="ic-sum-value">${{ subtotal | number:'1.2-2' }}</span>
+          </div>
+
+          @if (selectedTaxRate) {
+            <div class="ic-sum-row ic-sum-tax">
+              <span class="ic-sum-label">
+                IVA ({{ selectedTaxRate.percentage }}%)
+              </span>
+              <span class="ic-sum-value ic-sum-value--tax">
+                + ${{ taxAmount | number:'1.2-2' }}
+              </span>
+            </div>
+          } @else {
+            <div class="ic-sum-row ic-sum-tax">
+              <span class="ic-sum-label">IVA</span>
+              <span class="ic-sum-value ic-sum-value--muted">Sin IVA</span>
+            </div>
+          }
+
+          <div class="ic-sum-divider"></div>
+
+          <div class="ic-sum-row ic-sum-total">
+            <span>TOTAL</span>
+            <span>${{ invoiceTotal | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="ic-sum-items-count">
+            {{ items.length }} ítem{{ items.length !== 1 ? 's' : '' }}
+          </div>
+
+        </div>
+
+        <div class="ic-summary-actions">
+          <a routerLink="/invoices" class="ic-btn-cancel">Cancelar</a>
+          <button type="submit" class="ic-btn-submit" [disabled]="saving()">
+            @if (saving()) {
+              <mat-spinner diameter="18" class="ic-spinner"></mat-spinner>
+              <span>Procesando...</span>
+            } @else {
+              <span class="material-icons-round">receipt_long</span>
+              <span>Emitir factura</span>
+            }
+          </button>
+        </div>
+
+      </div>
+    </aside>
+
+  </form>
 </div>

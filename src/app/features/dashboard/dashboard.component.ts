@@ -166,9 +166,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private buildChartOptions(data: DashboardData): any {
     const days = data.revenueByDay;
+    const exp  = data.expensesByDay;
     return {
-      series:      [{ name: 'Ingresos facturados', data: days.map(d => d.amount) }],
-      chart:       { type: 'area' as const, height: 280, toolbar: { show: false }, fontFamily: 'inherit' },
+      series: [
+        { name: 'Ingresos', data: days.map(d => d.amount) },
+        { name: 'Gastos',   data: exp.map(d => d.amount)  },
+      ],
+      chart:       { type: 'area' as const, height: 300, toolbar: { show: false }, fontFamily: 'inherit' },
       xaxis:       {
         categories: days.map(d => d.date),
         labels:     { style: { fontSize: '11px', colors: '#64748b' } },
@@ -179,11 +183,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
         min: 0,
         labels: { formatter: (v: number) => `$${v.toFixed(0)}`, style: { fontSize: '11px', colors: '#64748b' } },
       },
-      colors:      ['#22c55e'],
-      fill:        { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.01, stops: [0, 100] } },
-      stroke:      { curve: 'smooth' as const, width: 2 },
+      colors:  ['#22c55e', '#f43f5e'],
+      fill:    {
+        type: 'gradient',
+        gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0.01, stops: [0, 100] },
+      },
+      stroke:      { curve: 'smooth' as const, width: [2, 2] },
       dataLabels:  { enabled: false },
       grid:        { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { left: 0, right: 0 } },
+      legend:      { position: 'top' as const, horizontalAlign: 'right' as const, fontSize: '12px' },
       tooltip:     { y: { formatter: (v: number) => `$${v.toFixed(2)}` } },
     };
   }
