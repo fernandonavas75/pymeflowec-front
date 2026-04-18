@@ -60,7 +60,7 @@ export class LandingComponent implements OnInit {
 
   ngOnInit(): void {
     this.moduleService.getPublicModules().subscribe({
-      next: mods => this.modules.set(mods),
+      next: mods => this.modules.set(mods.filter(m => m.is_active)),
       error: () => {},
     });
   }

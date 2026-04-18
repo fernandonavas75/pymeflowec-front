@@ -157,3 +157,14 @@
   margin-top: 20px; text-align: center; font-size: 0.875rem; color: var(--text-muted);
   a { color: var(--primary); font-weight: 600; text-decoration: none; &:hover { text-decoration: underline; } }
 }
+
+.back-to-home {
+  margin-top: 12px; text-align: center;
+  a {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.8125rem; color: var(--text-muted); text-decoration: none;
+    transition: color 0.2s;
+    &:hover { color: var(--primary); }
+    .material-icons-round { font-size: 16px; }
+  }
+}
