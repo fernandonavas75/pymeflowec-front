@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ModuleRequestService } from '../../core/services/module-request.service';
@@ -8,6 +8,7 @@ interface Feature {
   icon: string;
   title: string;
   description: string;
+  color: string;
 }
 
 interface Step {
@@ -30,33 +31,82 @@ export class LandingComponent implements OnInit {
   modules = signal<PlatformModule[]>([]);
 
   features: Feature[] = [
-    { icon: 'inventory_2',      title: 'Inventario',        description: 'Control de stock en tiempo real con alertas de bajo inventario y movimientos automáticos.' },
-    { icon: 'receipt_long',     title: 'Facturación SRI',   description: 'Emisión de facturas electrónicas integradas al SRI con firma digital y validación automática.' },
-    { icon: 'bar_chart',        title: 'Reportes',          description: 'Dashboards interactivos con indicadores clave: ventas, gastos, rentabilidad y flujo de caja.' },
-    { icon: 'people',           title: 'Clientes y CRM',    description: 'Gestiona tu cartera de clientes, historial de compras y comunicaciones centralizadas.' },
-    { icon: 'local_shipping',   title: 'Compras',           description: 'Órdenes de compra, seguimiento de proveedores y control de costos automatizado.' },
-    { icon: 'account_balance',  title: 'Contabilidad',      description: 'Cierre contable, balance general, estado de resultados y conciliaciones bancarias.' },
+    {
+      icon: 'inventory_2',
+      title: 'Inventario y Catálogo',
+      description: 'Gestiona productos, stock y precios en tiempo real con control total de tu catálogo comercial.',
+      color: 'purple',
+    },
+    {
+      icon: 'receipt_long',
+      title: 'Facturación',
+      description: 'Genera y administra facturas de forma organizada. Historial completo de ventas por cliente.',
+      color: 'blue',
+    },
+    {
+      icon: 'local_shipping',
+      title: 'Proveedores y Compras',
+      description: 'Registra proveedores, gestiona órdenes de compra y controla los costos de adquisición.',
+      color: 'teal',
+    },
+    {
+      icon: 'people',
+      title: 'Cartera de Clientes',
+      description: 'Organiza tu base de clientes con historial de facturas y datos siempre actualizados.',
+      color: 'green',
+    },
+    {
+      icon: 'percent',
+      title: 'Impuestos Configurables',
+      description: 'Define tasas de impuesto personalizadas adaptadas a los productos y servicios de tu empresa.',
+      color: 'amber',
+    },
+    {
+      icon: 'support_agent',
+      title: 'Soporte de Plataforma',
+      description: 'Administradores dedicados aprueban módulos, gestionan empresas y supervisan operaciones.',
+      color: 'indigo',
+    },
   ];
 
   steps: Step[] = [
-    { number: '01', icon: 'app_registration',  title: 'Regístrate',          description: 'Crea tu organización en minutos. Solo necesitas tu RUC y datos básicos de la empresa.' },
-    { number: '02', icon: 'extension',          title: 'Selecciona módulos',  description: 'Elige los módulos que necesitas. El superadmin aprobará tu solicitud en 24 horas.' },
-    { number: '03', icon: 'rocket_launch',      title: '¡Empieza a gestionar!', description: 'Accede a tu panel personalizado y comienza a digitalizar tu negocio hoy mismo.' },
+    {
+      number: '01',
+      icon: 'app_registration',
+      title: 'Regístrate',
+      description: 'Crea tu empresa en minutos. Solo necesitas tu RUC y datos básicos de contacto.',
+    },
+    {
+      number: '02',
+      icon: 'pending_actions',
+      title: 'Solicita módulos',
+      description: 'Elige los módulos que necesitas. Un administrador de plataforma los revisará y activará para tu empresa.',
+    },
+    {
+      number: '03',
+      icon: 'rocket_launch',
+      title: '¡Empieza a gestionar!',
+      description: 'Accede a tu panel personalizado y digitaliza las operaciones de tu empresa desde el primer día.',
+    },
   ];
 
   currentYear = new Date().getFullYear();
 
   moduleIcons: Record<string, string> = {
-    inventory:    'inventory_2',
-    sales:        'point_of_sale',
-    invoicing:    'receipt_long',
-    purchases:    'local_shipping',
-    accounting:   'account_balance',
-    expenses:     'payments',
-    reports:      'bar_chart',
-    crm:          'people',
-    cash:         'account_balance_wallet',
+    inventory:  'inventory_2',
+    sales:      'point_of_sale',
+    invoicing:  'receipt_long',
+    purchases:  'local_shipping',
+    accounting: 'account_balance',
+    expenses:   'payments',
+    reports:    'bar_chart',
+    crm:        'people',
+    cash:       'account_balance_wallet',
   };
+
+  constructor() {
+    afterNextRender(() => this.setupScrollAnimations());
+  }
 
   ngOnInit(): void {
     this.moduleService.getPublicModules().subscribe({
@@ -66,6 +116,21 @@ export class LandingComponent implements OnInit {
   }
 
   getModuleIcon(code: string): string {
-    return this.moduleIcons[code] ?? 'extension';
+    return this.moduleIcons[code.toLowerCase()] ?? 'extension';
+  }
+
+  private setupScrollAnimations(): void {
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+    );
+    document.querySelectorAll('.anim').forEach(el => observer.observe(el));
   }
 }
