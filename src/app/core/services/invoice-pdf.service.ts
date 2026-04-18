@@ -12,23 +12,24 @@ export class InvoicePdfService {
       import('pdfmake/build/vfs_fonts'),
     ]);
 
-    const pdfMake = (pdfMakeModule.default ?? pdfMakeModule) as any;
-    const vfs = (vfsModule.default ?? vfsModule) as any;
+    // pdfmake 0.3.x: el módulo CJS llega como .default en imports dinámicos
+    const pdfMake = ((pdfMakeModule as any).default ?? pdfMakeModule) as any;
+    const vfs     = ((vfsModule     as any).default ?? vfsModule)     as any;
 
-    pdfMake.vfs = vfs;
-    pdfMake.fonts = {
-      Roboto: {
-        normal: 'Roboto-Regular.ttf',
-        bold: 'Roboto-Medium.ttf',
-        italics: 'Roboto-Italic.ttf',
-        bolditalics: 'Roboto-MediumItalic.ttf',
-      },
-    };
+    // En 0.3.x ya NO se usa pdfMake.vfs: se registra con addVirtualFileSystem()
+    pdfMake.addVirtualFileSystem(vfs);
 
     const company = this.auth.currentUser()?.company;
-    pdfMake.createPdf(this.buildDoc(invoice, company)).download(
-      `factura-${invoice.invoice_number}.pdf`
-    );
+
+    return new Promise((resolve, reject) => {
+      try {
+        pdfMake
+          .createPdf(this.buildDoc(invoice, company))
+          .download(`factura-${invoice.invoice_number}.pdf`, resolve);
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   private fmt(n: number): string {

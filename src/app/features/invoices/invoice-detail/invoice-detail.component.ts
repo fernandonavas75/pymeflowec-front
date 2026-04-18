@@ -59,6 +59,10 @@ export class InvoiceDetailComponent implements OnInit {
     this.pdfLoading.set(true);
     try {
       await this.pdfService.download(inv);
+      this.snackBar.open('PDF descargado', 'OK', { duration: 3000 });
+    } catch (err) {
+      console.error('Error generando PDF:', err);
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 4000 });
     } finally {
       this.pdfLoading.set(false);
     }
