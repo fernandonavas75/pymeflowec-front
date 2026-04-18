@@ -7,6 +7,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { InvoicesService } from '../../../core/services/invoices.service';
+import { InvoicePdfService } from '../../../core/services/invoice-pdf.service';
 import { Invoice } from '../../../core/models/invoice.model';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
@@ -26,15 +27,17 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
   templateUrl: './invoice-detail.component.html',
 })
 export class InvoiceDetailComponent implements OnInit {
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  private route          = inject(ActivatedRoute);
+  private router         = inject(Router);
   private invoicesService = inject(InvoicesService);
-  private snackBar = inject(MatSnackBar);
-  private dialog = inject(MatDialog);
+  private pdfService     = inject(InvoicePdfService);
+  private snackBar       = inject(MatSnackBar);
+  private dialog         = inject(MatDialog);
 
-  invoice = signal<Invoice | null>(null);
-  loading = signal(true);
+  invoice       = signal<Invoice | null>(null);
+  loading       = signal(true);
   actionLoading = signal(false);
+  pdfLoading    = signal(false);
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
@@ -48,6 +51,17 @@ export class InvoiceDetailComponent implements OnInit {
         this.router.navigate(['/invoices']);
       },
     });
+  }
+
+  async downloadPdf(): Promise<void> {
+    const inv = this.invoice();
+    if (!inv) return;
+    this.pdfLoading.set(true);
+    try {
+      await this.pdfService.download(inv);
+    } finally {
+      this.pdfLoading.set(false);
+    }
   }
 
   cancelInvoice(): void {

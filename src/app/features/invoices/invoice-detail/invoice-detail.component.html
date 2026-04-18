@@ -12,7 +12,18 @@
         <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Factura {{ invoice()!.invoice_number }}</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Emitida el {{ formatDate(invoice()!.issue_date) }}</p>
       </div>
-      <div class="ml-auto">
+      <div class="ml-auto flex items-center gap-3">
+        <button mat-stroked-button
+          (click)="downloadPdf()"
+          [disabled]="pdfLoading()"
+          title="Descargar PDF">
+          @if (pdfLoading()) {
+            <mat-spinner diameter="16" style="display:inline-block"></mat-spinner>
+          } @else {
+            <mat-icon>picture_as_pdf</mat-icon>
+          }
+          PDF
+        </button>
         <app-status-badge [status]="invoice()!.status" type="invoice" />
       </div>
     </div>
