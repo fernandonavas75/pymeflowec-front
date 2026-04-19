@@ -1,124 +1,191 @@
 # PymeFlow EC — Frontend
 
 > **Sistema ERP Multi-Tenant para PyMEs Ecuatorianas**  
+> Aplicación web cliente desarrollada con Angular 17 (Standalone Components)  
 > Trabajo de Titulación — Ingeniería en Sistemas / Computación  
-> Autor: Fernando Navas
+> **Autor:** Fernando Navas · Ecuador, 2025
 
 ---
 
 ## Tabla de Contenidos
 
-1. [Descripción General](#1-descripción-general)
+1. [Contexto y Problemática](#1-contexto-y-problemática)
 2. [Arquitectura del Sistema](#2-arquitectura-del-sistema)
-3. [Stack Tecnológico](#3-stack-tecnológico)
+3. [Stack Tecnológico y Justificación](#3-stack-tecnológico-y-justificación)
 4. [Estructura del Proyecto](#4-estructura-del-proyecto)
-5. [Módulos Funcionales](#5-módulos-funcionales)
-6. [Autenticación y Control de Acceso](#6-autenticación-y-control-de-acceso)
-7. [Multi-Tenencia](#7-multi-tenencia)
-8. [Comunicación con la API](#8-comunicación-con-la-api)
-9. [Gestión de Estado](#9-gestión-de-estado)
-10. [Generación de Documentos](#10-generación-de-documentos)
-11. [Configuración de Entornos](#11-configuración-de-entornos)
-12. [Instalación y Ejecución](#12-instalación-y-ejecución)
-13. [Scripts Disponibles](#13-scripts-disponibles)
-14. [Rutas de la Aplicación](#14-rutas-de-la-aplicación)
-15. [Patrones y Decisiones de Diseño](#15-patrones-y-decisiones-de-diseño)
+5. [Bootstrap y Configuración de la Aplicación](#5-bootstrap-y-configuración-de-la-aplicación)
+6. [Sistema de Enrutamiento](#6-sistema-de-enrutamiento)
+7. [Capa Core: Modelos de Dominio](#7-capa-core-modelos-de-dominio)
+8. [Capa Core: Servicios](#8-capa-core-servicios)
+9. [Autenticación y Gestión de Sesión](#9-autenticación-y-gestión-de-sesión)
+10. [Control de Acceso Basado en Roles (RBAC)](#10-control-de-acceso-basado-en-roles-rbac)
+11. [Pipeline de Interceptores HTTP](#11-pipeline-de-interceptores-http)
+12. [Arquitectura Multi-Tenant](#12-arquitectura-multi-tenant)
+13. [Gestión de Estado Reactivo](#13-gestión-de-estado-reactivo)
+14. [Módulos Funcionales del ERP](#14-módulos-funcionales-del-erp)
+15. [Generación de PDF Client-Side](#15-generación-de-pdf-client-side)
+16. [Sistema de Estilos y Theming](#16-sistema-de-estilos-y-theming)
+17. [Configuración de Entornos y Build](#17-configuración-de-entornos-y-build)
+18. [Instalación y Ejecución](#18-instalación-y-ejecución)
+19. [Patrones y Decisiones de Diseño](#19-patrones-y-decisiones-de-diseño)
 
 ---
 
-## 1. Descripción General
+## 1. Contexto y Problemática
 
-**PymeFlow EC** es una plataforma web de tipo SaaS (*Software as a Service*) orientada a la gestión empresarial de pequeñas y medianas empresas (PyMEs) en el Ecuador. El sistema implementa una arquitectura **multi-tenant**, donde múltiples empresas comparten una única instancia del software manteniendo aislamiento de datos por inquilino.
+Las pequeñas y medianas empresas (PyMEs) en Ecuador representan más del 90 % del tejido empresarial del país, sin embargo, la mayoría carece de herramientas digitales integradas para gestionar sus operaciones. Las soluciones ERP tradicionales presentan barreras de adopción significativas: costos de licenciamiento elevados, infraestructura local compleja y falta de adaptación al contexto fiscal ecuatoriano (RUC, CEDULA, IVA, emisión de facturas SRI).
 
-Este repositorio contiene el **cliente frontend** desarrollado con Angular 17, que consume una API REST provista por el backend (Spring Boot, puerto `8080`). La interfaz cubre los flujos de negocio principales de una empresa comercial: gestión de clientes, proveedores, productos e inventario, emisión de facturas, configuración de impuestos y administración de usuarios.
+**PymeFlow EC** propone una solución SaaS (*Software as a Service*) multi-tenant que democratiza el acceso a un ERP mediante un modelo de suscripción por módulos, donde varias empresas comparten la misma infraestructura con aislamiento total de datos. Este repositorio contiene el **cliente frontend** de la plataforma: una SPA (*Single Page Application*) desarrollada con Angular 17 que consume la API REST del backend (Spring Boot).
 
-Adicionalmente, el sistema incluye una capa de **administración de plataforma** exclusiva para el operador SaaS, que permite gestionar las empresas suscritas, auditar operaciones, administrar módulos habilitados y crear usuarios de soporte.
+### Alcance funcional
+
+- Gestión comercial: clientes, proveedores, productos con inventario, facturación electrónica
+- Configuración fiscal: tasas de impuesto (IVA) con períodos de vigencia
+- Administración de usuarios por empresa con roles diferenciados
+- Capa de administración de la plataforma SaaS: empresas suscritas, módulos, auditoría, soporte
 
 ---
 
 ## 2. Arquitectura del Sistema
 
+### 2.1 Visión general de capas
+
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          CLIENTE (Browser)                          │
-│                                                                     │
-│  ┌──────────┐  ┌──────────────┐  ┌───────────────────────────────┐ │
-│  │ Landing  │  │  Auth Module │  │     App Shell (Layout)        │ │
-│  │  Page    │  │  login/reg   │  │  Sidebar · Topbar · Router    │ │
-│  └──────────┘  └──────────────┘  └───────────────────────────────┘ │
-│                                           │                         │
-│              ┌────────────────────────────┼────────────────────┐    │
-│              │          Feature Modules (Lazy Loaded)          │    │
-│              │                                                 │    │
-│  ┌──────────┐ ┌─────────┐ ┌──────────┐ ┌──────┐ ┌──────────┐  │    │
-│  │Customers │ │Products │ │Suppliers │ │Invoic│ │Dashboard │  │    │
-│  └──────────┘ └─────────┘ └──────────┘ └──────┘ └──────────┘  │    │
-│  ┌──────────┐ ┌─────────┐ ┌──────────┐ ┌──────┐ ┌──────────┐  │    │
-│  │Tax Rates │ │  Users  │ │Companies │ │ Logs │ │ Platform │  │    │
-│  └──────────┘ └─────────┘ └──────────┘ └──────┘ └──────────┘  │    │
-│              └─────────────────────────────────────────────────┘    │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                      Core Layer                             │    │
-│  │  Guards · Interceptors · Services · Models                  │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────┘
-                              │ HTTP / REST
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│              Backend API — Spring Boot (port 8080)                  │
-│         /api/auth  /api/invoices  /api/products  /api/...           │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             BROWSER (SPA)                                   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                        ROUTING LAYER                                │    │
+│  │  app.routes.ts — lazy loadComponent() + authGuard + permissionGuard │    │
+│  └──────────────────────────────┬──────────────────────────────────────┘    │
+│                                 │                                           │
+│         ┌───────────────────────┼───────────────────────┐                   │
+│         ▼                       ▼                       ▼                   │
+│  ┌─────────────┐      ┌──────────────────┐     ┌──────────────────┐         │
+│  │   PUBLIC    │      │   APP SHELL      │     │   PLATFORM ADMIN │         │
+│  │  Landing    │      │  main-layout     │     │  companies/      │         │
+│  │  Login      │      │  sidebar         │     │  audit-logs/     │         │
+│  │  Register   │      │  topbar          │     │  support-users/  │         │
+│  └─────────────┘      └────────┬─────────┘     └──────────────────┘         │
+│                                │                                            │
+│               ┌────────────────┼────────────────────────┐                   │
+│               │         FEATURE MODULES (Lazy)          │                   │
+│               │                                         │                   │
+│  ┌──────────┐ ┌─────────┐ ┌──────────┐ ┌────────────┐  │                   │
+│  │customers │ │products │ │suppliers │ │  invoices  │  │                   │
+│  └──────────┘ └─────────┘ └──────────┘ └────────────┘  │                   │
+│  ┌──────────┐ ┌─────────┐ ┌──────────┐ ┌────────────┐  │                   │
+│  │tax-rates │ │  users  │ │dashboard │ │mod-requests│  │                   │
+│  └──────────┘ └─────────┘ └──────────┘ └────────────┘  │                   │
+│               └─────────────────────────────────────────┘                   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                         CORE LAYER                                  │    │
+│  │                                                                     │    │
+│  │  ┌───────────┐  ┌──────────────┐  ┌───────────┐  ┌──────────────┐  │    │
+│  │  │  Guards   │  │ Interceptors │  │ Services  │  │   Models     │  │    │
+│  │  │ authGuard │  │ token        │  │ AuthSvc   │  │ AuthUser     │  │    │
+│  │  │ permGuard │  │ clientView   │  │ ApiSvc    │  │ Invoice      │  │    │
+│  │  │ roleGuard │  │ error        │  │ ...domain │  │ Product, ... │  │    │
+│  │  └───────────┘  └──────────────┘  └───────────┘  └──────────────┘  │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                       SHARED LAYER                                  │    │
+│  │   ConfirmDialog · StatCard · StatusBadge · ComingSoon               │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                │  HTTPS / REST · Bearer JWT · JSON
+                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                  BACKEND API — Spring Boot · Puerto 8080                     │
+│  /api/auth   /api/customers   /api/products   /api/invoices                 │
+│  /api/suppliers   /api/tax-rates   /api/users   /api/companies              │
+│  /api/platform   /api/audit-logs   /api/module-requests                     │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Principios Arquitectónicos
+### 2.2 Principios Arquitectónicos
 
-| Principio | Implementación |
-|-----------|---------------|
-| Separación de responsabilidades | Core / Features / Layout / Shared |
-| Carga diferida (*Lazy Loading*) | Todas las rutas usan `loadComponent()` |
-| Sin NgModules | Arquitectura 100% *Standalone Components* (Angular 17) |
-| Estado reactivo | Angular Signals + `computed()` |
-| HTTP centralizado | Interceptores funcionales encadenados |
-| RBAC multinivel | Guards funcionales con soporte de roles anidados |
+| Principio | Implementación concreta |
+|---|---|
+| Separación de responsabilidades | Cuatro capas independientes: Core, Features, Layout, Shared |
+| Carga diferida | Todas las rutas usan `loadComponent()` — un chunk de JS por componente |
+| Sin NgModules | Arquitectura 100% Standalone Components (Angular 17) |
+| Estado reactivo sin librerías externas | Angular Signals + `computed()` en AuthService |
+| Centralización de cross-cutting concerns | Interceptores HTTP funcionales encadenados |
+| RBAC jerárquico | `permissionGuard` con evaluación de scope + rol + adminOnly |
+| Tipado fuerte | TypeScript strict mode; todos los contratos de API tipados con interfaces genéricas |
+
+### 2.3 Flujo de datos end-to-end
+
+```
+Usuario interactúa con componente
+            │
+            ▼
+Componente llama a un Service (CustomerService, InvoiceService…)
+            │
+            ▼
+Service llama a ApiService.get/post/put/delete()
+            │
+            ▼
+HttpClient despacha la request
+            │
+    ┌───────┴────────────────────────────────────┐
+    │         PIPELINE DE INTERCEPTORES           │
+    │  1. tokenInterceptor  → añade Bearer token  │
+    │  2. clientViewInterceptor → inyecta company_id (si aplica) │
+    │  3. errorInterceptor  → captura errores HTTP │
+    └───────┬────────────────────────────────────┘
+            │
+            ▼
+      API REST Backend
+            │
+            ▼
+  Response tipada: ApiResponse<T> | ApiListResponse<T>
+            │
+            ▼
+  Observable emite → Componente actualiza vista
+```
 
 ---
 
-## 3. Stack Tecnológico
+## 3. Stack Tecnológico y Justificación
 
-### Framework y Lenguaje
+### 3.1 Framework y Lenguaje
 
-| Tecnología | Versión | Rol |
-|---|---|---|
-| Angular | 17.3 | Framework principal SPA |
-| TypeScript | 5.4 | Lenguaje de desarrollo |
-| RxJS | 7.8 | Programación reactiva / HTTP |
-| Zone.js | 0.14 | Change detection |
+| Tecnología | Versión | Rol | Justificación |
+|---|---|---|---|
+| **Angular** | 17.3 | Framework SPA | Standalone Components, Signals nativos, lazy loading por componente; ecosistema maduro para aplicaciones empresariales |
+| **TypeScript** | 5.4 | Lenguaje | Strict mode habilitado; interfaces tipadas para todos los contratos de API; mejora la mantenibilidad en equipos |
+| **RxJS** | 7.8 | Streams / HTTP | Composición de operadores para refresh de token, manejo de errores y flujos asíncronos complejos |
+| **Zone.js** | 0.14 | Change detection | Integración con el ciclo de detección de cambios de Angular para actualizaciones de UI automáticas |
 
-### UI y Estilos
+### 3.2 UI y Sistema de Estilos
 
-| Tecnología | Versión | Rol |
-|---|---|---|
-| Angular Material | 17.3 | Componentes UI (Material Design 3) |
-| Angular CDK | 17.3 | Primitivos de layout e interacción |
-| Tailwind CSS | 3.4 | Utilidades CSS, theming personalizado |
-| PostCSS + Autoprefixer | 8.4 / 10.4 | Procesamiento de estilos |
-| SCSS | — | Preprocesador de hojas de estilo |
+| Tecnología | Versión | Rol | Justificación |
+|---|---|---|---|
+| **Angular Material** | 17.3 | Componentes UI | Material Design 3; formularios, tablas, diálogos, snackbars, paginación listos para producción |
+| **Angular CDK** | 17.3 | Primitivos | Overlays, scrolling virtual, drag & drop; base para los componentes Material |
+| **Tailwind CSS** | 3.4 | Utilidades CSS | Diseño utility-first sin CSS custom; dark mode con clase; integración con Material deshabilitando preflight |
+| **PostCSS + Autoprefixer** | 8.4 / 10.4 | Procesamiento | Pipeline de transformación de CSS; prefijos vendor automáticos para compatibilidad cross-browser |
+| **SCSS** | — | Preprocesador | Variables, mixins y anidamiento nativo; estilos globales en `styles.scss` |
 
-### Librerías de Dominio
+### 3.3 Librerías de Dominio
 
 | Librería | Versión | Uso |
 |---|---|---|
-| ApexCharts + ng-apexcharts | 3.48 / 1.10 | Gráficas del dashboard analítico |
-| pdfmake | 0.3.7 | Generación de facturas en PDF client-side |
+| **ApexCharts** | 3.48 | Motor de gráficas SVG/Canvas para el dashboard |
+| **ng-apexcharts** | 1.10 | Wrapper Angular de ApexCharts; enlace declarativo mediante propiedades de componente |
+| **pdfmake** | 0.3.7 | Generación de documentos PDF en el browser; renderización de facturas sin servidor |
 
-### Herramientas de Build
+### 3.4 Herramientas de Build
 
-| Herramienta | Rol |
-|---|---|
-| Angular CLI 17 | Scaffolding, build, serve |
-| esbuild (via Angular) | Bundler de producción |
-| Vite (dev server) | Servidor de desarrollo (puerto 5173) |
+| Herramienta | Versión | Rol |
+|---|---|---|
+| **Angular CLI** | 17.3 | Scaffolding, build, serve, test runner |
+| **esbuild** | (interno Angular CLI 17) | Bundler de producción; reemplaza webpack; orden de magnitud más rápido |
+| **Vite** | (dev server Angular CLI 17) | Servidor de desarrollo con HMR; puerto configurado en `5173` |
 
 ---
 
@@ -126,66 +193,73 @@ Adicionalmente, el sistema incluye una capa de **administración de plataforma**
 
 ```
 pymeflowec-front/
+│
 ├── src/
 │   ├── app/
-│   │   ├── core/                        # Núcleo transversal
+│   │   │
+│   │   ├── core/                              # Núcleo transversal — singleton services
+│   │   │   │
 │   │   │   ├── guards/
-│   │   │   │   ├── auth.guard.ts        # Valida sesión JWT activa
-│   │   │   │   ├── permission.guard.ts  # RBAC por ruta
-│   │   │   │   └── role.guard.ts        # Validación de rol específico
+│   │   │   │   ├── auth.guard.ts              # CanActivateFn: valida JWT + /auth/me
+│   │   │   │   ├── permission.guard.ts        # CanActivateFn: RBAC (platform/store/adminOnly)
+│   │   │   │   └── role.guard.ts              # CanActivateFn: validación de rol puntual
+│   │   │   │
 │   │   │   ├── interceptors/
-│   │   │   │   ├── token.interceptor.ts       # Inyección Bearer + refresh
-│   │   │   │   ├── error.interceptor.ts       # Manejo centralizado de errores
-│   │   │   │   └── client-view.interceptor.ts # Scoping de company_id
-│   │   │   ├── models/
-│   │   │   │   ├── auth.model.ts
-│   │   │   │   ├── company.model.ts
-│   │   │   │   ├── customer.model.ts
-│   │   │   │   ├── invoice.model.ts
-│   │   │   │   ├── product.model.ts
-│   │   │   │   ├── supplier.model.ts
-│   │   │   │   ├── user.model.ts
-│   │   │   │   ├── tax-rate.model.ts
-│   │   │   │   ├── pagination.model.ts
-│   │   │   │   ├── audit-log.model.ts
-│   │   │   │   └── module-request.model.ts
+│   │   │   │   ├── token.interceptor.ts       # Bearer JWT + lógica de refresh automático
+│   │   │   │   ├── client-view.interceptor.ts # Inyección de company_id para impersonación
+│   │   │   │   └── error.interceptor.ts       # Captura HTTP errors → MatSnackBar
+│   │   │   │
+│   │   │   ├── models/                        # Contratos TypeScript — mirrors del backend
+│   │   │   │   ├── auth.model.ts              # LoginRequest, RegisterRequest, AuthUser, LoginResponse
+│   │   │   │   ├── company.model.ts           # Company, CreateCompanyDto, UpdateCompanyDto
+│   │   │   │   ├── customer.model.ts          # Customer, CustomerType, CreateCustomerDto
+│   │   │   │   ├── invoice.model.ts           # Invoice, InvoiceDetail, CreateInvoiceDto
+│   │   │   │   ├── product.model.ts           # Product, AdjustStockDto, StockMovementType
+│   │   │   │   ├── supplier.model.ts          # Supplier, CreateSupplierDto
+│   │   │   │   ├── user.model.ts              # User con role y company
+│   │   │   │   ├── tax-rate.model.ts          # TaxRate con períodos de vigencia
+│   │   │   │   ├── pagination.model.ts        # ApiResponse<T>, ApiListResponse<T>, PaginatedResponse<T>
+│   │   │   │   ├── audit-log.model.ts         # AuditLog para trazabilidad de plataforma
+│   │   │   │   └── module-request.model.ts    # ModuleRequest, estados APPROVED/PENDING
+│   │   │   │
 │   │   │   └── services/
-│   │   │       ├── auth.service.ts
-│   │   │       ├── api.service.ts            # Wrapper HTTP genérico
-│   │   │       ├── customers.service.ts
-│   │   │       ├── products.service.ts
-│   │   │       ├── suppliers.service.ts
-│   │   │       ├── invoices.service.ts
-│   │   │       ├── users.service.ts
-│   │   │       ├── companies.service.ts
-│   │   │       ├── tax-rates.service.ts
-│   │   │       ├── dashboard.service.ts
-│   │   │       ├── invoice-pdf.service.ts
-│   │   │       ├── audit-logs.service.ts
-│   │   │       ├── module-request.service.ts
-│   │   │       ├── company-modules.service.ts
-│   │   │       ├── admin-view.service.ts     # Impersonación de empresa
-│   │   │       ├── roles.service.ts
-│   │   │       └── theme.service.ts
-│   │   ├── features/                    # Módulos de dominio (lazy)
+│   │   │       ├── auth.service.ts            # Signal currentUser + JWT + refresh
+│   │   │       ├── api.service.ts             # Wrapper genérico de HttpClient
+│   │   │       ├── customers.service.ts       # CRUD clientes paginado
+│   │   │       ├── products.service.ts        # CRUD productos + ajuste de stock
+│   │   │       ├── suppliers.service.ts       # CRUD proveedores
+│   │   │       ├── invoices.service.ts        # CRUD facturas + cancelación
+│   │   │       ├── users.service.ts           # CRUD usuarios de empresa
+│   │   │       ├── companies.service.ts       # Gestión empresas (plataforma)
+│   │   │       ├── tax-rates.service.ts       # Tasas impositivas
+│   │   │       ├── dashboard.service.ts       # KPIs y métricas analíticas
+│   │   │       ├── invoice-pdf.service.ts     # Generación PDF con pdfmake
+│   │   │       ├── audit-logs.service.ts      # Logs de auditoría de plataforma
+│   │   │       ├── module-request.service.ts  # Solicitudes de módulos por empresa
+│   │   │       ├── company-modules.service.ts # Módulos habilitados por empresa
+│   │   │       ├── admin-view.service.ts      # Estado de impersonación de empresa
+│   │   │       ├── roles.service.ts           # Catálogo de roles disponibles
+│   │   │       └── theme.service.ts           # Toggle de modo oscuro/claro
+│   │   │
+│   │   ├── features/                          # Componentes de dominio — lazy loaded
 │   │   │   ├── auth/
-│   │   │   │   ├── login/
-│   │   │   │   ├── register/
-│   │   │   │   └── forgot-password/
+│   │   │   │   ├── login/                     # Formulario de inicio de sesión
+│   │   │   │   ├── register/                  # Registro de empresa + admin
+│   │   │   │   └── forgot-password/           # Recuperación de contraseña
 │   │   │   ├── clients/
-│   │   │   │   ├── clients-list/
-│   │   │   │   └── client-form/
+│   │   │   │   ├── clients-list/              # Tabla paginada de clientes
+│   │   │   │   └── client-form/               # Formulario crear/editar (reutilizable)
 │   │   │   ├── products/
-│   │   │   │   ├── products-list/
-│   │   │   │   ├── product-form/
-│   │   │   │   └── stock-adjust-dialog/
+│   │   │   │   ├── products-list/             # Catálogo con filtros y búsqueda
+│   │   │   │   ├── product-form/              # Formulario crear/editar producto
+│   │   │   │   └── stock-adjust-dialog/       # Dialog modal para ajuste de inventario
 │   │   │   ├── suppliers/
 │   │   │   │   ├── suppliers-list/
 │   │   │   │   └── supplier-form/
 │   │   │   ├── invoices/
-│   │   │   │   ├── invoices-list/
-│   │   │   │   ├── invoice-create/
-│   │   │   │   └── invoice-detail/
+│   │   │   │   ├── invoices-list/             # Historial de facturas con estado
+│   │   │   │   ├── invoice-create/            # Wizard de emisión de factura
+│   │   │   │   └── invoice-detail/            # Vista detalle + descarga PDF
 │   │   │   ├── tax-rates/
 │   │   │   │   ├── tax-rates-list/
 │   │   │   │   └── tax-rate-form/
@@ -193,316 +267,1055 @@ pymeflowec-front/
 │   │   │   │   ├── users-list/
 │   │   │   │   └── user-form/
 │   │   │   ├── companies/
-│   │   │   │   ├── companies-list/
-│   │   │   │   └── company-detail/
-│   │   │   ├── dashboard/
-│   │   │   ├── landing/
+│   │   │   │   ├── companies-list/            # Listado de empresas suscritas (plataforma)
+│   │   │   │   └── company-detail/            # Detalle empresa + módulos + estado
+│   │   │   ├── dashboard/                     # Panel de KPIs con ApexCharts
+│   │   │   ├── landing/                       # Página de marketing / presentación
 │   │   │   ├── module-requests/
+│   │   │   │   └── module-requests-list/      # Cola de aprobación de módulos
 │   │   │   └── platform/
-│   │   │       ├── audit-logs/
-│   │   │       └── support-users/
-│   │   ├── layout/                      # Shell de la aplicación
-│   │   │   ├── main-layout/
-│   │   │   ├── sidebar/
-│   │   │   └── topbar/
-│   │   ├── shared/                      # Componentes reutilizables
+│   │   │       ├── audit-logs/                # Visor de logs de plataforma
+│   │   │       └── support-users/             # Gestión de usuarios PLATFORM_STAFF
+│   │   │
+│   │   ├── layout/                            # Shell de la aplicación autenticada
+│   │   │   ├── main-layout/                   # Router outlet + estructura de página
+│   │   │   ├── sidebar/                       # Navegación lateral con module gating
+│   │   │   └── topbar/                        # Barra superior con menú de usuario
+│   │   │
+│   │   ├── shared/                            # Componentes agnósticos de dominio
 │   │   │   └── components/
-│   │   │       ├── confirm-dialog/
-│   │   │       ├── stat-card/
-│   │   │       ├── status-badge/
-│   │   │       └── coming-soon/
-│   │   ├── app.routes.ts                # Definición de rutas
-│   │   ├── app.config.ts                # Configuración de providers
-│   │   └── app.component.ts
+│   │   │       ├── confirm-dialog/            # Dialog de confirmación genérico
+│   │   │       ├── stat-card/                 # Tarjeta de métrica para dashboard
+│   │   │       ├── status-badge/              # Badge con color según estado
+│   │   │       └── coming-soon/               # Placeholder para módulos en desarrollo
+│   │   │
+│   │   ├── app.routes.ts                      # Árbol de rutas de la aplicación
+│   │   ├── app.config.ts                      # ApplicationConfig (providers globales)
+│   │   └── app.component.ts                   # Componente raíz (solo <router-outlet>)
+│   │
 │   ├── environments/
-│   │   ├── environment.ts               # Dev: localhost:8080
-│   │   └── environment.prod.ts          # Prod: api.tesisfernandonavaspuce.es
-│   ├── styles.scss                      # Estilos globales
-│   ├── main.ts
-│   └── index.html
-├── angular.json
-├── tailwind.config.js
-├── tsconfig.json
-└── package.json
+│   │   ├── environment.ts                     # Dev: apiUrl → localhost:8080
+│   │   └── environment.prod.ts                # Prod: apiUrl → api.tesisfernandonavaspuce.es
+│   │
+│   ├── styles.scss                            # Tema Material + imports globales
+│   ├── main.ts                                # bootstrapApplication(AppComponent)
+│   └── index.html                             # Shell HTML
+│
+├── angular.json                               # Configuración Angular CLI
+├── tailwind.config.js                         # Tema Tailwind + desactivación preflight
+├── postcss.config.js                          # Plugins PostCSS
+├── tsconfig.json                              # Configuración TypeScript strict
+└── package.json                               # Dependencias y scripts
 ```
 
 ---
 
-## 5. Módulos Funcionales
+## 5. Bootstrap y Configuración de la Aplicación
 
-### 5.1 Dashboard
-
-Panel de control principal con métricas clave del negocio. Integra gráficas interactivas usando ApexCharts para visualizar tendencias de ventas, stock de productos y actividad de clientes.
-
-### 5.2 Clientes (`/customers`)
-
-Gestión del directorio de clientes. Soporta tres tipos de identificación fiscal ecuatoriana:
-
-| Tipo | Descripción |
-|---|---|
-| `CEDULA` | Persona natural — cédula de identidad |
-| `RUC` | Persona jurídica o natural con actividad económica |
-| `FINAL_CONSUMER` | Consumidor final (sin datos fiscales) |
-
-### 5.3 Productos (`/products`)
-
-Catálogo de productos con control de inventario. Funcionalidades:
-- CRUD de productos con precio unitario y stock disponible
-- Ajuste de stock mediante diálogo modal (`StockAdjustDialogComponent`)
-- Registro de movimientos: `IN` (entrada), `OUT` (salida), `ADJUSTMENT` (corrección)
-
-### 5.4 Proveedores (`/suppliers`)
-
-Directorio de proveedores con información de contacto. Ruta protegida por rol administrador.
-
-### 5.5 Facturación (`/invoices`)
-
-Módulo central del ERP. Permite:
-- Creación de facturas con líneas de detalle (`InvoiceDetail`)
-- Aplicación de tasas impositivas configuradas por el administrador
-- Visualización de facturas emitidas con su estado
-- Descarga de la factura en formato PDF generada en el cliente (sin servidor)
-
-### 5.6 Tasas de Impuesto (`/tax-rates`)
-
-Configuración de impuestos con períodos de vigencia. Usado al momento de calcular el IVA en las facturas.
-
-### 5.7 Usuarios (`/users`)
-
-Administración de usuarios de la empresa (inquilino). Roles disponibles en el ámbito *store*: `STORE_ADMIN`, `STORE_SELLER`, `STORE_WAREHOUSE`.
-
-### 5.8 Solicitudes de Módulos (`/module-requests`)
-
-Flujo de aprobación para que una empresa solicite la habilitación de módulos adicionales del ERP. El operador de la plataforma aprueba o rechaza las solicitudes.
-
-### 5.9 Administración de Plataforma
-
-Accesible únicamente para usuarios con rol `PLATFORM_ADMIN` o `PLATFORM_STAFF`:
-
-| Ruta | Función |
-|---|---|
-| `/companies` | Listado y gestión de empresas suscritas |
-| `/companies/:id` | Detalle de empresa, módulos habilitados, estado |
-| `/platform/modules` | Catálogo de módulos del sistema |
-| `/platform/support-users` | Gestión de usuarios de soporte (solo `PLATFORM_ADMIN`) |
-| `/platform/audit-logs` | Registro de auditoría de operaciones críticas |
-
----
-
-## 6. Autenticación y Control de Acceso
-
-### 6.1 Flujo de Autenticación
-
-```
-Usuario ingresa credenciales
-          │
-          ▼
-POST /api/auth/login
-          │
-          ▼
-Backend retorna:
-  - access_token (JWT)
-  - refresh_token
-  - user { id, name, email, role, company }
-          │
-          ▼
-AuthService almacena en localStorage:
-  pf_token    → JWT de acceso
-  pf_refresh  → Token de renovación
-  pf_user     → Objeto usuario serializado
-          │
-          ▼
-Signal currentUser actualizado
-          │
-          ▼
-Redirect al Dashboard
-```
-
-### 6.2 Interceptores HTTP
-
-Los interceptores se aplican en cadena en el siguiente orden:
-
-1. **`token.interceptor`** — Adjunta el header `Authorization: Bearer <token>` a todas las peticiones autenticadas. Si el servidor responde con `401 Unauthorized`, ejecuta automáticamente la renovación del token y reintenta la petición original.
-
-2. **`client-view.interceptor`** — Cuando un administrador de plataforma impersona una empresa, inyecta el parámetro `company_id` en cada petición para limitar los datos al inquilino seleccionado.
-
-3. **`error.interceptor`** — Captura errores HTTP y muestra notificaciones al usuario mediante `MatSnackBar` con mensajes en español.
-
-### 6.3 Guards de Ruta
+Angular 17 utiliza `bootstrapApplication()` en lugar de `AppModule`. Toda la configuración de providers se centraliza en `app.config.ts`:
 
 ```typescript
-// Jerarquía de protección de rutas
-Route
-  └── canActivate: [authGuard]          // ¿Sesión activa?
-        └── canActivate: [permissionGuard]  // ¿Tiene el rol requerido?
+// src/app/app.config.ts
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // Router con árbol de rutas lazy
+    provideRouter(routes),
+
+    // HttpClient con tres interceptores funcionales en cadena
+    provideHttpClient(
+      withInterceptors([tokenInterceptor, clientViewInterceptor, errorInterceptor])
+    ),
+
+    // Animaciones asíncronas (evita bloquear el hilo principal en el bootstrap)
+    provideAnimationsAsync(),
+
+    // Módulos Material que requieren providers globales
+    importProvidersFrom(MatSnackBarModule, MatDialogModule),
+
+    // Paginador localizado al español ecuatoriano
+    { provide: MatPaginatorIntl, useFactory: spanishPaginatorIntl },
+
+    // subscriptSizing dinámico para form-fields (evita saltos de layout)
+    { provide: MAT_FORM_FIELD_DEFAULT_OPTIONS, useValue: { subscriptSizing: 'dynamic' } },
+
+    // Alineación de opciones de select deshabilitada (mejor UX en listas largas)
+    { provide: MAT_SELECT_CONFIG, useValue: { disableOptionCentering: true } },
+  ],
+};
 ```
 
-| Guard | Responsabilidad |
-|---|---|
-| `authGuard` | Verifica que existe un JWT válido. Si no, redirige a `/login` |
-| `permissionGuard` | Evalúa opciones de ruta: `platform`, `platformAdmin`, `adminOnly` |
-| `role.guard` | Validación de rol específico para casos puntuales |
-
-### 6.4 Roles y Alcances
-
-El sistema define dos ámbitos (*scopes*) de usuario:
-
-**Plataforma (sin empresa asignada)**
-
-| Rol | Permisos |
-|---|---|
-| `PLATFORM_ADMIN` | Acceso total. Crea usuarios de plataforma, gestiona empresas y módulos |
-| `PLATFORM_STAFF` | Soporte. Ve empresas y logs, no puede crear admins de plataforma |
-
-**Empresa / Store (company_id requerido)**
-
-| Rol | Permisos |
-|---|---|
-| `STORE_ADMIN` | Administra todos los recursos de su empresa |
-| `STORE_SELLER` | Acceso a clientes, facturas y productos (lectura) |
-| `STORE_WAREHOUSE` | Acceso a productos e inventario |
-
-### 6.5 Señales Computadas en AuthService
+La función `spanishPaginatorIntl()` localiza el paginador de Angular Material:
 
 ```typescript
-isAuthenticated  = computed(() => this.currentUser() !== null)
-isSystemUser     = computed(() => !this.currentUser()?.company)
-isPlatformUser   = computed(() => role.scope === 'PLATFORM')
-isPlatformAdmin  = computed(() => role.name === 'PLATFORM_ADMIN')
-isStoreAdmin     = computed(() => role.name === 'STORE_ADMIN')
-isStoreUser      = computed(() => role.scope === 'STORE')
-isStoreWarehouse = computed(() => role.name === 'STORE_WAREHOUSE')
-```
-
----
-
-## 7. Multi-Tenencia
-
-La arquitectura multi-tenant se implementa a nivel de frontend mediante tres mecanismos complementarios:
-
-### 7.1 Scoping Automático por Empresa
-
-El `client-view.interceptor` intercepta todas las peticiones HTTP salientes. Cuando el usuario autenticado pertenece a una empresa (*store user*), el interceptor adjunta automáticamente el `company_id` correspondiente, asegurando que el backend filtre los datos por inquilino.
-
-### 7.2 Impersonación de Empresa (AdminView)
-
-El servicio `AdminViewService` permite a los administradores de plataforma "ingresar" a la vista de una empresa específica. Al activar este modo, el interceptor usa el `company_id` seleccionado en lugar del propio del usuario, permitiendo soporte y auditoría sin necesidad de credenciales por empresa.
-
-### 7.3 Gating de Módulos
-
-El servicio `CompanyModulesService` consulta los módulos habilitados para la empresa activa. El componente `SidebarComponent` filtra los ítems de navegación según el estado de cada módulo (`APPROVED` / `PENDING`), impidiendo el acceso a funcionalidades no suscritas.
-
----
-
-## 8. Comunicación con la API
-
-### 8.1 Endpoints Base
-
-| Entorno | URL Base |
-|---|---|
-| Desarrollo | `http://localhost:8080/api` |
-| Producción | `https://api.tesisfernandonavaspuce.es/api` |
-
-### 8.2 Wrappers de Respuesta
-
-Todos los servicios tipan sus respuestas con los siguientes modelos genéricos definidos en `pagination.model.ts`:
-
-```typescript
-// Respuesta singular
-interface ApiResponse<T> {
-  data: T;
-  message?: string;
-}
-
-// Respuesta paginada
-interface ApiListResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  size: number;
-}
-
-// Genérico de paginación
-interface PaginatedResponse<T> {
-  content: T[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
+function spanishPaginatorIntl(): MatPaginatorIntl {
+  const intl = new MatPaginatorIntl();
+  intl.itemsPerPageLabel = 'Elementos por página:';
+  intl.nextPageLabel     = 'Siguiente';
+  intl.previousPageLabel = 'Anterior';
+  intl.firstPageLabel    = 'Primera página';
+  intl.lastPageLabel     = 'Última página';
+  intl.getRangeLabel = (page, pageSize, length) => {
+    if (length === 0 || pageSize === 0) return `0 de ${length}`;
+    const start = page * pageSize + 1;
+    const end   = Math.min(page * pageSize + pageSize, length);
+    return `${start} – ${end} de ${length}`;
+  };
+  return intl;
 }
 ```
 
-### 8.3 ApiService
-
-El servicio `api.service.ts` actúa como wrapper de `HttpClient`, estandarizando la construcción de parámetros, cabeceras y el manejo de errores antes de que alcancen los interceptores.
-
 ---
 
-## 9. Gestión de Estado
+## 6. Sistema de Enrutamiento
 
-El frontend no utiliza una librería de gestión de estado externa (NgRx, Akita). En su lugar se aplica el enfoque nativo de Angular 17:
+### 6.1 Estrategia de rutas
 
-| Mecanismo | Uso |
+El árbol de rutas en `app.routes.ts` aplica tres patrones simultáneamente:
+
+**a) Rutas públicas** — acceso irrestricto:
+```typescript
+{
+  path: 'login',
+  loadComponent: () =>
+    import('./features/auth/login/login.component').then(m => m.LoginComponent),
+},
+```
+
+**b) Rutas de empresa** — envueltas en `MainLayoutComponent` protegidas por `authGuard`:
+```typescript
+{
+  path: '',
+  loadComponent: () =>
+    import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
+  canActivate: [authGuard],
+  children: [
+    {
+      path: 'products/new',
+      loadComponent: () =>
+        import('./features/products/product-form/product-form.component')
+          .then(m => m.ProductFormComponent),
+      canActivate: [permissionGuard],
+      data: { adminOnly: true },   // ← metadato leído por permissionGuard
+    },
+    // ...
+  ],
+}
+```
+
+**c) Rutas de plataforma** — adicionalmente protegidas con `data: { platform: true }` o `data: { platformAdmin: true }`:
+```typescript
+{
+  path: 'platform/support-users',
+  loadComponent: () =>
+    import('./features/platform/support-users/support-users-list.component')
+      .then(m => m.SupportUsersListComponent),
+  canActivate: [permissionGuard],
+  data: { platformAdmin: true },  // ← exclusivo PLATFORM_ADMIN
+},
+```
+
+### 6.2 Tabla completa de rutas
+
+#### Rutas Públicas
+
+| Ruta | Componente |
 |---|---|
-| **Angular Signals** | Estado global de autenticación (`AuthService.currentUser`) |
-| **`computed()`** | Estado derivado del usuario autenticado (roles, permisos) |
-| **`BehaviorSubject` / `Observable`** | Flujos de datos asincrónicos en servicios de dominio |
-| **Component-level state** | Estado local de formularios y listas dentro de cada componente |
+| `/` | `LandingComponent` |
+| `/login` | `LoginComponent` |
+| `/register` | `RegisterComponent` |
+| `/forgot-password` | `ForgotPasswordComponent` |
+
+#### Rutas de Empresa (requieren `authGuard`)
+
+| Ruta | Guard adicional | Condición |
+|---|---|---|
+| `/dashboard` | — | Cualquier usuario autenticado |
+| `/customers` | — | Cualquier usuario autenticado |
+| `/customers/new` | — | Cualquier usuario autenticado |
+| `/customers/:id/edit` | — | Cualquier usuario autenticado |
+| `/invoices` | — | Cualquier usuario autenticado |
+| `/invoices/new` | — | Cualquier usuario autenticado |
+| `/invoices/:id` | — | Cualquier usuario autenticado |
+| `/products` | — | Cualquier usuario autenticado |
+| `/products/new` | `permissionGuard` | `adminOnly: true` → `STORE_ADMIN` |
+| `/products/:id/edit` | `permissionGuard` | `adminOnly: true` → `STORE_ADMIN` |
+| `/suppliers` | — | Cualquier usuario autenticado |
+| `/suppliers/new` | `permissionGuard` | `adminOnly: true` |
+| `/suppliers/:id/edit` | `permissionGuard` | `adminOnly: true` |
+| `/tax-rates` | `permissionGuard` | `adminOnly: true` |
+| `/tax-rates/new` | `permissionGuard` | `adminOnly: true` |
+| `/tax-rates/:id/edit` | `permissionGuard` | `adminOnly: true` |
+| `/users` | `permissionGuard` | `adminOnly: true` |
+| `/users/new` | `permissionGuard` | `adminOnly: true` |
+| `/users/:id/edit` | `permissionGuard` | `adminOnly: true` |
+| `/module-requests` | `permissionGuard` | `adminOnly: true` |
+
+#### Rutas de Plataforma (requieren `authGuard` + `permissionGuard`)
+
+| Ruta | Condición |
+|---|---|
+| `/companies` | `platform: true` → cualquier usuario PLATFORM |
+| `/companies/:id` | `platform: true` |
+| `/platform/modules` | `platform: true` |
+| `/platform/audit-logs` | `platform: true` |
+| `/platform/support-users` | `platformAdmin: true` → solo `PLATFORM_ADMIN` |
 
 ---
 
-## 10. Generación de Documentos
+## 7. Capa Core: Modelos de Dominio
 
-### PDF de Factura
+Los modelos TypeScript en `src/app/core/models/` actúan como contratos explícitos entre el frontend y la API REST. Todos son interfaces puras (sin lógica), reflejando exactamente la estructura JSON del backend.
 
-El servicio `InvoicePdfService` utiliza **pdfmake** para generar facturas en formato PDF directamente en el navegador, sin requerir procesamiento en el servidor. El documento incluye:
-
-- Datos de la empresa emisora
-- Datos del cliente receptor con tipo de documento fiscal
-- Tabla de líneas de detalle (producto, cantidad, precio unitario, subtotal)
-- Cálculo de subtotal, IVA y total
-- Número de factura y fecha de emisión
-
-La generación es completamente *client-side*, lo que reduce la carga del servidor y permite la descarga inmediata.
-
----
-
-## 11. Configuración de Entornos
-
-### Desarrollo
+### 7.1 Modelo de Autenticación (`auth.model.ts`)
 
 ```typescript
-// src/environments/environment.ts
+export interface AuthUser {
+  id: number;
+  company_id: number | null;
+  role_id: number;
+  full_name: string;
+  email: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
+  role: {
+    id: number;
+    name: 'PLATFORM_ADMIN' | 'PLATFORM_STAFF' | 'STORE_ADMIN' | 'STORE_SELLER' | 'STORE_WAREHOUSE' | string;
+    scope: 'PLATFORM' | 'STORE';
+    description?: string | null;
+  };
+  company: {
+    id: number;
+    name: string;
+    business_name?: string | null;
+    ruc?: string | null;
+    email?: string | null;
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
+  } | null;           // null para usuarios de plataforma sin empresa asignada
+}
+
+export interface LoginResponse {
+  access_token:  string;  // JWT de corta duración
+  refresh_token: string;  // Token de renovación
+  user: AuthUser;
+}
+
+export interface RegisterRequest {
+  company_name:  string;  // Auto-crea la empresa
+  company_ruc:   string;
+  company_email?: string;
+  company_phone?: string;
+  full_name:     string;  // Usuario administrador inicial
+  email:         string;
+  password:      string;
+}
+```
+
+### 7.2 Modelo de Factura (`invoice.model.ts`)
+
+```typescript
+export type InvoiceStatus = 'ISSUED' | 'CANCELLED';
+
+export interface InvoiceDetail {
+  id:              number;
+  invoice_id:      number;
+  company_id:      number;
+  product_id?:     number | null;
+  tax_rate_id?:    number | null;
+  product_name:    string;        // snapshot del nombre al momento de emisión
+  quantity:        number;
+  unit_price:      number;
+  tax_percentage:  number;
+  tax_amount:      number;
+  line_subtotal:   number;
+  line_total:      number;
+  created_at:      string;
+}
+
+export interface Invoice {
+  id:             number;
+  invoice_number: string;         // Ej: FAC-000001
+  issue_date:     string;
+  subtotal:       number;
+  tax_amount:     number;
+  total:          number;
+  status:         InvoiceStatus;
+  customer?:      Customer | null;
+  details?:       InvoiceDetail[];
+}
+
+export interface CreateInvoiceDto {
+  customer_id?: number;
+  issue_date?:  string;
+  items: {
+    product_id?:   number;
+    product_name?: string;  // permite items sin producto del catálogo
+    quantity:      number;
+    unit_price:    number;
+    tax_rate_id?:  number;
+  }[];
+}
+```
+
+### 7.3 Modelo de Producto (`product.model.ts`)
+
+```typescript
+export type StockMovementType  = 'IN' | 'OUT' | 'ADJUSTMENT';
+export type StockReferenceType = 'PURCHASE' | 'SALE' | 'MANUAL';
+
+export interface Product {
+  id:             number;
+  company_id:     number;
+  supplier_id?:   number | null;
+  tax_rate_id?:   number | null;
+  sku?:           string | null;
+  name:           string;
+  purchase_price: number;
+  sale_price:     number;
+  stock:          number;
+  min_stock:      number;         // umbral de alerta de inventario bajo
+  status:         'ACTIVE' | 'INACTIVE';
+}
+
+export interface AdjustStockDto {
+  quantity:       number;
+  movement_type:  StockMovementType;
+  reference_type: StockReferenceType;
+  notes?:         string;
+}
+```
+
+### 7.4 Modelo de Cliente (`customer.model.ts`)
+
+```typescript
+export type CustomerType = 'CEDULA' | 'RUC' | 'FINAL_CONSUMER';
+
+export interface Customer {
+  id:              number;
+  company_id:      number;
+  customer_type:   CustomerType;
+  document_number: string;       // CI o RUC según tipo
+  full_name:       string;
+  email?:          string | null;
+  phone?:          string | null;
+  address?:        string | null;
+}
+```
+
+### 7.5 Contratos de respuesta paginada (`pagination.model.ts`)
+
+```typescript
+// Wrapper de respuesta singular del backend
+export interface ApiResponse<T> {
+  success: boolean;
+  data:    T;
+}
+
+// Wrapper de respuesta paginada del backend
+export interface ApiListResponse<T> {
+  success: boolean;
+  data:    T[];
+  pagination: {
+    total:        number;
+    total_pages:  number;
+    current_page: number;
+    per_page:     number;
+  };
+}
+
+// Parámetros de paginación para query strings
+export interface PaginationParams {
+  page?:   number;
+  limit?:  number;
+  search?: string;
+  status?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+```
+
+---
+
+## 8. Capa Core: Servicios
+
+### 8.1 ApiService — Wrapper HTTP Genérico
+
+`ApiService` encapsula `HttpClient` y provee un API homogéneo para todos los servicios de dominio. Elimina la repetición de la URL base y la construcción de `HttpParams`:
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class ApiService {
+  private http    = inject(HttpClient);
+  private baseUrl = environment.apiUrl;   // inyectado desde environment.*
+
+  private buildParams(
+    params?: Record<string, string | number | boolean | undefined>
+  ): HttpParams {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          httpParams = httpParams.set(key, String(value));
+        }
+      });
+    }
+    return httpParams;
+  }
+
+  get<T>(path: string, params?: Record<string, ...>): Observable<T> {
+    return this.http.get<T>(`${this.baseUrl}${path}`, { params: this.buildParams(params) });
+  }
+
+  post<T>(path: string, body: unknown):  Observable<T> { ... }
+  put<T>(path: string, body: unknown):   Observable<T> { ... }
+  patch<T>(path: string, body?: unknown): Observable<T> { ... }
+  delete<T>(path: string):               Observable<T> { ... }
+}
+```
+
+### 8.2 Patrón de servicio de dominio
+
+Todos los servicios de dominio siguen el mismo patrón: inyectan `ApiService`, tipan sus respuestas con los genéricos y exponen `Observable<T>`:
+
+```typescript
+// Ejemplo: CustomersService
+@Injectable({ providedIn: 'root' })
+export class CustomersService {
+  private api = inject(ApiService);
+
+  getAll(params?: PaginationParams): Observable<ApiListResponse<Customer>> {
+    return this.api.get<ApiListResponse<Customer>>('/customers', params);
+  }
+
+  getById(id: number): Observable<ApiResponse<Customer>> {
+    return this.api.get<ApiResponse<Customer>>(`/customers/${id}`);
+  }
+
+  create(dto: CreateCustomerDto): Observable<ApiResponse<Customer>> {
+    return this.api.post<ApiResponse<Customer>>('/customers', dto);
+  }
+
+  update(id: number, dto: UpdateCustomerDto): Observable<ApiResponse<Customer>> {
+    return this.api.put<ApiResponse<Customer>>(`/customers/${id}`, dto);
+  }
+
+  delete(id: number): Observable<ApiResponse<void>> {
+    return this.api.delete<ApiResponse<void>>(`/customers/${id}`);
+  }
+}
+```
+
+---
+
+## 9. Autenticación y Gestión de Sesión
+
+### 9.1 AuthService — Signal-based
+
+`AuthService` utiliza un `signal<AuthUser | null>` como fuente de verdad del usuario autenticado. Todos los estados derivados (roles, permisos) se calculan con `computed()`, garantizando consistencia sin suscripciones manuales:
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private api    = inject(ApiService);
+  private router = inject(Router);
+
+  // Fuente de verdad reactiva
+  currentUser   = signal<AuthUser | null>(null);
+
+  // Estados derivados — se recalculan automáticamente cuando currentUser cambia
+  isAuthenticated  = computed(() => !!this.currentUser());
+  role             = computed(() => this.currentUser()?.role?.name);
+  isSystemUser     = computed(() => !this.currentUser()?.company);   // usuario de plataforma
+  isPlatformUser   = computed(() => this.currentUser()?.role?.scope === 'PLATFORM');
+  isPlatformAdmin  = computed(() => this.currentUser()?.role?.name === 'PLATFORM_ADMIN');
+  isStoreAdmin     = computed(() => this.currentUser()?.role?.name === 'STORE_ADMIN');
+  isStoreUser      = computed(() => this.currentUser()?.role?.scope === 'STORE');
+  isStoreWarehouse = computed(() => this.currentUser()?.role?.name === 'STORE_WAREHOUSE');
+
+  constructor() {
+    this.loadFromStorage();  // hidrata el signal desde localStorage al iniciar la app
+  }
+}
+```
+
+### 9.2 Flujo de Login
+
+```
+POST /api/auth/login  { email, password }
+           │
+           ▼  Backend retorna:
+           │  { success, access_token, refresh_token, user: AuthUser }
+           │
+           ▼  AuthService.login() ejecuta tap():
+           │    localStorage.setItem('pf_token',   access_token)
+           │    localStorage.setItem('pf_refresh',  refresh_token)
+           │    localStorage.setItem('pf_user',     JSON.stringify(user))
+           │    this.currentUser.set(user)         ← Signal actualizado
+           │
+           ▼  Componente suscrito navega a /dashboard
+```
+
+### 9.3 Estrategia de tokens
+
+| Clave localStorage | Contenido | Uso |
+|---|---|---|
+| `pf_token` | JWT de acceso (corta duración) | Adjuntado en cada petición HTTP por `tokenInterceptor` |
+| `pf_refresh` | Token de renovación (larga duración) | Enviado a `/auth/refresh` cuando el JWT expira (401) |
+| `pf_user` | `AuthUser` serializado (JSON) | Hidratación del signal en el reload de página |
+
+### 9.4 Renovación automática de token
+
+```
+Request normal →  tokenInterceptor → Backend
+                                           │
+                               Si 401 Unauthorized y no es /auth/refresh:
+                                           │
+                                           ▼
+                             POST /api/auth/refresh  { refresh_token }
+                                           │
+                               Si OK: actualiza pf_token en localStorage
+                                      reintenta la request original con nuevo token
+                                           │
+                               Si falla: authService.logout() → redirige a /login
+```
+
+Implementación en `token.interceptor.ts`:
+
+```typescript
+export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);
+  const token       = localStorage.getItem('pf_token');
+  const authReq     = token ? addAuthHeader(req, token) : req;
+
+  return next(authReq).pipe(
+    catchError((error: HttpErrorResponse) => {
+      // Solo hace refresh si: es 401, no es la propia ruta de refresh, no es login
+      if (error.status === 401
+          && !req.url.includes('/auth/refresh')
+          && !req.url.includes('/auth/login')) {
+        return authService.refreshToken().pipe(
+          switchMap(res => {
+            const retryReq = addAuthHeader(req, res.access_token);
+            return next(retryReq);   // reintento transparente
+          }),
+          catchError(refreshError => {
+            authService.logout();    // sesión inrecuperable
+            return throwError(() => refreshError);
+          })
+        );
+      }
+      return throwError(() => error);
+    })
+  );
+};
+```
+
+---
+
+## 10. Control de Acceso Basado en Roles (RBAC)
+
+### 10.1 Jerarquía de roles
+
+```
+Scope: PLATFORM                          Scope: STORE
+─────────────────                        ───────────────────────────
+PLATFORM_ADMIN                           STORE_ADMIN
+ └─ Acceso total                          └─ Gestión completa de la empresa
+ └─ Crea PLATFORM_STAFF                  
+                                         STORE_SELLER
+PLATFORM_STAFF                            └─ Clientes, facturas (lectura/escritura)
+ └─ Soporte: empresas, logs              
+ └─ No puede crear admins de plataforma  STORE_WAREHOUSE
+                                          └─ Productos, inventario
+```
+
+### 10.2 authGuard — Verificación de sesión activa
+
+```typescript
+export const authGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router      = inject(Router);
+
+  const token = authService.getToken();
+  if (!token) {
+    router.navigate(['/login']);
+    return false;
+  }
+
+  // Si el signal ya tiene usuario (ej. recarga en misma sesión), permite inmediatamente
+  if (authService.currentUser()) {
+    return true;
+  }
+
+  // Si el token existe pero el signal está vacío (ej. primer load), valida con /auth/me
+  return authService.me().pipe(
+    map(() => true),
+    catchError(() => {
+      authService.logout();
+      return of(false);
+    })
+  );
+};
+```
+
+### 10.3 permissionGuard — RBAC por metadatos de ruta
+
+El guard lee los datos estáticos (`data`) de la ruta activa y aplica la política correspondiente:
+
+```typescript
+export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
+  const auth   = inject(AuthService);
+  const router = inject(Router);
+
+  const requirePlatformAdmin = route.data['platformAdmin'] ?? false;
+  const requirePlatform      = route.data['platform']      ?? false;
+  const adminOnly            = route.data['adminOnly']     ?? false;
+  const requiredRoles        = adminOnly ? ['STORE_ADMIN'] : (route.data['roles'] ?? []);
+
+  // Política 1: exclusivo PLATFORM_ADMIN
+  if (requirePlatformAdmin) {
+    if (auth.isPlatformAdmin()) return true;
+    router.navigate(['/dashboard']);
+    return false;
+  }
+
+  // Política 2: cualquier usuario de plataforma (PLATFORM_ADMIN o PLATFORM_STAFF)
+  if (requirePlatform) {
+    if (auth.isSystemUser()) return true;
+    router.navigate(['/dashboard']);
+    return false;
+  }
+
+  // Política 3: los usuarios de plataforma bypasean todos los guards de tienda
+  // (pueden acceder a cualquier empresa en modo soporte)
+  if (auth.isSystemUser()) return true;
+
+  // Política 4: sin roles requeridos → cualquier usuario autenticado de tienda
+  if (requiredRoles.length === 0) return true;
+
+  // Política 5: verifica si el usuario tiene alguno de los roles requeridos
+  if (auth.hasRole(...requiredRoles)) return true;
+
+  router.navigate(['/dashboard']);
+  return false;
+};
+```
+
+### 10.4 Metadatos de ruta soportados
+
+| Clave `data` | Tipo | Efecto |
+|---|---|---|
+| `platform: true` | boolean | Acceso solo para scope PLATFORM (admin o staff) |
+| `platformAdmin: true` | boolean | Acceso exclusivo para `PLATFORM_ADMIN` |
+| `adminOnly: true` | boolean | Alias para `roles: ['STORE_ADMIN']` |
+| `roles: string[]` | string[] | Array de roles válidos (OR lógico) |
+
+---
+
+## 11. Pipeline de Interceptores HTTP
+
+Los tres interceptores se registran en `app.config.ts` mediante `withInterceptors([...])` y se ejecutan **en el orden declarado** para las requests salientes (y en orden inverso para las respuestas entrantes).
+
+### 11.1 tokenInterceptor
+
+- Adjunta `Authorization: Bearer <token>` a todas las peticiones salientes
+- Implementa refresh automático del JWT ante respuesta 401
+- Evita el loop infinito excluyendo las rutas `/auth/refresh` y `/auth/login`
+
+### 11.2 clientViewInterceptor
+
+Mecanismo central de la multi-tenencia en el frontend. Cuando un administrador de plataforma impersona una empresa, este interceptor inyecta el `company_id` como query param en cada petición:
+
+```typescript
+export const clientViewInterceptor: HttpInterceptorFn = (req, next) => {
+  const adminView = inject(AdminViewService);
+  const company   = adminView.viewedCompany();  // Signal: empresa seleccionada o null
+
+  if (!company) return next(req);  // sin impersonación → pass-through
+
+  // Las rutas de plataforma y auth no necesitan company_id
+  if (req.url.includes('/platform/') || req.url.includes('/auth/')) {
+    return next(req);
+  }
+
+  // Clona la request e inyecta company_id como query param
+  const modified = req.clone({
+    params: req.params.set('company_id', company.id.toString()),
+  });
+
+  return next(modified);
+};
+```
+
+### 11.3 errorInterceptor
+
+Intercepta todas las respuestas de error HTTP y muestra una notificación contextual al usuario mediante `MatSnackBar`. Mapea códigos de estado a mensajes en español:
+
+```typescript
+export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+  const snackBar = inject(MatSnackBar);
+
+  return next(req).pipe(
+    catchError((error: HttpErrorResponse) => {
+      let message = 'Ha ocurrido un error inesperado';
+
+      // Extrae mensaje del body de error si existe
+      if (error.error?.message) {
+        message = Array.isArray(error.error.message)
+          ? error.error.message[0]
+          : error.error.message;
+      }
+
+      // Mapeo de códigos HTTP a mensajes de usuario
+      if      (error.status === 0)    message = 'No se pudo conectar con el servidor';
+      else if (error.status === 403)  message = 'No tienes permiso para realizar esta acción';
+      else if (error.status === 404)  message = 'El recurso solicitado no fue encontrado';
+      else if (error.status === 422)  message = error.error?.message || 'Error de validación';
+      else if (error.status >= 500)   message = 'Error interno del servidor';
+
+      // Los 401 son manejados por tokenInterceptor; no mostrar snackbar
+      if (error.status !== 401) {
+        snackBar.open(message, 'Cerrar', {
+          duration: 5000,
+          panelClass: ['error-snackbar'],
+          horizontalPosition: 'right',
+          verticalPosition: 'top',
+        });
+      }
+
+      return throwError(() => error);
+    })
+  );
+};
+```
+
+---
+
+## 12. Arquitectura Multi-Tenant
+
+### 12.1 Modelo de multi-tenencia
+
+PymeFlow EC implementa el modelo **shared database, shared schema** con discriminación por `company_id` en cada tabla del backend. El frontend refuerza este aislamiento mediante tres mecanismos:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MECANISMOS DE MULTI-TENENCIA (Frontend)          │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  1. Scoping por JWT                                         │    │
+│  │  El JWT del usuario ya contiene company_id. El backend      │    │
+│  │  valida y filtra por el tenant del token.                   │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  2. Impersonación vía clientViewInterceptor                 │    │
+│  │  PLATFORM_ADMIN selecciona empresa → AdminViewService       │    │
+│  │  guarda Signal<Company> → interceptor inyecta              │    │
+│  │  ?company_id=X en todas las peticiones de store.           │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  3. Module Gating en Sidebar                               │    │
+│  │  CompanyModulesService consulta módulos habilitados.       │    │
+│  │  SidebarComponent filtra ítems de navegación               │    │
+│  │  según estado del módulo: APPROVED / PENDING.              │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 12.2 Ciclo de vida de una empresa en la plataforma
+
+```
+REGISTRO                    ACTIVACIÓN                  OPERACIÓN
+─────────────────────────────────────────────────────────────────────
+Usuario registra empresa     PLATFORM_ADMIN              STORE_ADMIN
+  POST /auth/register   →    activa empresa   →          gestiona su empresa
+  company.status = PENDING   company.status = ACTIVE     con sus usuarios y módulos
+                              │
+                              ├─ Aprueba módulos solicitados
+                              ├─ Puede suspender: status = SUSPENDED
+                              └─ Puede ver audit logs de la empresa
+```
+
+### 12.3 Estados de empresa
+
+| Estado | Descripción |
+|---|---|
+| `PENDING` | Registro recibido, pendiente de activación por PLATFORM_ADMIN |
+| `ACTIVE` | Empresa operativa, puede usar los módulos aprobados |
+| `INACTIVE` | Suscripción expirada o deshabilitada voluntariamente |
+| `SUSPENDED` | Suspendida por incumplimiento; acceso bloqueado temporalmente |
+
+---
+
+## 13. Gestión de Estado Reactivo
+
+El frontend no incorpora librerías de gestión de estado externas (NgRx, Akita, Elf). La decisión es intencional: Angular 17 provee primitivos suficientemente expresivos para la complejidad actual de la aplicación.
+
+### 13.1 Estrategia por capa
+
+| Capa | Mecanismo | Justificación |
+|---|---|---|
+| **Estado de sesión global** | `signal<AuthUser \| null>` en `AuthService` | Acceso síncrono sin suscripción; auto-recálculo de estados derivados |
+| **Estados derivados de rol** | `computed(() => ...)` | Dependencia automática del signal; consistencia garantizada |
+| **Datos asíncronos del servidor** | `Observable<T>` desde servicios de dominio | RxJS provee cancelación, composición y manejo de errores |
+| **Estado de impersonación** | `signal<Company \| null>` en `AdminViewService` | Síncrono; leído en cada request por el interceptor |
+| **Estado local de formulario** | Variables de componente + `FormGroup` | Estado encapsulado; no afecta a otros componentes |
+
+### 13.2 Por qué no NgRx
+
+NgRx introduce un overhead significativo (acciones, reducers, efectos, selectores) apropiado para aplicaciones con estado global muy distribuido. En PymeFlow EC, el único estado verdaderamente global es la sesión del usuario, que se gestiona eficientemente con un Signal. El resto del estado vive en componentes o se obtiene directamente de la API.
+
+---
+
+## 14. Módulos Funcionales del ERP
+
+### 14.1 Dashboard
+
+Panel principal de indicadores de gestión. Combina `DashboardService` (métricas del backend) con componentes `StatCard` (shared) y gráficas de `ng-apexcharts`. Las opciones de ApexCharts se inicializan en una propiedad del componente (no en un getter) para evitar reevaluaciones infinitas que congelarían el browser.
+
+### 14.2 Gestión de Clientes
+
+Soporta los tres tipos de identificación fiscal vigentes en Ecuador:
+
+| `CustomerType` | Identificador | Emisor |
+|---|---|---|
+| `CEDULA` | Cédula de identidad (10 dígitos) | Registro Civil |
+| `RUC` | Registro Único de Contribuyentes (13 dígitos) | SRI |
+| `FINAL_CONSUMER` | Sin identificación (consumidor final) | — |
+
+El formulario `ClientFormComponent` es reutilizado para creación y edición mediante la detección del parámetro `:id` en la ruta activa.
+
+### 14.3 Catálogo de Productos e Inventario
+
+Los productos registran precio de compra (`purchase_price`) y precio de venta (`sale_price`) de forma independiente, permitiendo calcular márgenes. El control de stock se gestiona mediante movimientos tipados:
+
+| `StockMovementType` | `StockReferenceType` | Descripción |
+|---|---|---|
+| `IN` | `PURCHASE` | Entrada por compra a proveedor |
+| `OUT` | `SALE` | Salida por venta (automática al emitir factura) |
+| `ADJUSTMENT` | `MANUAL` | Corrección manual por inventario físico |
+
+El ajuste de stock se realiza desde un `MatDialog` (`StockAdjustDialogComponent`) sin navegar fuera de la lista de productos.
+
+### 14.4 Facturación
+
+Módulo central del ERP. El flujo de emisión opera en `InvoiceCreateComponent`:
+
+```
+Seleccionar cliente (opcional para consumidor final)
+            │
+            ▼
+Agregar líneas de detalle:
+  - Buscar producto del catálogo (autocomplete)
+  - O ingresar descripción libre
+  - Cantidad + precio unitario + tasa de impuesto
+            │
+            ▼
+Cálculo automático:
+  line_subtotal = quantity × unit_price
+  tax_amount    = line_subtotal × (tax_percentage / 100)
+  line_total    = line_subtotal + tax_amount
+            │
+            ▼
+POST /api/invoices  → { invoice_number, status: 'ISSUED', ... }
+            │
+            ▼
+Redirige a InvoiceDetailComponent
+  donde el usuario puede descargar el PDF
+```
+
+### 14.5 Administración de la Plataforma
+
+Conjunto de vistas exclusivas para el operador SaaS:
+
+| Vista | Funcionalidad técnica |
+|---|---|
+| `CompaniesListComponent` | Lista paginada de empresas con filtro por estado |
+| `CompanyDetailComponent` | Detalle de empresa: módulos activos, usuarios, cambio de estado |
+| `AuditLogsComponent` | Visor de `AuditLog` con filtros por empresa, acción y fecha |
+| `SupportUsersListComponent` | CRUD de usuarios `PLATFORM_STAFF` (solo `PLATFORM_ADMIN`) |
+| `ModuleRequestsListComponent` | Cola de solicitudes de módulos pendientes de aprobación |
+
+---
+
+## 15. Generación de PDF Client-Side
+
+`InvoicePdfService` utiliza la librería **pdfmake** para construir y descargar facturas en PDF directamente en el navegador, sin requerir ningún endpoint de servidor dedicado para documentos.
+
+### 15.1 Estructura del documento generado
+
+```
+┌─────────────────────────────────────────────────────┐
+│  LOGO / NOMBRE EMPRESA          FACTURA              │
+│  Dirección · RUC · Email        Nº: FAC-000001       │
+│                                 Fecha: 2025-06-15    │
+├─────────────────────────────────────────────────────┤
+│  CLIENTE                                             │
+│  Nombre: Juan Pérez                                  │
+│  Tipo: CEDULA · Doc: 0102030405                      │
+├──────────────────────┬──────┬───────┬───────┬───────┤
+│  Descripción         │ Cant │ P.U.  │  IVA  │ Total │
+├──────────────────────┼──────┼───────┼───────┼───────┤
+│  Producto A          │  2   │ 10.00 │ 1.50  │ 21.50 │
+│  Servicio B          │  1   │ 50.00 │ 6.00  │ 56.00 │
+├──────────────────────┴──────┴───────┴───────┴───────┤
+│                              Subtotal:       77.50   │
+│                              IVA (15%):       7.50   │
+│                              TOTAL:          85.00   │
+└─────────────────────────────────────────────────────┘
+```
+
+### 15.2 Configuración de pdfmake en angular.json
+
+pdfmake usa módulos CommonJS. Angular CLI 17 los lista explícitamente en `allowedCommonJsDependencies` para suprimir advertencias de build:
+
+```json
+"allowedCommonJsDependencies": [
+  "pdfmake",
+  "pdfmake/build/pdfmake",
+  "pdfmake/build/vfs_fonts"
+]
+```
+
+---
+
+## 16. Sistema de Estilos y Theming
+
+### 16.1 Arquitectura híbrida Material + Tailwind
+
+La aplicación combina dos sistemas de diseño complementarios:
+
+| Sistema | Responsabilidad |
+|---|---|
+| **Angular Material** | Componentes interactivos: `mat-table`, `mat-form-field`, `mat-dialog`, `mat-snackbar`, `mat-paginator`, `mat-select` |
+| **Tailwind CSS** | Layout, espaciado, tipografía, colores de fondo, tarjetas, animaciones |
+
+Para que ambos sistemas coexistan sin conflictos de CSS, el `preflight` de Tailwind (que hace un reset del navegador) está **deshabilitado**:
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  corePlugins: {
+    preflight: false,   // Angular Material maneja sus propios resets CSS
+  },
+  // ...
+};
+```
+
+### 16.2 Paleta de colores personalizada
+
+```javascript
+// tailwind.config.js — paleta primaria índigo
+colors: {
+  primary: {
+    50:  '#eef2ff',
+    100: '#e0e7ff',
+    200: '#c7d2fe',
+    300: '#a5b4fc',
+    400: '#818cf8',
+    500: '#6366f1',   // ← primary.DEFAULT (usado en botones, enlaces, highlights)
+    600: '#4f46e5',
+    700: '#4338ca',
+    800: '#3730a3',
+    900: '#312e81',
+  }
+}
+```
+
+### 16.3 Animaciones CSS definidas
+
+| Nombre | Definición | Uso |
+|---|---|---|
+| `fade-in` | `opacity: 0→1` en 0.25s ease-out | Aparición de paneles y cards |
+| `slide-up` | `translateY(20px)→0 + opacity 0→1` en 0.3s | Modales y formularios |
+| `shimmer` | `backgroundPosition` animado | Skeletons de carga |
+
+### 16.4 Sombras de card personalizadas
+
+```javascript
+boxShadow: {
+  'card':    '0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07)',
+  'card-md': '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
+}
+```
+
+### 16.5 Dark Mode
+
+Habilitado mediante la estrategia `class` de Tailwind. `ThemeService` agrega o remueve la clase `dark` en el `<html>` raíz, lo que activa automáticamente todas las variantes `dark:` definidas en los componentes.
+
+---
+
+## 17. Configuración de Entornos y Build
+
+### 17.1 Configuración de entornos
+
+```typescript
+// src/environments/environment.ts (desarrollo)
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:8080/api'
 };
-```
 
-### Producción
-
-```typescript
-// src/environments/environment.prod.ts
+// src/environments/environment.prod.ts (producción)
 export const environment = {
   production: true,
   apiUrl: 'https://api.tesisfernandonavaspuce.es/api'
 };
 ```
 
-El CLI de Angular reemplaza automáticamente el archivo de entorno durante `ng build --configuration production` mediante la directiva `fileReplacements` en `angular.json`.
+Angular CLI reemplaza automáticamente `environment.ts` por `environment.prod.ts` durante `ng build --configuration production` mediante la directiva `fileReplacements` en `angular.json`.
+
+### 17.2 Configuración TypeScript (strict mode)
+
+```json
+// tsconfig.json (opciones relevantes)
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true          // type checking en templates HTML
+  }
+}
+```
+
+### 17.3 Presupuestos de bundle (angular.json)
+
+| Tipo | Warning | Error |
+|---|---|---|
+| Bundle inicial (JS + CSS) | 500 KB | 1 MB |
+| Estilo por componente | 16 KB | 32 KB |
+
+### 17.4 Optimizaciones de producción
+
+| Técnica | Efecto |
+|---|---|
+| Tree-shaking (esbuild) | Elimina código no referenciado |
+| Minificación JS + CSS | Reducción de tamaño de transferencia |
+| Hashing de artefactos | Cache busting automático en deployments |
+| Code splitting por ruta | Bundle inicial mínimo; chunks cargados bajo demanda |
+| `loadComponent()` por ruta | Un chunk JS por componente lazy |
 
 ---
 
-## 12. Instalación y Ejecución
+## 18. Instalación y Ejecución
 
-### Pre-requisitos
+### 18.1 Pre-requisitos
 
-| Herramienta | Versión Mínima |
+| Herramienta | Versión mínima |
 |---|---|
-| Node.js | 18.x o superior |
-| npm | 9.x o superior |
-| Angular CLI | 17.x |
+| Node.js | 18.x LTS |
+| npm | 9.x |
+| Angular CLI | 17.x (`npm i -g @angular/cli@17`) |
 
-### Pasos
+### 18.2 Pasos de instalación
 
 ```bash
 # 1. Clonar el repositorio
@@ -512,130 +1325,118 @@ cd pymeflowec-front
 # 2. Instalar dependencias
 npm install
 
-# 3. Ejecutar en modo desarrollo
+# 3. Iniciar servidor de desarrollo
 npm start
-# La aplicación estará disponible en http://localhost:5173
+# → http://localhost:5173
+# → Conecta con el backend en http://localhost:8080/api
 
 # 4. Compilar para producción
 npm run build
-# Los artefactos se generan en dist/pymeflowec-frontend/
+# → Artefactos en dist/pymeflowec-frontend/
+# → API apunta a https://api.tesisfernandonavaspuce.es/api
 ```
 
-> **Nota:** El backend (Spring Boot) debe estar corriendo en `http://localhost:8080` para que la aplicación funcione en modo desarrollo.
+### 18.3 Scripts disponibles
 
----
-
-## 13. Scripts Disponibles
-
-| Comando | Descripción |
-|---|---|
-| `npm start` | Inicia el servidor de desarrollo en el puerto `5173` |
-| `npm run build` | Compila la aplicación para producción con optimizaciones |
-| `npm run watch` | Compilación incremental en modo desarrollo (útil con esbuild) |
-
-### Configuración de Build de Producción
-
-| Parámetro | Valor |
-|---|---|
-| Bundler | esbuild (vía Angular CLI 17) |
-| Output path | `dist/pymeflowec-frontend/` |
-| Optimización | Scripts y estilos minimizados |
-| Code splitting | Por ruta (lazy loading) |
-| Output hashing | Todos los artefactos |
-| Presupuesto inicial | Warning: 500 KB / Error: 1 MB |
-| CommonJS permitidos | `pdfmake`, `pdfmake/build/pdfmake`, `pdfmake/build/vfs_fonts` |
-
----
-
-## 14. Rutas de la Aplicación
-
-### Rutas Públicas
-
-| Ruta | Componente | Descripción |
+| Script | Comando Angular | Descripción |
 |---|---|---|
-| `/` | `LandingComponent` | Página de presentación del producto |
-| `/login` | `LoginComponent` | Inicio de sesión |
-| `/register` | `RegisterComponent` | Registro de nueva empresa |
-| `/forgot-password` | `ForgotPasswordComponent` | Recuperación de contraseña |
+| `npm start` | `ng serve --port 5173` | Servidor de desarrollo con HMR |
+| `npm run build` | `ng build` | Build de producción optimizado |
+| `npm run watch` | `ng build --watch --configuration development` | Compilación incremental en desarrollo |
 
-### Rutas Protegidas — Empresa
-
-Requieren `authGuard`. Las rutas de administración adicionalmente requieren rol `STORE_ADMIN`.
-
-| Ruta | Descripción | Admin Only |
-|---|---|:---:|
-| `/dashboard` | Panel principal con métricas | |
-| `/customers` | Listado de clientes | |
-| `/customers/new` | Crear cliente | |
-| `/customers/:id/edit` | Editar cliente | |
-| `/products` | Catálogo de productos | ✓ |
-| `/products/new` | Crear producto | ✓ |
-| `/products/:id/edit` | Editar producto | ✓ |
-| `/suppliers` | Listado de proveedores | ✓ |
-| `/suppliers/new` | Crear proveedor | ✓ |
-| `/suppliers/:id/edit` | Editar proveedor | ✓ |
-| `/invoices` | Historial de facturas | |
-| `/invoices/new` | Emitir factura | |
-| `/invoices/:id` | Detalle de factura | |
-| `/tax-rates` | Tasas impositivas | ✓ |
-| `/tax-rates/new` | Crear tasa | ✓ |
-| `/tax-rates/:id/edit` | Editar tasa | ✓ |
-| `/users` | Gestión de usuarios | ✓ |
-| `/users/new` | Crear usuario | ✓ |
-| `/users/:id/edit` | Editar usuario | ✓ |
-| `/module-requests` | Solicitudes de módulos | ✓ |
-
-### Rutas Protegidas — Plataforma
-
-Requieren `authGuard` + `permissionGuard` con alcance `platform`.
-
-| Ruta | Descripción | Solo PLATFORM_ADMIN |
-|---|---|:---:|
-| `/companies` | Listado de empresas suscritas | |
-| `/companies/:id` | Detalle y gestión de empresa | |
-| `/platform/modules` | Catálogo de módulos del sistema | |
-| `/platform/support-users` | Usuarios de soporte | ✓ |
-| `/platform/audit-logs` | Registros de auditoría | |
+> **Requisito de backend:** El servidor Spring Boot debe estar ejecutándose en `http://localhost:8080` para que la aplicación funcione en modo desarrollo. Las variables de entorno de producción apuntan al servidor desplegado.
 
 ---
 
-## 15. Patrones y Decisiones de Diseño
+## 19. Patrones y Decisiones de Diseño
 
-### Standalone Components (sin NgModules)
+### 19.1 Standalone Components (eliminación de NgModules)
 
-Desde Angular 14, los componentes pueden declararse sin pertenecer a un `NgModule`. Este proyecto adopta íntegramente este paradigma en la versión 17, simplificando el grafo de dependencias y habilitando carga diferida a nivel de componente individual.
+Angular 17 consolida el modelo de Standalone Components introducido en Angular 14. Cada componente declara sus propias dependencias en el array `imports` de `@Component`, eliminando la indirección de los `NgModule`. Esto permite:
 
-### Lazy Loading por Ruta
+- **Lazy loading a nivel de componente**: `loadComponent()` crea un chunk JS por componente, reduciendo el bundle inicial
+- **Árbol de dependencias explícito**: las imports de cada componente son autocontenidas y visibles en el mismo archivo
+- **Tree-shaking más eficiente**: el bundler puede eliminar código no referenciado con mayor precisión
 
-Cada ruta utiliza `loadComponent()` en lugar de `loadChildren()`, logrando un *bundle* separado por componente. Esto minimiza el tiempo de carga inicial (*Time to Interactive*) y mejora la experiencia del usuario en conexiones lentas.
+### 19.2 Functional Guards e Interceptors
 
-### Guards y Interceptores Funcionales
+Angular 15+ introduce `CanActivateFn` e `HttpInterceptorFn` como alternativas funcionales a las clases con interfaces. El proyecto usa exclusivamente el enfoque funcional:
 
-Angular 15+ introduce `CanActivateFn` e `HttpInterceptorFn` como alternativas funcionales a las clases que implementan interfaces. Este proyecto usa exclusivamente el enfoque funcional, que es más conciso y permite el uso de `inject()` sin necesidad de inyección en constructor.
+```typescript
+// Interceptor funcional — sin clase, sin constructor, inject() disponible
+export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
+  const authService = inject(AuthService);  // DI sin constructor
+  // ...
+};
 
-### Signals para Estado Global
+// Guard funcional
+export const authGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  // ...
+};
+```
 
-En lugar de `BehaviorSubject` expuesto como `Observable`, el `AuthService` utiliza un `signal<AuthUser | null>` para representar el usuario activo. Los estados derivados (roles, permisos) se calculan con `computed()`, garantizando consistencia sin suscripciones manuales.
+**Ventajas frente al enfoque de clase:**
+- Menos boilerplate (sin `implements CanActivate`, sin constructor)
+- `inject()` disponible directamente sin necesidad de pasar dependencias manualmente
+- Composición más sencilla (son funciones puras combinables)
 
-### Theming Híbrido (Material + Tailwind)
+### 19.3 Signals como primitivo de estado global
 
-Angular Material provee los componentes interactivos (formularios, diálogos, tablas, snackbars). Tailwind CSS complementa con utilidades de espaciado, tipografía y color para el layout general. Para evitar conflictos, el `preflight` de Tailwind está deshabilitado, cediendo el reset de estilos base a Material.
+El `AuthService` abandona el patrón `BehaviorSubject` + `asObservable()` en favor de Signals nativos de Angular 17:
 
-### Localización en Español
+| Patrón anterior (RxJS) | Patrón actual (Signals) |
+|---|---|
+| `private _user$ = new BehaviorSubject<AuthUser\|null>(null)` | `currentUser = signal<AuthUser\|null>(null)` |
+| `user$ = this._user$.asObservable()` | — |
+| `this._user$.next(user)` | `this.currentUser.set(user)` |
+| `isAdmin$ = this.user$.pipe(map(u => u?.role === 'ADMIN'))` | `isAdmin = computed(() => currentUser()?.role === 'ADMIN')` |
+| `ngOnDestroy + unsubscribe` | No necesario (sin suscripciones) |
 
-La aplicación está completamente localizada al español (Ecuador):
+Los `computed()` se recalculan automáticamente cuando el signal del que dependen cambia, garantizando consistencia de estado sin gestión manual de suscripciones.
+
+### 19.4 Formulario único para creación y edición
+
+`ClientFormComponent`, `ProductFormComponent`, `SupplierFormComponent` y otros formularios son componentes únicos que sirven tanto para crear como para editar el recurso. La diferenciación se realiza leyendo el parámetro `:id` de la URL activa:
+
+```typescript
+// Patrón en formularios reutilizables
+export class ClientFormComponent implements OnInit {
+  isEditMode = false;
+  customerId: number | null = null;
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.isEditMode = true;
+      this.customerId = +id;
+      this.loadCustomer(this.customerId);  // pre-popula el formulario
+    }
+  }
+}
+```
+
+### 19.5 Theming híbrido sin conflictos
+
+La combinación de Angular Material y Tailwind CSS en el mismo proyecto requiere deshabilitar el `preflight` de Tailwind para evitar que el reset CSS de Tailwind sobrescriba los estilos base que Material necesita. Esta es una decisión de arquitectura de estilos documentada directamente en `tailwind.config.js`.
+
+### 19.6 Localización al español (Ecuador)
+
+La aplicación está completamente localizada sin dependencia de `@angular/localize`:
+
 - `MatPaginatorIntl` personalizado con textos en español
-- Mensajes de error de la API traducidos por el interceptor de errores
-- Etiquetas de interfaz, botones y títulos en español
+- `errorInterceptor` mapea todos los códigos HTTP a mensajes en español
+- Todas las etiquetas de UI, botones, títulos y mensajes de validación están en español
+- Formatos de fecha adaptados al contexto ecuatoriano (`dd/MM/yyyy`)
 
 ---
 
 ## Autor
 
 **Fernando Navas**  
-Trabajo de Titulación — Ingeniería en Sistemas  
+Trabajo de Titulación — Ingeniería en Sistemas / Computación  
 Ecuador, 2025
 
 ---
 
-*Este proyecto forma parte de un trabajo de titulación académico. La plataforma PymeFlow EC fue diseñada, desarrollada y documentada como demostración de una solución SaaS real aplicable al contexto empresarial ecuatoriano.*
+*PymeFlow EC es un sistema desarrollado como demostración de una solución SaaS empresarial aplicable al contexto de las PyMEs ecuatorianas. El proyecto abarca el diseño arquitectónico, la implementación frontend con Angular 17 y su integración con una API REST bajo principios de multi-tenencia, seguridad basada en roles y generación de documentos fiscales.*
