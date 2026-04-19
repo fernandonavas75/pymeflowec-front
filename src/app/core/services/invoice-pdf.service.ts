@@ -32,8 +32,8 @@ export class InvoicePdfService {
     });
   }
 
-  private fmt(n: number): string {
-    return `$${n.toFixed(2)}`;
+  private fmt(n: number | string): string {
+    return `$${Number(n).toFixed(2)}`;
   }
 
   private fmtDate(d: string): string {
