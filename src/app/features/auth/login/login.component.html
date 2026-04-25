@@ -1,101 +1,87 @@
-<div class="login-page">
-
-  <!-- Brand panel (solo desktop) -->
-  <div class="brand-panel">
-    <div class="brand-logo">
-      <span class="material-icons-round">bolt</span>
+<div class="auth-wrap">
+  <aside class="aside">
+    <div class="brand">
+      <div class="mark"><app-icon name="sparkles" [size]="20"/></div>
+      <div class="wordmark">pymeflow<span class="tld">.ec</span></div>
     </div>
-    <h1 class="brand-name">PymeFlow<span class="brand-accent">EC</span></h1>
-    <p class="brand-tagline">Sistema ERP para PYMEs ecuatorianas.<br>Gestiona tu negocio desde un solo lugar.</p>
-    <ul class="brand-features">
-      <li>
-        <span class="feat-icon"><mat-icon>receipt_long</mat-icon></span>
-        Facturación electrónica SRI
-      </li>
-      <li>
-        <span class="feat-icon"><mat-icon>inventory_2</mat-icon></span>
-        Control de inventario
-      </li>
-      <li>
-        <span class="feat-icon"><mat-icon>bar_chart</mat-icon></span>
-        Reportes y dashboards
-      </li>
-      <li>
-        <span class="feat-icon"><mat-icon>security</mat-icon></span>
-        Roles y permisos granulares
-      </li>
-    </ul>
-  </div>
-
-  <!-- Form panel -->
-  <div class="form-panel">
-    <div class="login-card">
-
-      <!-- Logo mobile -->
-      <div class="mobile-brand">
-        <div class="mobile-logo">
-          <span class="material-icons-round">bolt</span>
+    <div class="main">
+      <h2>Bienvenido de vuelta.</h2>
+      <p>Continúa gestionando tu negocio desde donde lo dejaste.</p>
+      <div class="quote">
+        <div class="q">"En dos semanas reemplazamos 3 Excel y un cuaderno. Ahora sé exactamente cuánto vendemos cada día."</div>
+        <div class="a">
+          <div class="av">JP</div>
+          <div>
+            <div class="an">José Pérez</div>
+            <div class="ar">Tienda Don Pepe · Quito</div>
+          </div>
         </div>
-        <p class="mobile-app-name">PymeFlow<span class="mobile-app-accent">EC</span></p>
       </div>
+    </div>
+    <div class="foot">
+      <span>© 2026 PymeFlowEc</span>
+      <a routerLink="/">Inicio</a>
+      <a>Privacidad</a>
+      <a>Términos</a>
+    </div>
+  </aside>
 
-      <h2 class="form-title">Iniciar sesión</h2>
-      <p class="form-subtitle">Ingresa tus credenciales para continuar</p>
+  <main class="main-col">
+    <nav class="topnav">
+      <a routerLink="/" class="btn ghost sm">
+        <app-icon name="chevron_left" [size]="12"/>Inicio
+      </a>
+      <span>¿Nuevo aquí?</span>
+      <a routerLink="/register">Crear cuenta</a>
+    </nav>
+
+    <div class="card">
+      <h1>Ingresar</h1>
+      <div class="sub">Accede con el correo de tu empresa.</div>
 
       @if (error()) {
-        <div class="error-alert">
-          <span class="material-icons-round">error_outline</span>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);
+                    background:var(--danger-soft);color:var(--danger);font-size:13px;margin-bottom:16px">
+          <app-icon name="alert_circle" [size]="16"/>
           <span>{{ error() }}</span>
         </div>
       }
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Correo electrónico</mat-label>
-          <input matInput type="email" formControlName="email" placeholder="usuario@empresa.com" autocomplete="email">
-          <mat-icon matPrefix>mail_outline</mat-icon>
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="field">
+          <label>Email</label>
+          <input class="input" type="email" formControlName="email"
+                 placeholder="tu@empresa.ec" autocomplete="email"/>
           @if (form.get('email')?.touched && emailError) {
-            <mat-error>{{ emailError }}</mat-error>
+            <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ emailError }}</div>
           }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Contraseña</mat-label>
-          <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password">
-          <mat-icon matPrefix>lock_outline</mat-icon>
-          <button mat-icon-button matSuffix type="button" (click)="togglePassword()">
-            <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          @if (form.get('password')?.touched && passwordError) {
-            <mat-error>{{ passwordError }}</mat-error>
-          }
-        </mat-form-field>
-
-        <div class="forgot-link">
-          <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
         </div>
 
-        <button mat-flat-button color="primary" type="submit" class="submit-btn" [disabled]="loading()">
+        <div class="field">
+          <label style="display:flex;justify-content:space-between;align-items:center">
+            Contraseña
+            <a routerLink="/forgot-password" style="color:var(--accent);font-weight:600;font-size:12px">¿Olvidaste?</a>
+          </label>
+          <input class="input" [type]="showPassword() ? 'text' : 'password'"
+                 formControlName="password" placeholder="••••••••" autocomplete="current-password"/>
+          @if (form.get('password')?.touched && passwordError) {
+            <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ passwordError }}</div>
+          }
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="rm"/>
+          <label for="rm">Recordarme por 30 días</label>
+        </div>
+
+        <button class="btn primary lg" style="width:100%" type="submit" [disabled]="loading()">
           @if (loading()) {
-            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-            <span>Ingresando...</span>
+            <span class="btn-spinner"></span>Ingresando...
           } @else {
-            <span>Iniciar sesión</span>
+            <app-icon name="check" [size]="14"/>Ingresar
           }
         </button>
       </form>
-
-      <p class="register-link">
-        ¿No tienes cuenta? <a routerLink="/register">Crear empresa gratis</a>
-      </p>
-
-      <div class="back-to-home">
-        <a routerLink="/">
-          <span class="material-icons-round">arrow_back</span>
-          Volver al inicio
-        </a>
-      </div>
     </div>
-  </div>
-
+  </main>
 </div>

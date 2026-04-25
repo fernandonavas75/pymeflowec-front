@@ -1,90 +1,199 @@
-<div class="page-container">
-  <div class="page-header">
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Clientes</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestiona la cartera de clientes</p>
+      <div class="page-title">Clientes</div>
+      <div class="page-sub-en">Customers · {{ totalCount() }} registrados</div>
     </div>
-    <a routerLink="/customers/new" mat-flat-button color="primary" class="flex items-center gap-2">
-      <mat-icon>person_add</mat-icon>
-      Nuevo cliente
-    </a>
+    <div class="page-actions">
+      <button class="btn secondary" type="button">
+        <app-icon name="download" [size]="14"/>Exportar
+      </button>
+      <button class="btn primary" type="button" (click)="openNew()">
+        <app-icon name="plus" [size]="14"/>Nuevo cliente
+      </button>
+    </div>
   </div>
 
-  <div class="filters-bar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Buscar clientes</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [formControl]="searchCtrl" placeholder="Nombre, identificación...">
-    </mat-form-field>
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todos <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'RUC'" (click)="tab.set('RUC')" type="button">
+      RUC <span class="count">{{ rucCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'CEDULA'" (click)="tab.set('CEDULA')" type="button">
+      Cédula <span class="count">{{ cedulaCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'FINAL_CONSUMER'" (click)="tab.set('FINAL_CONSUMER')" type="button">
+      Cons. Final <span class="count">{{ finalCount() }}</span>
+    </button>
   </div>
 
-  <div class="table-container">
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar por nombre, documento o email…"/>
+    </div>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
     @if (loading()) {
-      <div class="loading-overlay">
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
         @for (i of [1,2,3,4,5]; track i) {
-          <div class="skeleton-row">
-            <div class="skeleton h-4 w-32"></div>
-            <div class="skeleton h-4 w-20"></div>
-            <div class="skeleton h-4 w-24"></div>
-            <div class="skeleton h-4 w-36"></div>
-            <div class="skeleton h-4 w-24"></div>
-            <div class="skeleton h-8 w-20"></div>
-          </div>
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
         }
       </div>
+
+    } @else if (filteredCustomers().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="users" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron clientes</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">Limpiar búsqueda</button>
+        }
+      </div>
+
     } @else {
-      <table mat-table [dataSource]="customers()" class="w-full">
-        <ng-container matColumnDef="full_name">
-          <th mat-header-cell *matHeaderCellDef>Nombre</th>
-          <td mat-cell *matCellDef="let c" class="font-medium">{{ c.full_name }}</td>
-        </ng-container>
-        <ng-container matColumnDef="customer_type">
-          <th mat-header-cell *matHeaderCellDef>Tipo</th>
-          <td mat-cell *matCellDef="let c">
-            <span class="text-xs font-medium text-slate-500 uppercase">{{ customerTypeLabel(c.customer_type) }}</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="document_number">
-          <th mat-header-cell *matHeaderCellDef>Documento</th>
-          <td mat-cell *matCellDef="let c" class="font-mono text-sm">{{ c.document_number }}</td>
-        </ng-container>
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let c">{{ c.email || '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="phone">
-          <th mat-header-cell *matHeaderCellDef>Teléfono</th>
-          <td mat-cell *matCellDef="let c">{{ c.phone || '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let c">
-            <div class="flex items-center gap-1">
-              <a [routerLink]="['/customers', c.id, 'edit']" mat-icon-button matTooltip="Editar">
-                <mat-icon class="text-slate-400 dark:text-slate-500">edit</mat-icon>
-              </a>
-              <button mat-icon-button matTooltip="Eliminar" (click)="deleteCustomer(c)">
-                <mat-icon class="text-red-400">delete</mat-icon>
-              </button>
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
-            No se encontraron clientes
-          </td>
-        </tr>
-      </table>
-      <mat-paginator
-        [length]="total()"
-        [pageSize]="limit()"
-        [pageIndex]="page() - 1"
-        [pageSizeOptions]="[10, 20, 50]"
-        (page)="onPageChange($event)"
-        showFirstLastButtons
-      />
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Documento</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th class="num">Compras</th>
+              <th class="num">Total</th>
+              <th style="width:48px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of filteredCustomers(); track c.id) {
+              <tr style="cursor:pointer" (click)="openEdit(c)">
+                <td><strong>{{ c.full_name }}</strong></td>
+                <td><span class="badge neutral">{{ typeLabel(c.customer_type) }}</span></td>
+                <td class="mono" style="font-size:12px">{{ c.document_number }}</td>
+                <td style="color:var(--text-muted-ds)">{{ c.email || '—' }}</td>
+                <td class="mono" style="font-size:12px">{{ c.phone || '—' }}</td>
+                <td class="num mono">{{ statsFor(c.id).count }}</td>
+                <td class="num mono"><strong>${{ statsFor(c.id).total | number:'1.2-2' }}</strong></td>
+                <td style="text-align:right">
+                  <button class="btn ghost sm" title="Editar" type="button"
+                          (click)="$event.stopPropagation(); openEdit(c)">
+                    <app-icon name="edit" [size]="13"/>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
   </div>
+
+  <!-- ── Inline Modal ────────────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nuevo cliente' : 'Editar cliente' }}</div>
+            <div class="d">
+              {{ isNew ? 'Registra un nuevo cliente para facturación.' : 'Actualiza la información de ' + editing()?.full_name + '.' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <!-- Segment: tipo documento -->
+            <div class="mfield">
+              <label>Tipo de documento</label>
+              <div class="seg">
+                <button type="button" [class.active]="form.get('customer_type')?.value === 'CEDULA'"
+                        (click)="form.get('customer_type')?.setValue('CEDULA')">Cédula</button>
+                <button type="button" [class.active]="form.get('customer_type')?.value === 'RUC'"
+                        (click)="form.get('customer_type')?.setValue('RUC')">RUC</button>
+                <button type="button" [class.active]="form.get('customer_type')?.value === 'FINAL_CONSUMER'"
+                        (click)="form.get('customer_type')?.setValue('FINAL_CONSUMER')">Cons. Final</button>
+              </div>
+            </div>
+
+            @if (form.get('customer_type')?.value !== 'FINAL_CONSUMER') {
+              <div class="mfield">
+                <label>
+                  {{ form.get('customer_type')?.value === 'RUC' ? 'RUC (13 dígitos)' : 'Cédula (10 dígitos)' }}
+                  <span style="color:var(--danger)">*</span>
+                </label>
+                <input class="m-input mono" [placeholder]="docPlaceholder" [maxlength]="docMaxLength"
+                       formControlName="document_number"/>
+                <div class="hint">Se valida con el SRI al guardar.</div>
+              </div>
+            }
+
+            <div class="mfield">
+              <label>{{ nameLabel }} <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" [placeholder]="namePlaceholder" formControlName="full_name"/>
+              @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
+              }
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Email</label>
+                <input class="m-input" type="email" placeholder="cliente@email.com" formControlName="email"/>
+              </div>
+              <div class="mfield">
+                <label>Teléfono</label>
+                <input class="m-input mono" placeholder="09XXXXXXXX" formControlName="phone"/>
+              </div>
+            </div>
+
+            @if (!isNew) {
+              <div class="ds-alert accent" style="margin-top:12px">
+                <app-icon name="sparkles" [size]="16" style="flex-shrink:0"/>
+                <div>
+                  <div class="t">Historial del cliente</div>
+                  <div class="d">
+                    {{ statsFor(editing()!.id).count }} compras ·
+                    total <strong>${{ statsFor(editing()!.id).total | number:'1.2-2' }}</strong> ·
+                    cliente desde {{ formatDate(editing()!.created_at) }}
+                  </div>
+                </div>
+              </div>
+            }
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          @if (!isNew) {
+            <button class="btn danger" style="margin-right:auto" type="button" (click)="deleteCustomer(editing()!)">
+              <app-icon name="trash" [size]="13"/>Eliminar
+            </button>
+          }
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="saveCustomer()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear cliente' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

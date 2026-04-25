@@ -4,9 +4,7 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyModulesService } from '../../core/services/company-modules.service';
 import { AdminViewService } from '../../core/services/admin-view.service';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { AppIconComponent } from '../../shared/components/app-icon/app-icon.component';
 
 interface NavItem {
   label: string;
@@ -51,7 +49,7 @@ interface RenderedGroup {
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, MatIconModule, MatTooltipModule, MatProgressSpinnerModule],
+  imports: [CommonModule, RouterLink, RouterLinkActive, AppIconComponent],
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.scss'],
 })

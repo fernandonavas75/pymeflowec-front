@@ -1,205 +1,161 @@
-<div class="page-container">
-  <div class="page-header">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
-        {{ isPlatformUser ? 'Solicitudes de módulos' : 'Módulos del sistema' }}
-      </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        {{ isPlatformUser
-          ? 'Vista de plataforma — módulos solicitados por empresa'
-          : 'Activa módulos para ampliar las funcionalidades de tu empresa' }}
-      </p>
+<!-- Platform view -->
+@if (isPlatformUser) {
+  <div>
+    <div class="platform-banner"><span class="dot"></span>Zona interna · Platform Support</div>
+
+    <div class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="page-title">Solicitudes de módulos</h1>
+          <p class="page-sub-en">Module requests · {{ pendingCount() }} pendientes</p>
+        </div>
+        <div class="page-actions">
+          <button class="btn secondary" (click)="loadAll()">
+            <app-icon name="refresh" [size]="14" class="icon" />Actualizar
+          </button>
+        </div>
+      </div>
+
+      @if (pendingCount() > 0) {
+        <div class="ds-alert" style="margin-bottom:20px">
+          <app-icon name="sparkles" [size]="18" class="alert-icon" style="color:var(--accent)" />
+          <div>
+            <div style="font-weight:600;font-size:13.5px">Tienes {{ pendingCount() }} solicitudes esperando</div>
+            <div style="font-size:12.5px;color:var(--text-muted-ds);margin-top:2px">
+              Revisa y aprueba para activar módulos pagos en las empresas.
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Tabs -->
+      <div class="page-tabs">
+        <div class="page-tab" [class.active]="tab() === 'pending'"  (click)="tab.set('pending')">
+          Pendientes <span class="tab-count">{{ pendingCount() }}</span>
+        </div>
+        <div class="page-tab" [class.active]="tab() === 'approved'" (click)="tab.set('approved')">Aprobadas</div>
+        <div class="page-tab" [class.active]="tab() === 'rejected'" (click)="tab.set('rejected')">Rechazadas</div>
+        <div class="page-tab" [class.active]="tab() === 'all'"      (click)="tab.set('all')">Todas</div>
+      </div>
+
+      @if (loading()) {
+        <div style="display:flex;flex-direction:column;gap:12px">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="skel" style="height:80px;border-radius:var(--radius-ds)"></div>
+          }
+        </div>
+      } @else if (filteredByTab().length === 0) {
+        <div class="empty" style="padding:72px 24px">
+          <app-icon name="puzzle" [size]="40" style="opacity:.25" />
+          <p>No hay solicitudes en esta categoría</p>
+        </div>
+      } @else {
+        <div class="card">
+          @for (r of filteredByTab(); track r.id) {
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-ds);
+                        display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;
+                        &:last-child{border-bottom:none}">
+              <div style="width:40px;height:40px;border-radius:var(--radius-sm-ds);
+                          background:var(--accent-soft);color:var(--accent);display:grid;place-items:center">
+                <app-icon name="puzzle" [size]="20" />
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:14px;margin-bottom:2px">
+                  <span style="color:var(--accent)">{{ r.module?.name }}</span>
+                  <span style="color:var(--text-subtle)"> · </span>
+                  {{ r.company?.name }}
+                </div>
+                <div style="font-size:12px;color:var(--text-subtle);display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+                  <span style="display:inline-flex;align-items:center;gap:4px">
+                    <app-icon name="users" [size]="11" />{{ r.requested_by }}
+                  </span>
+                  <span class="mono">{{ r.created_at | date:'dd/MM HH:mm' }}</span>
+                  <span class="mono" style="color:var(--text-subtle)">{{ r.module?.code }}</span>
+                  <span class="status-dot" [attr.data-s]="r.status">{{ statusLabel(r.status) }}</span>
+                </div>
+                @if (r.comments) {
+                  <div style="margin-top:8px;padding:8px 12px;background:var(--surface-2);
+                              border-left:2px solid var(--accent);border-radius:4px;
+                              font-size:12.5px;color:var(--text-muted-ds);font-style:italic">
+                    "{{ r.comments }}"
+                  </div>
+                }
+              </div>
+              <div style="display:flex;gap:6px">
+                @if (r.status.toLowerCase() === 'pending') {
+                  <button class="btn danger sm" (click)="deactivate(r)">
+                    <app-icon name="x" [size]="12" class="icon" />Rechazar
+                  </button>
+                  <button class="btn primary sm" (click)="activate(r)">
+                    <app-icon name="check" [size]="12" class="icon" />Aprobar
+                  </button>
+                } @else {
+                  <button class="btn ghost sm">
+                    <app-icon name="eye" [size]="12" class="icon" />Ver detalle
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
     </div>
   </div>
 
-  @if (loading()) {
-    <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
-
-  } @else if (forbidden()) {
-    <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-      <mat-icon style="font-size:48px;width:48px;height:48px">lock</mat-icon>
-      <p class="text-base font-medium">Sin permiso para ver esta sección</p>
-    </div>
-
-  } @else if (isPlatformUser) {
-    <!-- ══════════════════════════════════════════════════════════════
-         VISTA PLATAFORMA: grid de cards por solicitud
-    ═══════════════════════════════════════════════════════════════ -->
-
-    <!-- Filtros -->
-    <div class="flex flex-wrap gap-3 mb-6">
-      <mat-form-field appearance="outline" class="flex-1" style="min-width: 200px">
-        <mat-label>Buscar</mat-label>
-        <mat-icon matPrefix class="mr-1 text-slate-400">search</mat-icon>
-        <input matInput [formControl]="searchControl" placeholder="Empresa, módulo…" />
-      </mat-form-field>
-
-      <mat-form-field appearance="outline" style="width: 160px">
-        <mat-label>Estado</mat-label>
-        <mat-select [formControl]="statusControl">
-          <mat-option value="">Todos</mat-option>
-          <mat-option value="PENDING">En espera</mat-option>
-          <mat-option value="APPROVED">Activo</mat-option>
-          <mat-option value="REJECTED">Rechazado</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
-
-    @if (filteredRequests().length === 0) {
-      <div class="flex flex-col items-center py-20 text-slate-400 dark:text-slate-500 gap-3">
-        <mat-icon style="font-size:48px;width:48px;height:48px">inbox</mat-icon>
-        <p class="text-base font-medium">No se encontraron solicitudes</p>
+} @else {
+  <!-- Store view — module catalog -->
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Módulos del sistema</h1>
+        <p class="page-sub-en">Solicita módulos adicionales para tu empresa</p>
       </div>
-    } @else {
-      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
-        @for (r of filteredRequests(); track r.id) {
-          <div class="form-card flex flex-col gap-3 hover:shadow-md transition-shadow duration-150">
+    </div>
 
-            <!-- Cabecera: avatar empresa + nombre + estado módulo -->
-            <div class="flex items-start gap-3">
-              <div class="flex items-center justify-center w-11 h-11 rounded-xl font-bold text-base shrink-0"
-                   [ngClass]="avatarColor(r.company?.name ?? '')">
-                {{ initials(r.company?.name ?? '') }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="font-semibold text-slate-800 dark:text-slate-100 truncate"
-                   [title]="r.company?.name">
-                  {{ r.company?.name ?? 'Empresa #' + r.company_id }}
-                </p>
-                <p class="text-xs text-slate-400 dark:text-slate-500 truncate" [title]="r.module?.name">
-                  {{ r.module?.name ?? 'Módulo #' + r.module_id }}
-                </p>
-              </div>
-              <span class="badge shrink-0 mt-0.5" [ngClass]="statusClass(r.status)">
-                {{ statusLabel(r.status) }}
-              </span>
-            </div>
-
-            <!-- Info del módulo -->
-            <div class="flex flex-col gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-              @if (r.module?.code) {
-                <span class="flex items-center gap-2">
-                  <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">tag</mat-icon>
-                  <span class="font-mono">{{ r.module?.code }}</span>
-                </span>
-              }
-              @if (r.user?.full_name) {
-                <span class="flex items-center gap-2 truncate" [title]="r.user?.full_name">
-                  <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">person</mat-icon>
-                  {{ r.user?.full_name }}
-                </span>
-              }
-              <span class="flex items-center gap-2">
-                <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">calendar_today</mat-icon>
-                Solicitado {{ r.created_at | date:'dd/MM/yyyy' }}
-              </span>
-            </div>
-
-            <!-- Acciones -->
-            <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-              <a mat-button [routerLink]="['/companies', r.company_id]" class="text-sm">
-                <mat-icon>open_in_new</mat-icon> Ver empresa
-              </a>
-              @if (authService.isPlatformAdmin()) {
-                @if (r.status === 'APPROVED') {
-                  <button mat-icon-button matTooltip="Desactivar módulo" (click)="deactivate(r)">
-                    <mat-icon class="text-green-500">toggle_on</mat-icon>
-                  </button>
-                } @else if (r.status === 'REJECTED') {
-                  <button mat-icon-button matTooltip="Activar módulo" (click)="activate(r)">
-                    <mat-icon class="text-slate-400">toggle_off</mat-icon>
-                  </button>
-                } @else {
-                  <div class="flex">
-                    <button mat-icon-button matTooltip="Activar módulo" (click)="activate(r)">
-                      <mat-icon class="text-green-500">check_circle</mat-icon>
-                    </button>
-                    <button mat-icon-button matTooltip="Rechazar solicitud" (click)="deactivate(r)">
-                      <mat-icon class="text-red-400">cancel</mat-icon>
-                    </button>
-                  </div>
-                }
-              }
-            </div>
-          </div>
+    @if (loading()) {
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="skel" style="height:140px;border-radius:var(--radius-ds)"></div>
         }
       </div>
-    }
-
-  } @else {
-    <!-- ══════════════════════════════════════════════════════════════
-         VISTA TIENDA: catálogo de módulos con estado
-    ═══════════════════════════════════════════════════════════════ -->
-    @if (catalog().length === 0) {
-      <div class="flex flex-col items-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-        <mat-icon style="font-size:48px;width:48px;height:48px">extension_off</mat-icon>
-        <p class="text-base font-medium">No hay módulos disponibles</p>
+    } @else if (forbidden()) {
+      <div class="ds-alert" style="color:var(--danger)">
+        <app-icon name="alert_circle" [size]="16" class="alert-icon" />
+        <span>No tienes permisos para ver los módulos disponibles.</span>
+      </div>
+    } @else if (catalog().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="puzzle" [size]="40" style="opacity:.25" />
+        <p>No hay módulos disponibles</p>
       </div>
     } @else {
-      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr))">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
         @for (item of catalog(); track item.id) {
-          <div class="form-card flex flex-col gap-3" [class.opacity-60]="item.status === 'REJECTED'">
-
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center w-10 h-10 rounded-lg"
-                     [ngClass]="{
-                       'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400': item.status === 'APPROVED',
-                       'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400': item.status === 'PENDING',
-                       'bg-red-100   text-red-500   dark:bg-red-900/40   dark:text-red-400':   item.status === 'REJECTED',
-                       'bg-slate-100 text-slate-400 dark:bg-slate-800    dark:text-slate-500': !item.status
-                     }">
-                  <mat-icon style="font-size:20px;width:20px;height:20px;">{{ statusIcon(item.status) }}</mat-icon>
-                </div>
-                <div>
-                  <p class="font-semibold text-slate-800 dark:text-slate-100 text-sm">{{ item.name }}</p>
-                  <p class="text-xs text-slate-400 font-mono">{{ item.code }}</p>
-                </div>
+          <div class="card" style="padding:20px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+              <div style="width:40px;height:40px;border-radius:var(--radius-sm-ds);background:var(--accent-soft);
+                          color:var(--accent);display:grid;place-items:center">
+                <app-icon name="puzzle" [size]="20" />
               </div>
-              @if (item.status) {
-                <span class="badge shrink-0" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
-              }
-            </div>
-
-            @if (item.description) {
-              <p class="text-sm text-slate-500 dark:text-slate-400">{{ item.description }}</p>
-            }
-
-            <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700">
               @if (item.status === 'APPROVED') {
-                <p class="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                  <mat-icon style="font-size:14px;width:14px;height:14px;">check</mat-icon>
-                  Módulo activo en tu empresa
-                </p>
+                <span class="badge success">Activo</span>
               } @else if (item.status === 'PENDING') {
-                <p class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                  <mat-icon style="font-size:14px;width:14px;height:14px;">hourglass_empty</mat-icon>
-                  Solicitud enviada — en espera de autorización
-                </p>
-              } @else if (item.status === 'REJECTED') {
-                <button mat-stroked-button class="w-full text-sm"
-                        [disabled]="requestingId() === item.id"
-                        (click)="requestModule(item)">
-                  @if (requestingId() === item.id) {
-                    <mat-spinner diameter="16" class="inline-block mr-2"></mat-spinner>
-                  }
-                  Volver a solicitar
-                </button>
-              } @else {
-                <button mat-flat-button color="primary" class="w-full text-sm"
-                        [disabled]="requestingId() === item.id"
-                        (click)="requestModule(item)">
-                  @if (requestingId() === item.id) {
-                    <mat-spinner diameter="16" class="inline-block mr-2"></mat-spinner>Enviando…
-                  } @else {
-                    Solicitar módulo
-                  }
-                </button>
+                <span class="badge warn">En espera</span>
               }
             </div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--text-ds)">{{ item.name }}</div>
+            <div style="font-size:13px;color:var(--text-muted-ds);margin-bottom:16px">{{ item.description }}</div>
+            @if (!item.status) {
+              <button class="btn primary sm" style="width:100%"
+                      [disabled]="requestingId() === item.id"
+                      (click)="requestModule(item)">
+                @if (requestingId() === item.id) { <span class="btn-spinner"></span> }
+                Solicitar módulo
+              </button>
+            }
           </div>
         }
       </div>
     }
-  }
-</div>
+  </div>
+}

@@ -1,133 +1,172 @@
-<div class="page-container">
+<div class="page">
+
+  <!-- ── Loading ─────────────────────────────────────────────────── -->
   @if (loading()) {
-    <div class="flex justify-center py-20">
-      <mat-spinner diameter="48"></mat-spinner>
+    <div style="display:flex;justify-content:center;padding:80px 0">
+      <span class="page-spinner"></span>
     </div>
+
   } @else if (invoice()) {
-    <div class="page-header">
-      <a routerLink="/invoices" mat-icon-button>
-        <mat-icon>arrow_back</mat-icon>
-      </a>
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Factura {{ invoice()!.invoice_number }}</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Emitida el {{ formatDate(invoice()!.issue_date) }}</p>
+
+    <!-- ── Header ────────────────────────────────────────────────── -->
+    <div class="page-head">
+      <div style="display:flex;align-items:center;gap:12px">
+        <a routerLink="/invoices" class="btn ghost sm">
+          <app-icon name="arrow_left" [size]="14" class="icon" />
+          Volver
+        </a>
+        <div>
+          <h1 class="page-title">{{ invoice()!.invoice_number }}</h1>
+          <p class="page-sub-en">Emitida el {{ formatDate(invoice()!.issue_date) }}</p>
+        </div>
       </div>
-      <div class="ml-auto flex items-center gap-3">
-        <button mat-stroked-button
-          (click)="downloadPdf()"
-          [disabled]="pdfLoading()"
-          title="Descargar PDF">
+      <div class="page-actions" style="align-items:center">
+        <app-status-badge [status]="invoice()!.status" type="invoice" />
+        <button class="btn secondary" (click)="downloadPdf()" [disabled]="pdfLoading()">
           @if (pdfLoading()) {
-            <mat-spinner diameter="16" style="display:inline-block"></mat-spinner>
+            <span class="btn-spinner"></span>
           } @else {
-            <mat-icon>picture_as_pdf</mat-icon>
+            <app-icon name="download" [size]="14" class="icon" />
           }
           PDF
         </button>
-        <app-status-badge [status]="invoice()!.status" type="invoice" />
       </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-      <!-- Main content -->
-      <div class="xl:col-span-2 flex flex-col gap-6">
-        <!-- Info -->
-        <div class="form-card">
-          <h3 class="section-title">Información de la factura</h3>
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p class="text-slate-500 dark:text-slate-400 mb-1">Número de factura</p>
-              <p class="font-mono font-bold text-indigo-600">{{ invoice()!.invoice_number }}</p>
-            </div>
-            <div>
-              <p class="text-slate-500 dark:text-slate-400 mb-1">Estado</p>
-              <app-status-badge [status]="invoice()!.status" type="invoice" />
-            </div>
-            <div>
-              <p class="text-slate-500 dark:text-slate-400 mb-1">Fecha de emisión</p>
-              <p class="font-semibold text-slate-900 dark:text-slate-100">{{ formatDate(invoice()!.issue_date) }}</p>
-            </div>
-            <div>
-              <p class="text-slate-500 dark:text-slate-400 mb-1">Cliente</p>
-              <p class="font-semibold text-slate-900 dark:text-slate-100">
-                {{ invoice()!.customer?.full_name || 'Consumidor final' }}
-              </p>
+    <!-- ── Two-column layout ──────────────────────────────────────── -->
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+
+      <!-- Main column -->
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+
+        <!-- Invoice info -->
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Información de la factura</span>
+          </div>
+          <div class="card-body">
+            <div class="ds-stack">
+              <div class="info-row">
+                <span class="info-label">Número</span>
+                <span class="info-value mono" style="color:var(--accent)">{{ invoice()!.invoice_number }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Estado</span>
+                <span class="info-value">
+                  <app-status-badge [status]="invoice()!.status" type="invoice" />
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Fecha de emisión</span>
+                <span class="info-value">{{ formatDate(invoice()!.issue_date) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Cliente</span>
+                <span class="info-value">{{ invoice()!.customer?.full_name || 'Consumidor final' }}</span>
+              </div>
               @if (invoice()!.customer?.document_number) {
-                <p class="text-xs text-slate-400 font-mono">{{ invoice()!.customer!.document_number }}</p>
+                <div class="info-row">
+                  <span class="info-label">RUC / Cédula</span>
+                  <span class="info-value mono">{{ invoice()!.customer!.document_number }}</span>
+                </div>
               }
             </div>
           </div>
         </div>
 
         <!-- Line items -->
-        <div class="form-card">
-          <h3 class="section-title">Detalle de la factura</h3>
-          @if (invoice()!.details && invoice()!.details!.length > 0) {
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-slate-100 dark:border-slate-700">
-                  <th class="text-left py-2 text-slate-500 dark:text-slate-400 font-medium">Producto</th>
-                  <th class="text-center py-2 text-slate-500 dark:text-slate-400 font-medium">Cant.</th>
-                  <th class="text-right py-2 text-slate-500 dark:text-slate-400 font-medium">P. Unitario</th>
-                  <th class="text-right py-2 text-slate-500 dark:text-slate-400 font-medium">IVA</th>
-                  <th class="text-right py-2 text-slate-500 dark:text-slate-400 font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (detail of invoice()!.details; track detail.id) {
-                  <tr class="border-b border-slate-100 dark:border-slate-700/50">
-                    <td class="py-3 font-medium text-slate-900 dark:text-slate-100">{{ detail.product_name }}</td>
-                    <td class="py-3 text-center">{{ detail.quantity }}</td>
-                    <td class="py-3 text-right text-slate-600 dark:text-slate-400">${{ detail.unit_price | number:'1.2-2' }}</td>
-                    <td class="py-3 text-right text-slate-600 dark:text-slate-400">${{ detail.tax_amount | number:'1.2-2' }}</td>
-                    <td class="py-3 text-right font-semibold">${{ detail.line_total | number:'1.2-2' }}</td>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Detalle de la factura</span>
+          </div>
+          <div class="card-body p0">
+            @if (invoice()!.details && invoice()!.details!.length > 0) {
+              <table class="ds-table">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th class="text-center">Cant.</th>
+                    <th class="text-right">P. Unitario</th>
+                    <th class="text-right">IVA 15%</th>
+                    <th class="text-right">Total línea</th>
                   </tr>
-                }
-              </tbody>
-            </table>
-          } @else {
-            <p class="text-slate-400 dark:text-slate-500 text-sm py-4">Sin detalles de factura</p>
-          }
+                </thead>
+                <tbody>
+                  @for (d of invoice()!.details; track d.id) {
+                    <tr>
+                      <td style="font-weight:500">{{ d.product_name }}</td>
+                      <td class="num text-center">{{ d.quantity }}</td>
+                      <td class="num text-right">${{ d.unit_price | number:'1.2-2' }}</td>
+                      <td class="num text-right" style="color:var(--text-subtle)">${{ d.tax_amount | number:'1.2-2' }}</td>
+                      <td class="num text-right" style="font-weight:600">${{ d.line_total | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <div class="empty" style="padding:36px">
+                <app-icon name="file_text" [size]="32" style="opacity:.25" />
+                <p style="font-size:13px;color:var(--text-subtle)">Sin detalles registrados</p>
+              </div>
+            }
+          </div>
         </div>
+
       </div>
 
-      <!-- Sidebar -->
-      <div class="flex flex-col gap-6">
+      <!-- Sidebar column -->
+      <div style="display:flex;flex-direction:column;gap:20px">
+
         <!-- Totals -->
-        <div class="form-card">
-          <h3 class="section-title">Totales</h3>
-          <div class="space-y-3 text-sm">
-            <div class="flex justify-between">
-              <span class="text-slate-600 dark:text-slate-400">Subtotal</span>
-              <span class="font-medium">${{ invoice()!.subtotal | number:'1.2-2' }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-slate-600 dark:text-slate-400">IVA</span>
-              <span class="font-medium">${{ invoice()!.tax_amount | number:'1.2-2' }}</span>
-            </div>
-            <div class="border-t border-slate-200 dark:border-slate-700 pt-3 flex justify-between">
-              <span class="font-bold text-slate-900 dark:text-slate-100">Total</span>
-              <span class="font-bold text-xl text-indigo-600">${{ invoice()!.total | number:'1.2-2' }}</span>
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Totales</span>
+          </div>
+          <div class="card-body">
+            <div class="ds-stack">
+              <div class="info-row">
+                <span class="info-label">Subtotal</span>
+                <span class="info-value num">${{ invoice()!.subtotal | number:'1.2-2' }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">IVA 15%</span>
+                <span class="info-value num">${{ invoice()!.tax_amount | number:'1.2-2' }}</span>
+              </div>
+              <div class="info-row" style="border-top:1px solid var(--border-ds);padding-top:12px;margin-top:4px">
+                <span class="info-label" style="font-weight:700;font-size:14px;color:var(--text-ds)">Total</span>
+                <span class="info-value num" style="font-size:20px;font-weight:700;color:var(--accent)">
+                  ${{ invoice()!.total | number:'1.2-2' }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Actions -->
-        <div class="form-card">
-          <h3 class="section-title">Acciones</h3>
-          <div class="flex flex-col gap-2">
+        <div class="card">
+          <div class="card-head">
+            <span class="card-title">Acciones</span>
+          </div>
+          <div class="card-body">
             @if (invoice()!.status === 'ISSUED') {
-              <button mat-stroked-button color="warn" (click)="cancelInvoice()" [disabled]="actionLoading()">
-                <mat-icon>cancel</mat-icon> Cancelar factura
+              <button class="btn danger" style="width:100%" (click)="cancelInvoice()" [disabled]="actionLoading()">
+                @if (actionLoading()) {
+                  <span class="btn-spinner"></span>
+                } @else {
+                  <app-icon name="x" [size]="14" class="icon" />
+                }
+                Cancelar factura
               </button>
             } @else {
-              <div class="text-center text-slate-400 dark:text-slate-500 text-sm py-4">
+              <p style="font-size:13px;color:var(--text-subtle);text-align:center;padding:8px 0">
                 Sin acciones disponibles
-              </div>
+              </p>
             }
           </div>
         </div>
+
       </div>
     </div>
   }
+
 </div>

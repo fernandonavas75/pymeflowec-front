@@ -1,109 +1,79 @@
-<aside class="sidebar" [class.collapsed]="collapsed()">
+<aside class="ds-sidebar">
 
-  <!-- Logo -->
-  <div class="sidebar-header">
-    @if (!collapsed()) {
-      <div class="logo-full">
-        <span class="logo-icon"><mat-icon>bolt</mat-icon></span>
-        <span class="logo-text">PymeFlow<span class="logo-accent">EC</span></span>
-      </div>
-    } @else {
-      <div class="logo-icon-only"><mat-icon>bolt</mat-icon></div>
-    }
+  <!-- Brand -->
+  <div class="sidebar-brand">
+    <div class="brand-mark">
+      <app-icon name="bolt" [size]="16" />
+    </div>
+    <span class="brand-wordmark">PymeFlow<span class="tld">EC</span></span>
   </div>
 
-  <!-- Banner modo cliente -->
+  <!-- Client mode banner -->
   @if (adminViewSvc.isClientViewMode()) {
-    <div class="client-view-banner" [class.collapsed]="collapsed()"
-         [matTooltip]="collapsed() ? ('Modo cliente: ' + adminViewSvc.viewedCompany()!.name) : ''"
-         matTooltipPosition="right">
-      <mat-icon class="text-amber-400">visibility</mat-icon>
-      @if (!collapsed()) {
-        <div class="flex-1 min-w-0">
-          <p class="text-xs font-semibold text-amber-600 dark:text-amber-400 truncate">Modo cliente</p>
-          <p class="text-xs text-amber-700 dark:text-amber-300 truncate font-medium">{{ adminViewSvc.viewedCompany()!.name }}</p>
-        </div>
-        <button class="exit-client-btn" (click)="adminViewSvc.exitClientView()" matTooltip="Salir del modo cliente">
-          <mat-icon style="font-size:16px;width:16px;height:16px;">close</mat-icon>
-        </button>
-      }
+    <div class="client-banner">
+      <app-icon name="visibility" [size]="15" style="flex-shrink:0;color:oklch(0.62 0.16 75)" />
+      <span class="client-banner-name">{{ adminViewSvc.viewedCompany()!.name }}</span>
+      <button class="client-banner-exit"
+              title="Salir del modo cliente"
+              (click)="adminViewSvc.exitClientView()">
+        <app-icon name="close" [size]="11" />
+      </button>
     </div>
   }
 
-  <!-- Navegación -->
-  <nav class="sidebar-nav">
+  <!-- Nav scroll area -->
+  <div class="sidebar-scroll">
 
     <!-- Dashboard -->
     <a routerLink="/dashboard" routerLinkActive="active" class="nav-item"
-       [matTooltip]="collapsed() ? 'Dashboard' : ''" matTooltipPosition="right">
-      <mat-icon class="nav-icon">dashboard</mat-icon>
-      @if (!collapsed()) { <span class="nav-label">Dashboard</span> }
+       [title]="collapsed() ? 'Dashboard' : ''">
+      <app-icon name="dashboard" [size]="17" class="icon" />
+      <span class="label">Dashboard</span>
     </a>
 
-    <!-- Skeleton mientras cargan los módulos -->
+    <!-- Loading state -->
     @if (moduleLoading() || adminViewSvc.loading()) {
-      <div class="nav-item nav-item--loading opacity-40 pointer-events-none">
-        <mat-spinner diameter="16" class="nav-icon"></mat-spinner>
-        @if (!collapsed()) { <span class="nav-label">Cargando módulos…</span> }
+      <div class="nav-item" style="opacity:.4;pointer-events:none">
+        <span class="icon nav-spinner"></span>
+        <span class="label">Cargando módulos…</span>
       </div>
     }
 
-    <!-- Grupos de navegación -->
+    <!-- Nav groups -->
     @for (group of visibleNavGroups(); track group.label) {
-
-      <!-- Etiqueta del grupo -->
-      @if (!collapsed()) {
+      <div class="nav-group">
         <div class="nav-group-label">{{ group.label }}</div>
-      } @else {
-        <div class="nav-group-divider"></div>
-      }
 
-      <!-- Items del grupo -->
-      @for (item of group.items; track item.route) {
-        @if (item.moduleStatus === 'PENDING') {
-          <!-- Módulo en espera de autorización: visible pero no navegable -->
-          <div class="nav-item nav-item--pending"
-               [matTooltip]="collapsed()
-                 ? (item.label + ' — pendiente de autorización')
-                 : 'Módulo pendiente de autorización por la plataforma'"
-               matTooltipPosition="right">
-            <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-            @if (!collapsed()) {
-              <span class="nav-label">{{ item.label }}</span>
-              <mat-icon class="text-amber-400 ml-auto"
-                        style="font-size:15px;width:15px;height:15px;">
-                hourglass_empty
-              </mat-icon>
-            }
-          </div>
-        } @else {
-          <!-- Item normal (activo o sin módulo requerido) -->
-          <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
-             [matTooltip]="collapsed() ? item.label : ''" matTooltipPosition="right">
-            <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-            @if (!collapsed()) { <span class="nav-label">{{ item.label }}</span> }
-          </a>
+        @for (item of group.items; track item.route) {
+          @if (item.moduleStatus === 'PENDING') {
+            <div class="nav-item nav-item--pending"
+                 [title]="item.label + ' — pendiente de autorización'">
+              <app-icon [name]="item.icon" [size]="17" class="icon" />
+              <span class="label">{{ item.label }}</span>
+              <span class="pill">PEND</span>
+            </div>
+          } @else {
+            <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
+               [title]="collapsed() ? item.label : ''">
+              <app-icon [name]="item.icon" [size]="17" class="icon" />
+              <span class="label">{{ item.label }}</span>
+            </a>
+          }
         }
-      }
+      </div>
     }
 
-  </nav>
+  </div>
 
   <!-- Footer -->
-  <div class="sidebar-footer">
-    <div class="user-info">
-      <div class="user-avatar">{{ userInitials }}</div>
-      @if (!collapsed()) {
-        <div class="user-details">
-          <p class="user-name">{{ authService.currentUser()?.full_name }}</p>
-          <p class="user-role">{{ authService.role() }}</p>
-        </div>
-      }
+  <div class="sidebar-foot">
+    <div class="ds-avatar">{{ userInitials }}</div>
+    <div class="sidebar-foot-meta">
+      <div class="n">{{ authService.currentUser()?.full_name }}</div>
+      <div class="r">{{ authService.role() }}</div>
     </div>
-    <button class="logout-btn" (click)="logout()"
-            [matTooltip]="collapsed() ? 'Cerrar sesión' : ''" matTooltipPosition="right">
-      <mat-icon>logout</mat-icon>
-      @if (!collapsed()) { <span>Cerrar sesión</span> }
+    <button class="topbar-btn" title="Cerrar sesión" (click)="logout()">
+      <app-icon name="logout" [size]="16" class="icon" />
     </button>
   </div>
 

@@ -2,13 +2,8 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ProductsService } from '../../../core/services/products.service';
 import { SuppliersService } from '../../../core/services/suppliers.service';
 import { TaxRatesService } from '../../../core/services/tax-rates.service';
@@ -18,17 +13,7 @@ import { TaxRate } from '../../../core/models/tax-rate.model';
 @Component({
   selector: 'app-product-form',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSelectModule,
-    MatProgressSpinnerModule,
-    MatTooltipModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppIconComponent],
   templateUrl: './product-form.component.html',
 })
 export class ProductFormComponent implements OnInit {

@@ -1,232 +1,171 @@
-<div class="ic-page">
+<div class="page" style="padding-bottom:24px">
 
-  <!-- Header -->
-  <div class="ic-header">
-    <a routerLink="/invoices" class="ic-back">
-      <span class="material-icons-round">arrow_back</span>
-    </a>
-    <div class="ic-header-text">
-      <h1 class="ic-title">Nueva factura</h1>
-      <p class="ic-subtitle">Completa los datos para registrar la venta</p>
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Nueva factura</div>
+      <div class="page-sub-en">New invoice · POS</div>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/invoices" class="btn ghost">Descartar</a>
     </div>
   </div>
 
-  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="ic-layout">
+  <!-- ── POS layout ──────────────────────────────────────────────── -->
+  <div class="pos-layout">
 
-    <!-- ── COLUMNA PRINCIPAL ──────────────────────────────── -->
-    <div class="ic-main">
-
-      <!-- SECCIÓN 1: Datos de la factura -->
-      <div class="ic-card">
-        <div class="ic-card-header">
-          <span class="material-icons-round">article</span>
-          <h2>Datos de la factura</h2>
-        </div>
-        <div class="ic-card-body">
-          <div class="ic-fields-row">
-
-            <div class="ic-field-group ic-field-grow">
-              <label class="ic-label">Cliente <span class="ic-required">*</span></label>
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Seleccionar cliente</mat-label>
-                <mat-select formControlName="customer_id">
-                  @for (c of customers(); track c.id) {
-                    <mat-option [value]="c.id">
-                      {{ c.full_name }} — {{ c.document_number }}
-                    </mat-option>
-                  }
-                </mat-select>
-                @if (form.get('customer_id')?.touched && form.get('customer_id')?.hasError('required')) {
-                  <mat-error>Debes seleccionar un cliente</mat-error>
-                }
-              </mat-form-field>
-            </div>
-
-            <div class="ic-field-group">
-              <label class="ic-label">Fecha de emisión</label>
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>Fecha</mat-label>
-                <input matInput type="date" formControlName="issue_date">
-              </mat-form-field>
-            </div>
-
-          </div>
-        </div>
+    <!-- LEFT: Product search + grid -->
+    <div class="pos-left">
+      <div class="pos-search">
+        <app-icon name="search" [size]="18" class="icon"/>
+        <input [formControl]="queryCtrl" placeholder="Buscar producto por nombre o SKU…"/>
+        <span class="pos-kbd">F2</span>
       </div>
 
-      <!-- SECCIÓN 2: IVA global -->
-      <div class="ic-card">
-        <div class="ic-card-header">
-          <span class="material-icons-round">percent</span>
-          <h2>Impuesto (IVA)</h2>
-        </div>
-        <div class="ic-card-body">
-          <div class="ic-tax-row">
-            <mat-form-field appearance="outline" class="ic-tax-select">
-              <mat-label>Tasa de IVA</mat-label>
-              <mat-select formControlName="tax_rate_id">
-                <mat-option [value]="null">Sin IVA (0%)</mat-option>
-                @for (t of taxRates(); track t.id) {
-                  <mat-option [value]="t.id">{{ t.tax_name }} — {{ t.percentage }}%</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
-            <p class="ic-tax-note">
-              <span class="material-icons-round">info</span>
-              El IVA seleccionado se aplica sobre el subtotal total de la factura
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECCIÓN 3: Productos -->
-      <div class="ic-card">
-        <div class="ic-card-header">
-          <span class="material-icons-round">inventory_2</span>
-          <h2>Productos / Servicios</h2>
-          <span class="ic-items-count">{{ items.length }} ítem{{ items.length !== 1 ? 's' : '' }}</span>
-        </div>
-        <div class="ic-card-body ic-card-body--no-pad">
-
-          <div class="ic-table-wrap">
-            <!-- Tabla header -->
-            <div class="ic-table-head">
-              <span class="ic-th ic-th-product">Producto del catálogo</span>
-              <span class="ic-th ic-th-name">Descripción *</span>
-              <span class="ic-th ic-th-qty">Cant.</span>
-              <span class="ic-th ic-th-price">Precio unit.</span>
-              <span class="ic-th ic-th-sub">Subtotal</span>
-              <span class="ic-th ic-th-del"></span>
+      <div class="pos-products scrollbar-ds">
+        @for (p of filteredProducts(); track p.id) {
+          <button class="prod-tile" [class.in-cart]="isInCart(p.id)"
+                  [disabled]="p.stock === 0" (click)="addToCart(p)" type="button">
+            <div class="swatch">{{ (p.sku ?? p.name).split('-')[0] }}</div>
+            <div class="sku">{{ p.sku ?? '—' }}</div>
+            <div class="n">{{ p.name }}</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+              <div class="p">${{ p.sale_price | number:'1.2-2' }}</div>
+              <div class="stock" [class]="stockState(p)">
+                {{ p.stock === 0 ? 'agotado' : (p.stock + ' u.') }}
+              </div>
             </div>
-
-            <!-- Filas dinámicas -->
-            <div formArrayName="items" class="ic-table-body">
-              @for (item of items.controls; track item; let i = $index) {
-                <div [formGroupName]="i" class="ic-table-row">
-
-                  <div class="ic-td ic-th-product">
-                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                      <mat-select formControlName="product_id"
-                        (selectionChange)="onProductSelect(i, $event.value)">
-                        <mat-option [value]="null">— Manual —</mat-option>
-                        @for (p of products(); track p.id) {
-                          <mat-option [value]="p.id">{{ p.name }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                  </div>
-
-                  <div class="ic-td ic-th-name">
-                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                      <input matInput formControlName="product_name" placeholder="Nombre del producto o servicio">
-                      @if (items.at(i).get('product_name')?.touched && items.at(i).get('product_name')?.invalid) {
-                        <mat-error>Requerido</mat-error>
-                      }
-                    </mat-form-field>
-                  </div>
-
-                  <div class="ic-td ic-th-qty">
-                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                      <input matInput type="number" formControlName="quantity" min="1">
-                    </mat-form-field>
-                  </div>
-
-                  <div class="ic-td ic-th-price">
-                    <mat-form-field appearance="outline" class="w-full ic-field-compact">
-                      <span matTextPrefix>$&nbsp;</span>
-                      <input matInput type="number" formControlName="unit_price" min="0" step="0.01">
-                    </mat-form-field>
-                  </div>
-
-                  <div class="ic-td ic-th-sub">
-                    <span class="ic-line-sub">${{ lineSubtotal(i) | number:'1.2-2' }}</span>
-                  </div>
-
-                  <div class="ic-td ic-th-del">
-                    <button type="button" class="ic-del-btn"
-                      (click)="removeItem(i)" [disabled]="items.length === 1">
-                      <span class="material-icons-round">delete_outline</span>
-                    </button>
-                  </div>
-
-                </div>
-              }
-            </div>
+          </button>
+        }
+        @if (filteredProducts().length === 0) {
+          <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-subtle);font-size:13px">
+            Sin resultados para "{{ queryCtrl.value }}"
           </div>
-
-          <!-- Agregar ítem -->
-          <div class="ic-add-row">
-            <button type="button" class="ic-add-btn" (click)="addItem()">
-              <span class="material-icons-round">add_circle_outline</span>
-              Agregar ítem
-            </button>
-          </div>
-
-        </div>
+        }
       </div>
-
     </div>
 
-    <!-- ── PANEL RESUMEN ──────────────────────────────────── -->
-    <aside class="ic-aside">
-      <div class="ic-summary">
+    <!-- RIGHT: Cart panel -->
+    <div class="cart scrollbar-ds">
 
-        <div class="ic-summary-header">
-          <span class="material-icons-round">receipt_long</span>
-          <h3>Resumen</h3>
+      <div class="cart-head">
+        <h3>Carrito <span style="color:var(--text-subtle);font-family:var(--font-ui);font-weight:500;font-size:13px;margin-left:4px">/ Cart</span></h3>
+        <span style="font-family:var(--font-mono);color:var(--text-subtle);font-size:12px">
+          {{ cartCount() }} item{{ cartCount() !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- Customer chip -->
+      <div class="cart-customer" (click)="showCustomerPicker.set(true)">
+        <div class="cart-avatar">
+          {{ selectedCustomer() ? initials(selectedCustomer()!.full_name) : 'CF' }}
         </div>
-
-        <div class="ic-summary-body">
-
-          <div class="ic-sum-row">
-            <span class="ic-sum-label">Subtotal</span>
-            <span class="ic-sum-value">${{ subtotal | number:'1.2-2' }}</span>
+        <div style="flex:1;min-width:0">
+          <div class="n">{{ selectedCustomer()?.full_name ?? 'Consumidor Final' }}</div>
+          <div class="d">
+            {{ selectedCustomer() ? customerTypeLabel(selectedCustomer()!) : 'Consumidor final' }}
+            · {{ selectedCustomer()?.document_number ?? '9999999999999' }}
           </div>
+        </div>
+        <app-icon name="chevron_right" [size]="14"/>
+      </div>
 
-          @if (selectedTaxRate) {
-            <div class="ic-sum-row ic-sum-tax">
-              <span class="ic-sum-label">
-                IVA ({{ selectedTaxRate.percentage }}%)
-              </span>
-              <span class="ic-sum-value ic-sum-value--tax">
-                + ${{ taxAmount | number:'1.2-2' }}
-              </span>
-            </div>
-          } @else {
-            <div class="ic-sum-row ic-sum-tax">
-              <span class="ic-sum-label">IVA</span>
-              <span class="ic-sum-value ic-sum-value--muted">Sin IVA</span>
+      <!-- Empty cart -->
+      @if (cart().length === 0) {
+        <div class="cart-empty">
+          <app-icon name="receipt_long" [size]="28"/>
+          <div style="margin-top:8px;font-family:var(--font-display);font-size:18px;font-weight:700">Carrito vacío</div>
+          <div style="font-size:12.5px;color:var(--text-subtle)">Selecciona un producto para empezar</div>
+        </div>
+      } @else {
+        <div class="cart-items scrollbar-ds">
+          @for (item of cart(); track item.product.id) {
+            <div class="cart-item">
+              <div>
+                <div class="n">{{ item.product.name }}</div>
+                <div class="l">${{ item.product.sale_price | number:'1.2-2' }} · IVA {{ selectedTaxRate()?.percentage ?? 0 }}%</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="pos-qty">
+                  <button (click)="changeQty(item.product.id, -1)" type="button">
+                    <app-icon name="chevron_left" [size]="11"/>
+                  </button>
+                  <span class="v">{{ item.qty }}</span>
+                  <button (click)="changeQty(item.product.id, +1)" type="button">
+                    <app-icon name="chevron_right" [size]="11"/>
+                  </button>
+                </div>
+                <div class="p" style="min-width:60px">${{ item.qty * item.product.sale_price | number:'1.2-2' }}</div>
+                <button (click)="removeFromCart(item.product.id)" type="button" class="pos-remove">
+                  <app-icon name="x" [size]="13"/>
+                </button>
+              </div>
             </div>
           }
-
-          <div class="ic-sum-divider"></div>
-
-          <div class="ic-sum-row ic-sum-total">
-            <span>TOTAL</span>
-            <span>${{ invoiceTotal | number:'1.2-2' }}</span>
-          </div>
-
-          <div class="ic-sum-items-count">
-            {{ items.length }} ítem{{ items.length !== 1 ? 's' : '' }}
-          </div>
-
         </div>
+      }
 
-        <div class="ic-summary-actions">
-          <a routerLink="/invoices" class="ic-btn-cancel">Cancelar</a>
-          <button type="submit" class="ic-btn-submit" [disabled]="saving()">
-            @if (saving()) {
-              <mat-spinner diameter="18" class="ic-spinner"></mat-spinner>
-              <span>Procesando...</span>
-            } @else {
-              <span class="material-icons-round">receipt_long</span>
-              <span>Emitir factura</span>
-            }
-          </button>
+      <!-- Cart footer -->
+      <div class="cart-foot">
+        <div class="cart-row">
+          <span>Subtotal</span>
+          <span class="v">${{ subtotal() | number:'1.2-2' }}</span>
         </div>
-
+        <div class="cart-row">
+          <span>IVA {{ selectedTaxRate()?.percentage ?? 0 }}%</span>
+          <span class="v">${{ taxAmount() | number:'1.2-2' }}</span>
+        </div>
+        <div class="cart-total">
+          <span class="l">Total</span>
+          <span class="mono">${{ total() | number:'1.2-2' }}</span>
+        </div>
+        <button class="btn primary lg"
+                style="width:100%;margin-top:14px;justify-content:center;height:44px"
+                [disabled]="cart().length === 0 || saving()"
+                (click)="submit()" type="button">
+          @if (saving()) {
+            Procesando…
+          } @else {
+            <app-icon name="check" [size]="16"/>Emitir factura
+          }
+        </button>
       </div>
-    </aside>
 
-  </form>
+    </div><!-- /cart -->
+  </div><!-- /pos-layout -->
+
+  <!-- ── Customer picker drawer ──────────────────────────────────── -->
+  @if (showCustomerPicker()) {
+    <div class="drawer-backdrop" (click)="showCustomerPicker.set(false)"></div>
+    <div class="drawer">
+      <div class="drawer-head">
+        <div class="t">Seleccionar cliente</div>
+        <button class="btn ghost sm" (click)="showCustomerPicker.set(false)" type="button">
+          <app-icon name="x" [size]="16"/>
+        </button>
+      </div>
+      <div class="drawer-body" style="padding:0">
+        @for (c of customers(); track c.id) {
+          <div class="cust-row" (click)="pickCustomer(c)">
+            <div class="cart-avatar">{{ initials(c.full_name) }}</div>
+            <div style="flex:1">
+              <div style="font-weight:600">{{ c.full_name }}</div>
+              <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--text-subtle)">
+                {{ customerTypeLabel(c) }} · {{ c.document_number }}
+              </div>
+            </div>
+            @if (selectedCustomer()?.id === c.id) {
+              <app-icon name="check" [size]="16"/>
+            }
+          </div>
+        }
+      </div>
+      <div class="drawer-foot">
+        <a routerLink="/customers/new" class="btn secondary">
+          <app-icon name="plus" [size]="14"/>Nuevo cliente
+        </a>
+      </div>
+    </div>
+  }
+
 </div>

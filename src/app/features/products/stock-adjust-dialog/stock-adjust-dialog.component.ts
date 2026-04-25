@@ -1,14 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDividerModule } from '@angular/material/divider';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { forkJoin, of } from 'rxjs';
 import { ProductsService } from '../../../core/services/products.service';
 import { Product } from '../../../core/models/product.model';
@@ -16,103 +11,117 @@ import { Product } from '../../../core/models/product.model';
 @Component({
   selector: 'app-stock-adjust-dialog',
   standalone: true,
-  imports: [
-    CommonModule, ReactiveFormsModule, MatDialogModule,
-    MatInputModule, MatSelectModule, MatButtonModule,
-    MatIconModule, MatProgressSpinnerModule, MatDividerModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, AppIconComponent],
+  styles: [`:host { display: flex; flex-direction: column; max-height: 90vh; width: 440px; }`],
   template: `
-    <h2 mat-dialog-title class="text-lg font-semibold">Gestionar stock</h2>
-    <mat-dialog-content class="min-w-96">
-      <p class="text-sm text-gray-500 mb-4 font-medium">{{ product.name }}</p>
+    <!-- Header -->
+    <div class="ds-modal-head">
+      <div>
+        <div class="t">Gestionar stock</div>
+        <div class="d">{{ product.name }}</div>
+      </div>
+      <button class="topbar-btn" (click)="ref.close()">
+        <app-icon name="x" [size]="16" class="icon" />
+      </button>
+    </div>
 
-      <!-- Resumen actual -->
-      <div class="flex items-center gap-6 py-3 mb-5 bg-gray-50 rounded-lg px-4">
-        <div class="text-center">
-          <p class="text-xs text-gray-400 mb-1">Stock actual</p>
-          <p class="text-2xl font-bold"
-            [class.text-red-600]="product.stock <= product.min_stock"
-            [class.text-gray-900]="product.stock > product.min_stock">
+    <!-- Body -->
+    <div class="ds-modal-body" style="overflow-y:auto">
+
+      <!-- Stock summary -->
+      <div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds);padding:14px 16px;margin-bottom:20px">
+        <div style="text-align:center;flex:1">
+          <div style="font-size:11px;color:var(--text-subtle);margin-bottom:4px">Stock actual</div>
+          <div style="font-size:26px;font-weight:700;font-family:var(--font-display);letter-spacing:-0.02em"
+               [style.color]="product.stock <= product.min_stock ? 'var(--danger)' : 'var(--text-ds)'">
             {{ product.stock }}
-          </p>
-          <p class="text-xs text-gray-400">unidades</p>
+          </div>
+          <div style="font-size:11px;color:var(--text-subtle)">unidades</div>
         </div>
-        <mat-icon class="text-gray-300">arrow_forward</mat-icon>
-        <div class="text-center">
-          <p class="text-xs text-gray-400 mb-1">Nuevo stock</p>
-          <p class="text-2xl font-bold text-indigo-600">{{ newStock() }}</p>
-          <p class="text-xs text-gray-400">unidades</p>
+        <app-icon name="chevron_right" [size]="18" style="color:var(--text-subtle)" />
+        <div style="text-align:center;flex:1">
+          <div style="font-size:11px;color:var(--text-subtle);margin-bottom:4px">Nuevo stock</div>
+          <div style="font-size:26px;font-weight:700;font-family:var(--font-display);letter-spacing:-0.02em;color:var(--accent)">
+            {{ newStock() }}
+          </div>
+          <div style="font-size:11px;color:var(--text-subtle)">unidades</div>
         </div>
-        <div class="ml-auto text-center">
-          <p class="text-xs text-gray-400 mb-1">Alerta activa en</p>
-          <p class="text-xl font-bold text-amber-600">{{ form.get('min_stock')?.value ?? product.min_stock }}</p>
-          <p class="text-xs text-gray-400">unidades</p>
+        <div style="text-align:center;flex:1;margin-left:auto">
+          <div style="font-size:11px;color:var(--text-subtle);margin-bottom:4px">Alerta en</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--font-display);color:var(--warn)">
+            {{ form.get('min_stock')?.value ?? product.min_stock }}
+          </div>
+          <div style="font-size:11px;color:var(--text-subtle)">unidades</div>
         </div>
       </div>
 
-      <form [formGroup]="form" class="flex flex-col gap-4">
+      <form [formGroup]="form">
 
-        <!-- Sección: movimiento de stock -->
-        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Movimiento de stock</p>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo</mat-label>
-          <mat-select formControlName="movement_type">
-            <mat-option value="IN">Entrada &mdash; compra / recepcion</mat-option>
-            <mat-option value="OUT">Salida &mdash; merma / perdida</mat-option>
-            <mat-option value="ADJUSTMENT">Ajuste manual (establece valor exacto)</mat-option>
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>{{ form.get('movement_type')?.value === 'adjustment' ? 'Nuevo total de stock' : 'Cantidad' }}</mat-label>
-          <input matInput type="number" step="0.001" min="0" formControlName="quantity">
-          @if (form.get('quantity')?.touched && form.get('quantity')?.invalid) {
-            <mat-error>Ingresa una cantidad valida (mayor a 0)</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Notas (opcional)</mat-label>
-          <input matInput formControlName="notes" placeholder="Ej: Compra proveedor, conteo físico...">
-        </mat-form-field>
-
-        <mat-divider />
-
-        <!-- Sección: alerta de reabastecimiento -->
-        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Alerta de reabastecimiento</p>
-        <p class="text-xs text-gray-400 -mt-2">
-          Se muestra una alerta en la lista cuando el stock llega a este nivel.
+        <p style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:12px">
+          Movimiento de stock
         </p>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Stock minimo para alertar</mat-label>
-          <mat-icon matPrefix>notifications_active</mat-icon>
-          <input matInput type="number" step="0.001" min="0" formControlName="min_stock">
-          <mat-hint>Actual: {{ product.min_stock }}</mat-hint>
-          @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
-            <mat-error>Ingresa un valor valido (0 o mayor)</mat-error>
+        <div class="field">
+          <label class="field-label">Tipo <span class="req">*</span></label>
+          <select class="field-select" formControlName="movement_type">
+            <option value="IN">Entrada — compra / recepción</option>
+            <option value="OUT">Salida — merma / pérdida</option>
+            <option value="ADJUSTMENT">Ajuste manual (valor exacto)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field-label">
+            {{ form.get('movement_type')?.value === 'ADJUSTMENT' ? 'Nuevo total de stock' : 'Cantidad' }}
+            <span class="req">*</span>
+          </label>
+          <input class="field-input" type="number" step="0.001" min="0" formControlName="quantity"
+                 placeholder="0">
+          @if (form.get('quantity')?.touched && form.get('quantity')?.invalid) {
+            <span class="field-hint" style="color:var(--danger)">Ingresa una cantidad válida (mayor a 0)</span>
           }
-        </mat-form-field>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Notas (opcional)</label>
+          <input class="field-input" formControlName="notes" placeholder="Ej: Compra proveedor, conteo físico…">
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border-ds);margin:16px 0 18px">
+
+        <p style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:4px">
+          Alerta de reabastecimiento
+        </p>
+        <p style="font-size:12px;color:var(--text-subtle);margin-bottom:12px">
+          Se muestra una alerta cuando el stock llegue a este nivel.
+        </p>
+
+        <div class="field">
+          <label class="field-label">Stock mínimo para alertar</label>
+          <input class="field-input" type="number" step="0.001" min="0" formControlName="min_stock">
+          <span class="field-hint">Actual: {{ product.min_stock }}</span>
+          @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
+            <span class="field-hint" style="color:var(--danger)">Ingresa un valor válido (0 o mayor)</span>
+          }
+        </div>
 
       </form>
-    </mat-dialog-content>
+    </div>
 
-    <mat-dialog-actions align="end">
-      <button mat-stroked-button mat-dialog-close>Cancelar</button>
-      <button mat-flat-button color="primary" (click)="save()" [disabled]="form.invalid || saving">
-        @if (saving) {
-          <mat-spinner diameter="18" class="inline-block"></mat-spinner>
-        } @else {
-          Guardar
-        }
+    <!-- Footer -->
+    <div class="ds-modal-foot">
+      <button class="btn ghost" (click)="ref.close()">Cancelar</button>
+      <button class="btn primary" (click)="save()" [disabled]="form.invalid || saving">
+        @if (saving) { <span class="btn-spinner"></span> }
+        @else { <app-icon name="check" [size]="14" class="icon" /> }
+        Guardar
       </button>
-    </mat-dialog-actions>
+    </div>
   `,
 })
 export class StockAdjustDialogComponent {
   product: Product = inject(MAT_DIALOG_DATA);
-  private ref = inject(MatDialogRef<StockAdjustDialogComponent>);
+  ref = inject(MatDialogRef<StockAdjustDialogComponent>);
   private svc = inject(ProductsService);
   private snackBar = inject(MatSnackBar);
   private fb = inject(FormBuilder);

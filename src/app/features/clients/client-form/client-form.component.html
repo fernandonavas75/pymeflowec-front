@@ -1,82 +1,93 @@
-<div class="page-container">
-  <div class="page-header">
-    <a routerLink="/customers" mat-icon-button>
-      <mat-icon>arrow_back</mat-icon>
-    </a>
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza los datos del cliente' : 'Registra un nuevo cliente' }}</p>
+<div class="page">
+
+  <div class="page-head">
+    <div style="display:flex;align-items:center;gap:12px">
+      <a routerLink="/customers" class="btn ghost sm">
+        <app-icon name="arrow_left" [size]="14" class="icon" />
+        Volver
+      </a>
+      <div>
+        <h1 class="page-title">{{ isEdit ? 'Editar cliente' : 'Nuevo cliente' }}</h1>
+        <p class="page-sub-en">{{ isEdit ? 'Actualiza la información' : 'Registra un nuevo cliente para facturación' }}</p>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
-    <div class="flex justify-center py-20">
-      <mat-spinner diameter="48"></mat-spinner>
+    <div style="display:flex;justify-content:center;padding:80px 0">
+      <span class="page-spinner"></span>
     </div>
   } @else {
-    <div class="form-card">
+    <div class="card" style="max-width:520px">
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="form-grid">
+        <div class="card-body">
 
-          <mat-form-field appearance="outline">
-            <mat-label>Tipo de identificación *</mat-label>
-            <mat-select formControlName="customer_type">
-              @for (t of customerTypes; track t.value) {
-                <mat-option [value]="t.value">{{ t.label }}</mat-option>
+          <div class="mfield">
+            <label>Tipo de documento</label>
+            <div class="seg">
+              <button type="button" [class.active]="form.get('customer_type')?.value === 'CEDULA'"
+                      (click)="form.get('customer_type')?.setValue('CEDULA')">Cédula</button>
+              <button type="button" [class.active]="form.get('customer_type')?.value === 'RUC'"
+                      (click)="form.get('customer_type')?.setValue('RUC')">RUC</button>
+              <button type="button" [class.active]="form.get('customer_type')?.value === 'FINAL_CONSUMER'"
+                      (click)="form.get('customer_type')?.setValue('FINAL_CONSUMER')">Cons. Final</button>
+            </div>
+          </div>
+
+          @if (form.get('customer_type')?.value !== 'FINAL_CONSUMER') {
+            <div class="mfield">
+              <label>
+                {{ form.get('customer_type')?.value === 'RUC' ? 'RUC (13 dígitos)' : 'Cédula (10 dígitos)' }}
+                <span style="color:var(--danger)">*</span>
+              </label>
+              <input class="m-input mono" formControlName="document_number"
+                     [placeholder]="form.get('customer_type')?.value === 'RUC' ? '1790012345001' : '1712345678'"
+                     [maxlength]="form.get('customer_type')?.value === 'RUC' ? 13 : 10" />
+              @if (form.get('document_number')?.touched && form.get('document_number')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa un número válido (10-13 dígitos)</div>
               }
-            </mat-select>
-          </mat-form-field>
+            </div>
+          }
 
-          <mat-form-field appearance="outline">
-            <mat-label>Número de documento *</mat-label>
-            <input matInput formControlName="document_number" placeholder="1234567890">
-            @if (form.get('document_number')?.touched && form.get('document_number')?.invalid) {
-              <mat-error>Ingresa un número válido (10-13 dígitos)</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Nombre completo *</mat-label>
-            <input matInput formControlName="full_name">
+          <div class="mfield">
+            <label>
+              {{ form.get('customer_type')?.value === 'RUC' ? 'Razón social' : 'Nombres y apellidos' }}
+              <span style="color:var(--danger)">*</span>
+            </label>
+            <input class="m-input" formControlName="full_name"
+                   [placeholder]="form.get('customer_type')?.value === 'RUC' ? 'Empresa S.A.' : 'Juan Pérez'" />
             @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
-              <mat-error>Mínimo 3 caracteres</mat-error>
+              <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
             }
-          </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Teléfono</mat-label>
-            <input matInput formControlName="phone" placeholder="0987654321">
-            @if (form.get('phone')?.touched && form.get('phone')?.invalid) {
-              <mat-error>Ingresa un teléfono válido (10 dígitos)</mat-error>
-            }
-          </mat-form-field>
+          <div class="mfield-row">
+            <div class="mfield">
+              <label>Email</label>
+              <input class="m-input" type="email" placeholder="cliente@email.com" formControlName="email" />
+            </div>
+            <div class="mfield">
+              <label>Teléfono</label>
+              <input class="m-input mono" placeholder="09XXXXXXXX" formControlName="phone" />
+            </div>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Email</mat-label>
-            <input matInput type="email" formControlName="email">
-            @if (form.get('email')?.touched && form.get('email')?.invalid) {
-              <mat-error>Ingresa un email válido</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Dirección</mat-label>
-            <textarea matInput formControlName="address" rows="2"></textarea>
-          </mat-form-field>
+          <div class="mfield">
+            <label>Dirección</label>
+            <input class="m-input" formControlName="address" placeholder="Av. principal..." />
+          </div>
 
         </div>
 
-        <div class="form-actions">
-          <a routerLink="/customers" mat-stroked-button>Cancelar</a>
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-            @if (saving()) {
-              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
-            } @else {
-              {{ isEdit ? 'Guardar cambios' : 'Crear cliente' }}
-            }
+        <div class="card-head" style="justify-content:flex-end;gap:8px">
+          <a routerLink="/customers" class="btn secondary">Cancelar</a>
+          <button class="btn primary" type="submit" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            {{ isEdit ? 'Guardar cambios' : 'Crear cliente' }}
           </button>
         </div>
       </form>
     </div>
   }
+
 </div>

@@ -1,81 +1,142 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
-import { finalize } from 'rxjs';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { startWith, finalize } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { InvoicesService } from '../../../core/services/invoices.service';
+import { InvoicePdfService } from '../../../core/services/invoice-pdf.service';
 import { Invoice } from '../../../core/models/invoice.model';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-invoices-list',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSelectModule,
-    MatPaginatorModule,
-    MatTooltipModule,
-    StatusBadgeComponent,
-  ],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, AppIconComponent],
   templateUrl: './invoices-list.component.html',
 })
 export class InvoicesListComponent implements OnInit {
   private invoicesService = inject(InvoicesService);
-  authService = inject(AuthService);
+  private pdfService      = inject(InvoicePdfService);
+  private snackBar        = inject(MatSnackBar);
+  private dialog          = inject(MatDialog);
+  authService             = inject(AuthService);
 
-  invoices = signal<Invoice[]>([]);
-  loading = signal(true);
-  total = signal(0);
-  page = signal(1);
-  limit = signal(20);
+  private allInvoices = signal<Invoice[]>([]);
+  loading         = signal(true);
+  tabFilter       = signal<'all' | 'issued' | 'cancelled'>('all');
+  searchCtrl      = new FormControl('');
+  selectedInvoice = signal<Invoice | null>(null);
+  drawerLoading   = signal(false);
+  actionLoading   = signal(false);
+  pdfLoading      = signal(false);
 
-  statusCtrl = new FormControl('');
+  private searchQuery = toSignal(
+    this.searchCtrl.valueChanges.pipe(startWith('')),
+    { initialValue: '' }
+  );
 
-  displayedColumns = ['number', 'customer', 'date', 'subtotal', 'tax_amount', 'total', 'status', 'actions'];
+  issuedCount    = computed(() => this.allInvoices().filter(i => i.status === 'ISSUED').length);
+  cancelledCount = computed(() => this.allInvoices().filter(i => i.status === 'CANCELLED').length);
+  totalCount     = computed(() => this.allInvoices().length);
 
-  ngOnInit(): void {
-    this.loadInvoices();
-    this.statusCtrl.valueChanges.subscribe(() => {
-      this.page.set(1);
-      this.loadInvoices();
-    });
-  }
+  totalIssued = computed(() =>
+    this.allInvoices().filter(i => i.status === 'ISSUED').reduce((s, i) => s + i.total, 0)
+  );
+  taxIssued = computed(() => this.totalIssued() * 0.15);
 
-  loadInvoices(): void {
+  filteredInvoices = computed(() => {
+    let list = this.allInvoices();
+    const tab = this.tabFilter();
+    if (tab === 'issued')    list = list.filter(i => i.status === 'ISSUED');
+    if (tab === 'cancelled') list = list.filter(i => i.status === 'CANCELLED');
+    const q = (this.searchQuery() ?? '').toLowerCase();
+    if (q) list = list.filter(i =>
+      i.invoice_number.toLowerCase().includes(q) ||
+      (i.customer?.full_name ?? '').toLowerCase().includes(q)
+    );
+    return list;
+  });
+
+  ngOnInit(): void { this.load(); }
+
+  load(): void {
     this.loading.set(true);
-    const params: Record<string, string | number | boolean | undefined> = {
-      page: this.page(),
-      limit: this.limit(),
-    };
-    if (this.statusCtrl.value) params['status'] = this.statusCtrl.value;
+    this.invoicesService.list({ page: 1, limit: 500 })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: res => this.allInvoices.set(res.data ?? []),
+        error: ()  => this.allInvoices.set([]),
+      });
+  }
 
-    this.invoicesService.list(params).pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: res => { this.invoices.set(res.data ?? []); this.total.set(res.total ?? 0); },
-      error: ()  => this.invoices.set([]),
+  selectInvoice(inv: Invoice): void {
+    this.selectedInvoice.set(inv);
+    if (!inv.details) {
+      this.drawerLoading.set(true);
+      this.invoicesService.getById(inv.id).subscribe({
+        next: full => { this.selectedInvoice.set(full); this.drawerLoading.set(false); },
+        error: ()   => this.drawerLoading.set(false),
+      });
+    }
+  }
+
+  closeDrawer(): void { this.selectedInvoice.set(null); }
+
+  async downloadPdf(): Promise<void> {
+    const inv = this.selectedInvoice();
+    if (!inv) return;
+    this.pdfLoading.set(true);
+    try {
+      await this.pdfService.download(inv);
+      this.snackBar.open('PDF descargado', 'OK', { duration: 3000 });
+    } catch {
+      this.snackBar.open('Error al generar el PDF', 'Cerrar', { duration: 4000 });
+    } finally {
+      this.pdfLoading.set(false);
+    }
+  }
+
+  cancelInvoice(): void {
+    const inv = this.selectedInvoice();
+    if (!inv) return;
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Cancelar factura',
+        message: '¿Cancelar esta factura? Esta acción no se puede deshacer.',
+        confirmText: 'Cancelar factura',
+        danger: true,
+      },
+    }).afterClosed().subscribe(ok => {
+      if (!ok) return;
+      this.actionLoading.set(true);
+      this.invoicesService.cancel(inv.id).subscribe({
+        next: updated => {
+          this.selectedInvoice.set(updated);
+          this.allInvoices.update(list => list.map(i => i.id === updated.id ? updated : i));
+          this.actionLoading.set(false);
+          this.snackBar.open('Factura cancelada', 'OK', { duration: 3000 });
+        },
+        error: () => this.actionLoading.set(false),
+      });
     });
   }
 
-  onPageChange(event: PageEvent): void {
-    this.page.set(event.pageIndex + 1);
-    this.limit.set(event.pageSize);
-    this.loadInvoices();
+  formatDateTime(date: string): string {
+    const d = new Date(date);
+    const datePart = d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit' });
+    const timePart = d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+    return `${datePart} · ${timePart}`;
   }
 
-  formatDate(date: string): string {
-    return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' });
+  formatDateLong(date: string): string {
+    const d = new Date(date);
+    const datePart = d.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+    const timePart = d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+    return `${datePart} · ${timePart}`;
   }
 }

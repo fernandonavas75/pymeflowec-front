@@ -1,12 +1,10 @@
-<div class="layout-container" [class.sidebar-collapsed]="sidebarCollapsed()">
+<div class="app" [attr.data-sidebar]="sidebarCollapsed() ? 'icons' : 'labels'">
   <app-sidebar [collapsed]="sidebarCollapsed()" />
-  <div class="main-content">
-    <app-topbar
-      [sidebarCollapsed]="sidebarCollapsed()"
-      (toggleSidebar)="toggleSidebar()"
-    />
-    <div class="page-wrapper">
-      <router-outlet />
-    </div>
-  </div>
+  <app-topbar
+    [sidebarCollapsed]="sidebarCollapsed()"
+    (toggleSidebar)="toggleSidebar()"
+  />
+  <main class="ds-content">
+    <router-outlet />
+  </main>
 </div>

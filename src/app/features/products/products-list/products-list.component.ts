@@ -1,21 +1,14 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { startWith, finalize } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProductsService } from '../../../core/services/products.service';
 import { Product } from '../../../core/models/product.model';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { StockAdjustDialogComponent } from '../stock-adjust-dialog/stock-adjust-dialog.component';
@@ -23,101 +16,83 @@ import { StockAdjustDialogComponent } from '../stock-adjust-dialog/stock-adjust-
 @Component({
   selector: 'app-products-list',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    ReactiveFormsModule,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
-    MatPaginatorModule,
-    MatMenuModule,
-    MatDialogModule,
-    MatTooltipModule,
-    StatusBadgeComponent,
-  ],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, AppIconComponent],
   templateUrl: './products-list.component.html',
 })
 export class ProductsListComponent implements OnInit {
   private productsService = inject(ProductsService);
-  private dialog = inject(MatDialog);
-  private snackBar = inject(MatSnackBar);
-  authService = inject(AuthService);
+  private dialog          = inject(MatDialog);
+  private snackBar        = inject(MatSnackBar);
+  authService             = inject(AuthService);
 
-  products = signal<Product[]>([]);
-  loading = signal(true);
-  total = signal(0);
-  page = signal(1);
-  limit = signal(20);
-
+  private allProducts = signal<Product[]>([]);
+  loading    = signal(true);
+  tabFilter  = signal<'all' | 'low' | 'out'>('all');
   searchCtrl = new FormControl('');
-  statusCtrl = new FormControl('');
 
-  get displayedColumns(): string[] {
-    const base = ['name', 'stock', 'sale_price', 'status'];
-    return (this.canEdit() || this.canAdjustStock()) ? [...base, 'actions'] : base;
-  }
+  private searchQuery = toSignal(
+    this.searchCtrl.valueChanges.pipe(startWith('')),
+    { initialValue: '' }
+  );
 
-  ngOnInit(): void {
-    this.loadProducts();
-    this.searchCtrl.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
-      this.page.set(1);
-      this.loadProducts();
-    });
-    this.statusCtrl.valueChanges.subscribe(() => {
-      this.page.set(1);
-      this.loadProducts();
-    });
-  }
+  lowCount  = computed(() => this.allProducts().filter(p => p.stock > 0 && p.stock <= p.min_stock && p.status === 'ACTIVE').length);
+  outCount  = computed(() => this.allProducts().filter(p => p.stock === 0 && p.status === 'ACTIVE').length);
+  alertCount = computed(() => this.lowCount() + this.outCount());
+  totalCount = computed(() => this.allProducts().filter(p => p.status === 'ACTIVE').length);
 
-  loadProducts(): void {
+  filteredProducts = computed(() => {
+    let list = this.allProducts();
+    const tab = this.tabFilter();
+    if (tab === 'low') list = list.filter(p => p.stock > 0 && p.stock <= p.min_stock);
+    if (tab === 'out') list = list.filter(p => p.stock === 0);
+    const q = (this.searchQuery() ?? '').toLowerCase();
+    if (q) list = list.filter(p =>
+      p.name.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q)
+    );
+    return list;
+  });
+
+  ngOnInit(): void { this.load(); }
+
+  load(): void {
     this.loading.set(true);
-    const params: Record<string, string | number | boolean | undefined> = {
-      page: this.page(),
-      limit: this.limit(),
-    };
-    if (this.searchCtrl.value) params['search'] = this.searchCtrl.value;
-    if (this.statusCtrl.value) params['status'] = this.statusCtrl.value;
-
-    this.productsService.list(params).pipe(
-      finalize(() => this.loading.set(false))
-    ).subscribe({
-      next: res => { this.products.set(res.data ?? []); this.total.set(res.total ?? 0); },
-      error: ()  => this.products.set([]),
-    });
+    this.productsService.list({ page: 1, limit: 1000 })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: res => this.allProducts.set(res.data ?? []),
+        error: ()  => this.allProducts.set([]),
+      });
   }
 
-  onPageChange(event: PageEvent): void {
-    this.page.set(event.pageIndex + 1);
-    this.limit.set(event.pageSize);
-    this.loadProducts();
+  stockState(p: Product): 'low' | 'out' | '' {
+    return p.stock === 0 ? 'out' : p.stock <= p.min_stock ? 'low' : '';
+  }
+
+  stockPct(p: Product): number {
+    return Math.min(100, Math.round((p.stock / Math.max(p.min_stock * 2, 1)) * 100));
+  }
+
+  taxLabel(p: Product): string {
+    const pct = p.tax_rate?.percentage ?? 0;
+    return pct === 0 ? '0%' : pct + '%';
   }
 
   openStockDialog(product: Product): void {
-    const ref = this.dialog.open(StockAdjustDialogComponent, {
-      data: product,
-      width: '400px',
-    });
-    ref.afterClosed().subscribe(result => {
-      if (result) this.loadProducts();
-    });
+    const ref = this.dialog.open(StockAdjustDialogComponent, { data: product, width: '400px' });
+    ref.afterClosed().subscribe(result => { if (result) this.load(); });
   }
 
   toggleStatus(product: Product): void {
     const action = product.status === 'ACTIVE'
       ? this.productsService.deactivate(product.id)
       : this.productsService.activate(product.id);
-
     action.subscribe({
       next: () => {
         this.snackBar.open(
           product.status === 'ACTIVE' ? 'Producto desactivado' : 'Producto activado',
-          'OK',
-          { duration: 3000, panelClass: ['success-snackbar'] }
+          'OK', { duration: 3000 }
         );
-        this.loadProducts();
+        this.load();
       },
       error: () => {},
     });
@@ -125,32 +100,18 @@ export class ProductsListComponent implements OnInit {
 
   deleteProduct(product: Product): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title: 'Eliminar producto',
-        message: `¿Estás seguro de eliminar "${product.name}"?`,
-        confirmText: 'Eliminar',
-        danger: true,
-      },
+      data: { title: 'Eliminar producto', message: `¿Eliminar "${product.name}"?`, confirmText: 'Eliminar', danger: true },
     });
-
     ref.afterClosed().subscribe(result => {
       if (result) {
         this.productsService.remove(product.id).subscribe({
-          next: () => {
-            this.snackBar.open('Producto eliminado', 'OK', { duration: 3000, panelClass: ['success-snackbar'] });
-            this.loadProducts();
-          },
+          next: () => { this.snackBar.open('Producto eliminado', 'OK', { duration: 3000 }); this.load(); },
           error: () => {},
         });
       }
     });
   }
 
-  canEdit(): boolean {
-    return this.authService.isSystemUser() || this.authService.isStoreAdmin();
-  }
-
-  canAdjustStock(): boolean {
-    return this.authService.isStoreAdmin() || this.authService.isStoreWarehouse();
-  }
+  canEdit(): boolean        { return this.authService.isSystemUser() || this.authService.isStoreAdmin(); }
+  canAdjustStock(): boolean { return this.authService.isStoreAdmin() || this.authService.isStoreWarehouse(); }
 }

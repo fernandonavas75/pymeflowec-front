@@ -1,114 +1,125 @@
-<div class="page-container">
-  <div class="page-header">
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Empresas</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        Vista de plataforma —
-        @if (!loading()) { {{ total() }} empresa{{ total() !== 1 ? 's' : '' }} registrada{{ total() !== 1 ? 's' : '' }} }
-      </p>
-    </div>
+<div>
+  <!-- Platform banner -->
+  <div class="platform-banner">
+    <span class="dot"></span>Zona interna · Platform Support
   </div>
 
-  <!-- Filtros -->
-  <div class="flex flex-wrap gap-3 mb-6" [formGroup]="filters">
-    <mat-form-field appearance="outline" class="flex-1" style="min-width: 200px">
-      <mat-label>Buscar empresa</mat-label>
-      <mat-icon matPrefix class="mr-1 text-slate-400">search</mat-icon>
-      <input matInput formControlName="search" placeholder="Nombre, RUC, email…" />
-    </mat-form-field>
+  <div class="page">
 
-    <mat-form-field appearance="outline" style="width: 160px">
-      <mat-label>Estado</mat-label>
-      <mat-select formControlName="status">
-        <mat-option value="">Todos</mat-option>
-        <mat-option value="ACTIVE">Activa</mat-option>
-        <mat-option value="PENDING">Pendiente</mat-option>
-        <mat-option value="SUSPENDED">Suspendida</mat-option>
-        <mat-option value="INACTIVE">Inactiva</mat-option>
-      </mat-select>
-    </mat-form-field>
-  </div>
-
-  @if (loading()) {
-    <div class="flex justify-center py-20">
-      <mat-spinner diameter="40"></mat-spinner>
+    <!-- Header -->
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Empresas</h1>
+        <p class="page-sub-en">Companies · {{ total() }} tenants</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn secondary">
+          <app-icon name="download" [size]="14" class="icon" />Exportar
+        </button>
+      </div>
     </div>
 
-  } @else if (companies().length === 0) {
-    <div class="flex flex-col items-center py-20 text-slate-400 dark:text-slate-500 gap-3">
-      <mat-icon style="font-size: 48px; width: 48px; height: 48px">business</mat-icon>
-      <p class="text-base font-medium">No se encontraron empresas</p>
+    <!-- Tabs -->
+    <div class="page-tabs">
+      <div class="page-tab" [class.active]="tab() === 'all'"       (click)="tab.set('all')">Todas</div>
+      <div class="page-tab" [class.active]="tab() === 'ACTIVE'"    (click)="tab.set('ACTIVE')">Activas</div>
+      <div class="page-tab" [class.active]="tab() === 'SUSPENDED'" (click)="tab.set('SUSPENDED')">Suspendidas</div>
+      <div class="page-tab" [class.active]="tab() === 'PENDING'"   (click)="tab.set('PENDING')">Pendientes</div>
     </div>
 
-  } @else {
-    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))">
-      @for (c of companies(); track c.id) {
-        <div class="form-card flex flex-col gap-3 hover:shadow-md transition-shadow duration-150">
+    <!-- Search -->
+    <div class="filters">
+      <div class="filter-search">
+        <app-icon name="search" [size]="14" />
+        <input style="flex:1;background:none;border:none;outline:none;font-size:13px;min-width:200px"
+               [formControl]="searchCtrl" placeholder="Buscar empresa, RUC o email…" />
+      </div>
+      <span style="margin-left:auto;font-size:12px;color:var(--text-subtle)">
+        {{ total() }} resultado{{ total() !== 1 ? 's' : '' }}
+      </span>
+    </div>
 
-          <!-- Cabecera: avatar + nombre + estado -->
-          <div class="flex items-start gap-3">
-            <div class="flex items-center justify-center w-11 h-11 rounded-xl font-bold text-base shrink-0"
-                 [ngClass]="avatarColor(c.name)">
-              {{ initials(c.name) }}
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="font-semibold text-slate-800 dark:text-slate-100 truncate" [title]="c.name">{{ c.name }}</p>
-              @if (c.ruc) {
-                <p class="text-xs font-mono text-slate-400 dark:text-slate-500">RUC {{ c.ruc }}</p>
-              }
-            </div>
-            <span class="badge shrink-0 mt-0.5" [ngClass]="statusClass(c.status)">{{ statusLabel(c.status) }}</span>
-          </div>
-
-          <!-- Datos de contacto -->
-          <div class="flex flex-col gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-            @if (c.email) {
-              <span class="flex items-center gap-2 truncate" [title]="c.email">
-                <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">email</mat-icon>
-                {{ c.email }}
-              </span>
-            }
-            @if (c.phone) {
-              <span class="flex items-center gap-2">
-                <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">phone</mat-icon>
-                {{ c.phone }}
-              </span>
-            }
-            <span class="flex items-center gap-2">
-              <mat-icon style="font-size:15px;width:15px;height:15px;flex-shrink:0">calendar_today</mat-icon>
-              Registrada {{ c.created_at | date:'dd/MM/yyyy' }}
-            </span>
-          </div>
-
-          <!-- Acciones -->
-          <div class="mt-auto pt-2 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-            <a mat-button [routerLink]="['/companies', c.id]" class="text-sm">
-              <mat-icon>open_in_new</mat-icon> Ver detalle
-            </a>
-            @if (authService.isPlatformAdmin()) {
-              <button mat-icon-button
-                      [matTooltip]="c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
-                      (click)="toggleStatus(c)">
-                <mat-icon [class.text-green-500]="c.status === 'ACTIVE'"
-                          [class.text-slate-400]="c.status !== 'ACTIVE'">
-                  {{ c.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-                </mat-icon>
-              </button>
-            }
-          </div>
+    <!-- Table -->
+    <div class="card">
+      @if (loading()) {
+        <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+          @for (i of [1,2,3,4,5,6]; track i) {
+            <div class="skel" style="height:48px;border-radius:var(--radius-sm-ds)"></div>
+          }
         </div>
+      } @else if (filteredCompanies().length === 0) {
+        <div class="empty" style="padding:72px 24px">
+          <app-icon name="building" [size]="40" style="opacity:.25" />
+          <p>No se encontraron empresas</p>
+        </div>
+      } @else {
+        <div class="card-body p0">
+          <table class="ds-table">
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>RUC</th>
+                <th>Email</th>
+                <th>Estado</th>
+                <th>Creada</th>
+                <th style="width:80px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of filteredCompanies(); track c.id) {
+                <tr class="row-link" [routerLink]="['/companies', c.id]">
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:34px;height:34px;border-radius:var(--radius-sm-ds);
+                                  background:var(--accent-soft);color:var(--accent);
+                                  display:grid;place-items:center;font-family:var(--font-display);
+                                  font-size:12px;font-weight:700;flex-shrink:0">
+                        {{ initials(c.name) }}
+                      </div>
+                      <div>
+                        <div style="font-weight:600;color:var(--text-ds)">{{ c.name }}</div>
+                        @if (c.business_name && c.business_name !== c.name) {
+                          <div style="font-size:11px;color:var(--text-subtle)">{{ c.business_name }}</div>
+                        }
+                      </div>
+                    </div>
+                  </td>
+                  <td class="mono" style="font-size:12px">{{ c.ruc || '—' }}</td>
+                  <td style="color:var(--text-muted-ds)">{{ c.email || '—' }}</td>
+                  <td>
+                    <span class="status-dot" [attr.data-s]="c.status">{{ statusLabel(c.status) }}</span>
+                  </td>
+                  <td style="font-size:12px;color:var(--text-subtle)">
+                    {{ c.created_at | date:'dd/MM/yyyy' }}
+                  </td>
+                  <td>
+                    <div style="display:flex;gap:4px;justify-content:flex-end">
+                      <button class="btn ghost sm"
+                              [title]="c.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                              (click)="$event.stopPropagation(); toggleStatus(c)">
+                        <app-icon [name]="c.status === 'ACTIVE' ? 'eye' : 'eye_off'" [size]="13" class="icon" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (total() > limit()) {
+          <div class="pager">
+            <span class="pager-info">{{ (page()-1)*limit()+1 }}–{{ pageEnd() }} de {{ total() }}</span>
+            <button class="btn secondary sm" [disabled]="page() <= 1" (click)="changePage(-1)">
+              <app-icon name="chevron_left" [size]="13" class="icon" /> Anterior
+            </button>
+            <button class="btn secondary sm" [disabled]="page()*limit() >= total()" (click)="changePage(1)">
+              Siguiente <app-icon name="chevron_right" [size]="13" class="icon" />
+            </button>
+          </div>
+        }
       }
     </div>
 
-    <!-- Paginación -->
-    <mat-paginator
-      [length]="total()"
-      [pageSize]="limit()"
-      [pageIndex]="page() - 1"
-      [pageSizeOptions]="[12, 24, 48]"
-      (page)="onPageChange($event)"
-      showFirstLastButtons
-      class="mt-4">
-    </mat-paginator>
-  }
+  </div>
 </div>

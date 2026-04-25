@@ -2,10 +2,9 @@ import { Component, inject, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { AppIconComponent } from '../../shared/components/app-icon/app-icon.component';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { AdminViewService } from '../../core/services/admin-view.service';
@@ -13,7 +12,7 @@ import { AdminViewService } from '../../core/services/admin-view.service';
 @Component({
   selector: 'app-topbar',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule, MatButtonModule, MatTooltipModule, MatMenuModule, MatDividerModule],
+  imports: [CommonModule, RouterLink, MatIconModule, MatMenuModule, MatDividerModule, AppIconComponent],
   templateUrl: './topbar.component.html',
   styleUrls: ['./topbar.component.scss'],
 })

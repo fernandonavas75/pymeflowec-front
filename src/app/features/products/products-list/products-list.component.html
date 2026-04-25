@@ -1,127 +1,150 @@
-<div class="page-container">
-  <div class="page-header">
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Productos</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestiona el catálogo de productos</p>
+      <div class="page-title">Productos</div>
+      <div class="page-sub-en">
+        Products · {{ totalCount() }} en catálogo / {{ alertCount() }} alertas de stock
+      </div>
     </div>
-    @if (canEdit()) {
-      <a routerLink="/products/new" mat-flat-button color="primary" class="flex items-center gap-2">
-        <mat-icon>add</mat-icon>
-        Nuevo producto
-      </a>
-    }
+    <div class="page-actions">
+      @if (canEdit()) {
+        <button class="btn secondary" type="button">
+          <app-icon name="download" [size]="14"/>Exportar
+        </button>
+        <a routerLink="/products/new" class="btn primary">
+          <app-icon name="plus" [size]="14"/>Nuevo producto
+        </a>
+      }
+      @if (!canEdit() && canAdjustStock()) {
+        <button class="btn primary" type="button" (click)="load()">
+          <app-icon name="refresh" [size]="14"/>Ajuste de stock
+        </button>
+      }
+    </div>
   </div>
 
-  <div class="filters-bar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Buscar productos</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [formControl]="searchCtrl" placeholder="Nombre, SKU...">
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="status-filter">
-      <mat-label>Estado</mat-label>
-      <mat-select [formControl]="statusCtrl">
-        <mat-option value="">Todos</mat-option>
-        <mat-option value="ACTIVE">Activos</mat-option>
-        <mat-option value="INACTIVE">Inactivos</mat-option>
-      </mat-select>
-    </mat-form-field>
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tabFilter() === 'all'" (click)="tabFilter.set('all')" type="button">
+      Todos <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tabFilter() === 'low'" (click)="tabFilter.set('low')" type="button">
+      Stock bajo <span class="count">{{ lowCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tabFilter() === 'out'" (click)="tabFilter.set('out')" type="button">
+      Agotados <span class="count">{{ outCount() }}</span>
+    </button>
   </div>
 
-  <div class="table-container">
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input placeholder="Buscar por nombre o SKU…" [formControl]="searchCtrl"/>
+    </div>
+    <button class="filter-chip" type="button">
+      <app-icon name="filter" [size]="13"/>Proveedor
+    </button>
+    <button class="filter-chip" type="button">
+      <app-icon name="percent" [size]="13"/>IVA
+    </button>
+    <button class="filter-chip" type="button">
+      <app-icon name="filter" [size]="13"/>Estado
+    </button>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+
     @if (loading()) {
-      <div class="loading-overlay">
-        @for (i of [1,2,3,4,5]; track i) {
-          <div class="skeleton-row">
-            <div class="skeleton h-4 w-32"></div>
-            <div class="skeleton h-4 w-16"></div>
-            <div class="skeleton h-4 w-20"></div>
-            <div class="skeleton h-6 w-20 rounded-full"></div>
-            <div class="skeleton h-8 w-24"></div>
-          </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+        @for (i of [1,2,3,4,5,6]; track i) {
+          <div class="skel" style="height:44px;border-radius:var(--radius-sm-ds)"></div>
         }
       </div>
+
+    } @else if (filteredProducts().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="package" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron productos</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">
+            Limpiar búsqueda
+          </button>
+        }
+      </div>
+
     } @else {
-      <table mat-table [dataSource]="products()" class="w-full">
-        <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Nombre</th>
-          <td mat-cell *matCellDef="let p">
-            <div class="font-medium text-slate-900 dark:text-slate-100">{{ p.name }}</div>
-            @if (p.sku) {
-              <div class="text-xs text-slate-400 dark:text-slate-500 font-mono">{{ p.sku }}</div>
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Producto</th>
+              <th>Proveedor</th>
+              <th class="num">P. compra</th>
+              <th class="num">P. venta</th>
+              <th>IVA</th>
+              <th>Stock</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of filteredProducts(); track p.id) {
+              <tr>
+                <td>
+                  @if (p.sku) {
+                    <span class="mono" style="font-size:12.5px">{{ p.sku }}</span>
+                  } @else {
+                    <span style="color:var(--text-subtle)">—</span>
+                  }
+                </td>
+                <td><strong>{{ p.name }}</strong></td>
+                <td style="color:var(--text-muted-ds)">{{ p.supplier?.name ?? '—' }}</td>
+                <td class="num mono">${{ p.purchase_price | number:'1.2-2' }}</td>
+                <td class="num mono"><strong>${{ p.sale_price | number:'1.2-2' }}</strong></td>
+                <td><span class="badge neutral">{{ taxLabel(p) }}</span></td>
+                <td>
+                  <div class="stock-bar"
+                       [class.low]="stockState(p) === 'low'"
+                       [class.out]="stockState(p) === 'out'">
+                    <span>{{ p.stock }}</span>
+                    <div class="bar"><div class="fill" [style.width.%]="stockPct(p)"></div></div>
+                    <span style="color:var(--text-subtle);font-weight:500">min {{ p.min_stock }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
+                    @if (canAdjustStock()) {
+                      <button class="btn ghost sm" title="Ajustar stock" (click)="openStockDialog(p)" type="button">
+                        <app-icon name="refresh" [size]="13"/>
+                        @if (!canEdit()) { Ajustar }
+                      </button>
+                    }
+                    @if (canEdit()) {
+                      <a [routerLink]="['/products', p.id, 'edit']" class="btn ghost sm" title="Editar">
+                        <app-icon name="edit" [size]="13"/>
+                      </a>
+                      <button class="btn ghost sm" type="button"
+                              [title]="p.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                              (click)="toggleStatus(p)">
+                        <app-icon [name]="p.status === 'ACTIVE' ? 'eye' : 'eye_off'" [size]="13"/>
+                      </button>
+                      <button class="btn ghost sm" title="Eliminar"
+                              style="color:var(--danger)" (click)="deleteProduct(p)" type="button">
+                        <app-icon name="trash" [size]="13"/>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
             }
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="stock">
-          <th mat-header-cell *matHeaderCellDef>Stock</th>
-          <td mat-cell *matCellDef="let p">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold"
-                [class.text-red-600]="p.stock <= p.min_stock"
-                [class.text-amber-600]="p.stock > p.min_stock && p.stock <= p.min_stock * 2"
-                [class.text-slate-900]="p.stock > p.min_stock * 2">
-                {{ p.stock }}
-              </span>
-              @if (p.stock <= p.min_stock) {
-                <span class="badge bg-red-100 text-red-700 text-xs">Bajo</span>
-              }
-            </div>
-            <div class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Mín: {{ p.min_stock }}</div>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="sale_price">
-          <th mat-header-cell *matHeaderCellDef>Precio venta</th>
-          <td mat-cell *matCellDef="let p" class="font-semibold">
-            ${{ p.sale_price | number:'1.2-2' }}
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let p">
-            <app-status-badge [status]="p.status" type="product" />
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let p">
-            <div class="flex items-center gap-1">
-              @if (canAdjustStock()) {
-                <button mat-icon-button matTooltip="Ajustar stock" (click)="openStockDialog(p)">
-                  <mat-icon class="text-blue-400">inventory</mat-icon>
-                </button>
-              }
-              @if (canEdit()) {
-                <a [routerLink]="['/products', p.id, 'edit']" mat-icon-button matTooltip="Editar">
-                  <mat-icon class="text-slate-400 dark:text-slate-500">edit</mat-icon>
-                </a>
-                <button mat-icon-button [matTooltip]="p.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="toggleStatus(p)">
-                  <mat-icon [class.text-green-500]="p.status === 'ACTIVE'" [class.text-slate-400]="p.status !== 'ACTIVE'">
-                    {{ p.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-                  </mat-icon>
-                </button>
-                <button mat-icon-button matTooltip="Eliminar" (click)="deleteProduct(p)">
-                  <mat-icon class="text-red-400">delete</mat-icon>
-                </button>
-              }
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
-            No se encontraron productos
-          </td>
-        </tr>
-      </table>
-      <mat-paginator
-        [length]="total()"
-        [pageSize]="limit()"
-        [pageIndex]="page() - 1"
-        [pageSizeOptions]="[10, 20, 50]"
-        (page)="onPageChange($event)"
-        showFirstLastButtons
-      />
+          </tbody>
+        </table>
+      </div>
     }
+
   </div>
 </div>

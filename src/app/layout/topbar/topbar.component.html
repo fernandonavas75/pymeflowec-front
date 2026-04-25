@@ -1,44 +1,45 @@
-<header class="topbar">
-  <!-- Toggle sidebar button -->
-  <button class="topbar-toggle" (click)="onToggleSidebar()"
-          [matTooltip]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'">
-    <mat-icon>{{ sidebarCollapsed() ? 'menu' : 'menu_open' }}</mat-icon>
+<header class="ds-topbar">
+
+  <!-- Sidebar toggle -->
+  <button class="topbar-btn"
+          [title]="sidebarCollapsed() ? 'Expandir menú' : 'Colapsar menú'"
+          (click)="onToggleSidebar()">
+    <app-icon [name]="sidebarCollapsed() ? 'menu' : 'menu_open'" [size]="18" class="icon" />
   </button>
 
-  <!-- Indicador modo cliente -->
+  <!-- Client mode chip -->
   @if (adminViewSvc.isClientViewMode()) {
-    <div class="client-view-chip" matTooltip="Estás visualizando la aplicación como cliente de esta empresa">
-      <mat-icon>visibility</mat-icon>
+    <div class="client-chip" title="Visualizando como cliente de esta empresa">
+      <app-icon name="visibility" [size]="13" />
       <span>{{ adminViewSvc.viewedCompany()!.name }}</span>
-      <button class="chip-exit" (click)="adminViewSvc.exitClientView()" matTooltip="Salir del modo cliente">
-        <mat-icon>close</mat-icon>
+      <button class="chip-exit" title="Salir del modo cliente" (click)="adminViewSvc.exitClientView()">
+        <app-icon name="close" [size]="10" />
       </button>
     </div>
   } @else if (companyName) {
-    <!-- Company name (solo si tiene empresa y NO está en modo cliente) -->
-    <span class="company-name">
-      <mat-icon class="company-icon">business</mat-icon>
+    <span class="company-tag">
+      <app-icon name="business" [size]="13" />
       {{ companyName }}
     </span>
   }
 
-  <div class="topbar-spacer"></div>
+  <div style="flex:1"></div>
 
   <!-- Theme toggle -->
-  <button class="topbar-icon-btn"
-          (click)="themeService.toggle()"
-          [matTooltip]="themeService.isDark() ? 'Modo claro' : 'Modo oscuro'">
-    <mat-icon>{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+  <button class="topbar-btn"
+          [title]="themeService.isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          (click)="themeService.toggle()">
+    <app-icon [name]="themeService.isDark() ? 'light_mode' : 'dark_mode'" [size]="18" class="icon" />
   </button>
 
-  <!-- User menu -->
-  <button class="user-menu-btn" [matMenuTriggerFor]="userMenu">
-    <div class="user-avatar">{{ userInitials }}</div>
-    <div class="user-info">
-      <span class="user-name">{{ authService.currentUser()?.full_name }}</span>
-      <span class="user-role">{{ authService.role() }}</span>
+  <!-- User menu trigger -->
+  <button class="user-btn" [matMenuTriggerFor]="userMenu">
+    <div class="ds-avatar user-btn-avatar">{{ userInitials }}</div>
+    <div class="user-btn-meta">
+      <span class="n">{{ authService.currentUser()?.full_name }}</span>
+      <span class="r">{{ authService.role() }}</span>
     </div>
-    <mat-icon class="chevron">expand_more</mat-icon>
+    <app-icon name="expand_more" [size]="14" style="color:var(--text-subtle);flex-shrink:0" />
   </button>
 
   <mat-menu #userMenu="matMenu" xPosition="before">
@@ -54,4 +55,5 @@
       <span>Cerrar sesión</span>
     </button>
   </mat-menu>
+
 </header>

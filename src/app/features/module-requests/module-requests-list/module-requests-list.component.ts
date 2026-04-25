@@ -1,30 +1,20 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { ReactiveFormsModule, FormBuilder, FormControl, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { ModuleRequestsService } from '../../../core/services/module-requests.service';
 import { CompanyModulesService } from '../../../core/services/company-modules.service';
 import { ModuleRequest, ModuleCatalogItem } from '../../../core/models/module-request.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-module-requests-list',
   standalone: true,
-  imports: [
-    CommonModule, RouterLink, ReactiveFormsModule,
-    MatButtonModule, MatIconModule, MatProgressSpinnerModule,
-    MatInputModule, MatSelectModule, MatDialogModule, MatTooltipModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, AppIconComponent],
   templateUrl: './module-requests-list.component.html',
 })
 export class ModuleRequestsListComponent implements OnInit {
@@ -32,7 +22,6 @@ export class ModuleRequestsListComponent implements OnInit {
   private modulesSvc = inject(CompanyModulesService);
   private snackBar   = inject(MatSnackBar);
   private dialog     = inject(MatDialog);
-  private fb         = inject(FormBuilder);
   authService        = inject(AuthService);
 
   requests     = signal<ModuleRequest[]>([]);
@@ -40,8 +29,8 @@ export class ModuleRequestsListComponent implements OnInit {
   requestingId = signal<number | null>(null);
   loading      = signal(true);
   forbidden    = signal(false);
+  tab          = signal<'pending'|'approved'|'rejected'|'all'>('pending');
 
-  // Señales para los filtros (compatibles con computed)
   private searchSignal = signal('');
   private statusSignal = signal('');
 
@@ -61,10 +50,14 @@ export class ModuleRequestsListComponent implements OnInit {
     });
   });
 
-  requestForm = this.fb.group({
-    module_id: [null as number | null, Validators.required],
-    comments:  [''],
+  filteredByTab = computed((): ModuleRequest[] => {
+    const t = this.tab();
+    const list = this.filteredRequests();
+    if (t === 'all') return list;
+    return list.filter(r => r.status?.toLowerCase() === t);
   });
+
+  pendingCount = computed(() => this.requests().filter(r => r.status?.toLowerCase() === 'pending').length);
 
   get isPlatformUser(): boolean { return this.authService.isSystemUser(); }
 
@@ -80,8 +73,6 @@ export class ModuleRequestsListComponent implements OnInit {
     }
   }
 
-  // ── Vista plataforma ────────────────────────────────────────────────
-
   loadAll(): void {
     this.loading.set(true);
     this.svc.listAll().pipe(finalize(() => this.loading.set(false))).subscribe({
@@ -92,11 +83,7 @@ export class ModuleRequestsListComponent implements OnInit {
 
   activate(req: ModuleRequest): void {
     this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title:       'Activar módulo',
-        message:     `¿Activar "${req.module?.name}" para ${req.company?.name}?`,
-        confirmText: 'Activar',
-      },
+      data: { title: 'Activar módulo', message: `¿Activar "${req.module?.name}" para ${req.company?.name}?`, confirmText: 'Activar' },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
       this.svc.approve(req.id).subscribe({
@@ -108,22 +95,15 @@ export class ModuleRequestsListComponent implements OnInit {
 
   deactivate(req: ModuleRequest): void {
     this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        title:       'Desactivar módulo',
-        message:     `¿Desactivar "${req.module?.name}" para ${req.company?.name}?`,
-        confirmText: 'Desactivar',
-        danger:      true,
-      },
+      data: { title: 'Rechazar solicitud', message: `¿Rechazar "${req.module?.name}" para ${req.company?.name}?`, confirmText: 'Rechazar', danger: true },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
       this.svc.reject(req.id).subscribe({
-        next:  () => { this.snackBar.open('Módulo desactivado', 'OK', { duration: 3000 }); this.loadAll(); },
+        next:  () => { this.snackBar.open('Solicitud rechazada', 'OK', { duration: 3000 }); this.loadAll(); },
         error: () => {},
       });
     });
   }
-
-  // ── Vista tienda ────────────────────────────────────────────────────
 
   loadCatalog(): void {
     this.loading.set(true);
@@ -148,41 +128,12 @@ export class ModuleRequestsListComponent implements OnInit {
     });
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────
-
-  initials(name: string): string {
-    return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
-  }
-
-  avatarColor(name: string): string {
-    const palette = [
-      'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-      'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
-      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-      'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-      'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
-      'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-      'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-    ];
-    return palette[(name.charCodeAt(0) + (name.charCodeAt(1) || 0)) % palette.length];
-  }
-
-  statusClass(s: string | null): string {
-    const m: Record<string, string> = {
-      PENDING:  'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-      APPROVED: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-      REJECTED: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-    };
-    return s ? (m[s] ?? 'bg-slate-50 text-slate-600') : '';
-  }
-
   statusLabel(s: string | null): string {
-    const m: Record<string, string> = { PENDING: 'En espera', APPROVED: 'Activo', REJECTED: 'Rechazado' };
+    const m: Record<string, string> = { PENDING: 'Pendiente', pending: 'Pendiente', APPROVED: 'Aprobada', approved: 'Aprobada', REJECTED: 'Rechazada', rejected: 'Rechazada' };
     return s ? (m[s] ?? s) : 'No solicitado';
   }
 
-  statusIcon(s: string | null): string {
-    const m: Record<string, string> = { PENDING: 'hourglass_empty', APPROVED: 'check_circle', REJECTED: 'cancel' };
-    return s ? (m[s] ?? 'circle') : 'add_circle_outline';
+  initials(name: string): string {
+    return name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
   }
 }

@@ -1,215 +1,118 @@
-import { Component, computed, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription, finalize } from 'rxjs';
-import { NgApexchartsModule } from 'ng-apexcharts';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { DashboardService, DashboardData } from '../../core/services/dashboard.service';
+import { Subscription, forkJoin, of, finalize, catchError } from 'rxjs';
+import { DashboardService, DashboardData, RevenueByDay } from '../../core/services/dashboard.service';
+import { ProductsService } from '../../core/services/products.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyModulesService } from '../../core/services/company-modules.service';
 import { AdminViewService } from '../../core/services/admin-view.service';
-import { StatCardComponent } from '../../shared/components/stat-card/stat-card.component';
-import { StatusBadgeComponent } from '../../shared/components/status-badge/status-badge.component';
+import { Product } from '../../core/models/product.model';
+import { AppIconComponent } from '../../shared/components/app-icon/app-icon.component';
 
-interface DashboardCard {
-  icon: string;
-  label: string;
-  description: string;
-  route: string;
-  color: 'green' | 'blue' | 'purple' | 'teal' | 'amber' | 'indigo' | 'rose';
-  moduleCode?: string;
-  adminOnly?: boolean;
+interface ModCard {
+  icon: string; label: string; description: string;
+  route: string; color: 'green'|'blue'|'purple'|'teal'|'amber'|'indigo'|'rose';
+  moduleCode?: string; adminOnly?: boolean;
 }
+interface BarItem  { x: number; y: number; w: number; h: number; isLast: boolean; }
+interface GridLine { y: number; value: number; isZero: boolean; }
+interface ChartLabel { x: number; text: string; }
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterLink,
-    NgApexchartsModule,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    StatCardComponent,
-    StatusBadgeComponent,
-  ],
+  imports: [CommonModule, RouterLink, AppIconComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
+  private productsService  = inject(ProductsService);
   authService              = inject(AuthService);
+  adminViewSvc             = inject(AdminViewService);
   private modulesSvc       = inject(CompanyModulesService);
-  private adminViewSvc     = inject(AdminViewService);
 
   data: DashboardData | null = null;
-  loading = true;
+  loading    = true;
   lastUpdated = new Date();
-  chartOptions: any = {};
   private sub?: Subscription;
 
-  invoicesColumns = ['number', 'date', 'total', 'status'];
+  // Chart / sparkline state (populated on data load)
+  todaySales      = 0;
+  sparkPath       = '';
+  sparkArea       = '';
+  chartBars:      BarItem[]    = [];
+  chartGridLines: GridLine[]   = [];
+  chartLabels:    ChartLabel[] = [];
+  chartStats      = { avg: 0, vat: 0, best: 0 };
 
-  // ── Definición estática de tarjetas ────────────────────────────────
+  lowStockList = signal<Product[]>([]);
+  range        = signal<'7d'|'30d'>('7d');
 
-  private readonly STORE_CARD_DEFS: DashboardCard[] = [
-    {
-      icon: 'people', label: 'Clientes',
-      description: 'Administra tus clientes y contactos',
-      route: '/customers', color: 'blue', moduleCode: 'MOD_INVOICING',
-    },
-    {
-      icon: 'receipt_long', label: 'Facturación',
-      description: 'Emite y controla tus facturas electrónicas',
-      route: '/invoices', color: 'green', moduleCode: 'MOD_INVOICING',
-    },
-    {
-      icon: 'inventory_2', label: 'Productos',
-      description: 'Gestiona tu inventario y catálogo',
-      route: '/products', color: 'purple', moduleCode: 'MOD_PRODUCTS',
-    },
-    {
-      icon: 'local_shipping', label: 'Proveedores',
-      description: 'Controla tus proveedores y compras',
-      route: '/suppliers', color: 'teal', moduleCode: 'MOD_SUPPLIERS',
-    },
-    {
-      icon: 'percent', label: 'Tasas de impuesto',
-      description: 'Configura impuestos y tributos',
-      route: '/tax-rates', color: 'amber', moduleCode: 'MOD_TAX', adminOnly: true,
-    },
-    {
-      icon: 'manage_accounts', label: 'Usuarios',
-      description: 'Gestiona los usuarios de tu empresa',
-      route: '/users', color: 'indigo', adminOnly: true,
-    },
-    {
-      icon: 'extension', label: 'Módulos ERP',
-      description: 'Solicita y administra módulos del ERP',
-      route: '/module-requests', color: 'rose', adminOnly: true,
-    },
+  // ── Static card defs ──────────────────────────────────────────────
+  private readonly STORE_CARDS: ModCard[] = [
+    { icon: 'people',           label: 'Clientes',        description: 'Administra tus clientes',         route: '/customers',       color: 'blue',   moduleCode: 'MOD_INVOICING' },
+    { icon: 'receipt_long',     label: 'Facturación',     description: 'Emite y controla tus facturas',   route: '/invoices',        color: 'green',  moduleCode: 'MOD_INVOICING' },
+    { icon: 'inventory_2',      label: 'Productos',       description: 'Gestiona tu inventario',          route: '/products',        color: 'purple', moduleCode: 'MOD_PRODUCTS' },
+    { icon: 'local_shipping',   label: 'Proveedores',     description: 'Controla tus proveedores',        route: '/suppliers',       color: 'teal',   moduleCode: 'MOD_SUPPLIERS' },
+    { icon: 'percent',          label: 'Impuestos',       description: 'Configura tasas de impuesto',     route: '/tax-rates',       color: 'amber',  moduleCode: 'MOD_TAX', adminOnly: true },
+    { icon: 'manage_accounts',  label: 'Usuarios',        description: 'Gestiona los usuarios',           route: '/users',           color: 'indigo', adminOnly: true },
+    { icon: 'extension',        label: 'Módulos ERP',     description: 'Solicita módulos del ERP',        route: '/module-requests', color: 'rose',   adminOnly: true },
   ];
 
-  private readonly PLATFORM_CARD_DEFS: DashboardCard[] = [
-    {
-      icon: 'business', label: 'Empresas',
-      description: 'Gestiona las empresas registradas en la plataforma',
-      route: '/companies', color: 'blue',
-    },
-    {
-      icon: 'pending_actions', label: 'Solicitudes',
-      description: 'Revisa y aprueba solicitudes de módulos pendientes',
-      route: '/module-requests', color: 'amber',
-    },
+  private readonly PLATFORM_CARDS: ModCard[] = [
+    { icon: 'business',        label: 'Empresas',    description: 'Gestiona las empresas registradas', route: '/companies',       color: 'blue' },
+    { icon: 'pending_actions', label: 'Solicitudes', description: 'Aprueba solicitudes de módulos',    route: '/module-requests', color: 'amber' },
   ];
 
-  // ── Computed signals ────────────────────────────────────────────────
-
-  /** Tarjetas visibles para el usuario actual */
-  moduleCards = computed((): DashboardCard[] => {
-    const isClientView = this.adminViewSvc.isClientViewMode();
-
-    // Usuarios de plataforma fuera del modo cliente → tarjetas de plataforma
-    if (!isClientView && this.authService.isSystemUser()) return this.PLATFORM_CARD_DEFS;
-
-    // Modo cliente (plataforma viendo empresa) o usuario de tienda → tarjetas de tienda
+  // ── Computed ─────────────────────────────────────────────────────
+  moduleCards = computed((): ModCard[] => {
+    const isCV = this.adminViewSvc.isClientViewMode();
+    if (!isCV && this.authService.isSystemUser()) return this.PLATFORM_CARDS;
     const approved = this.modulesSvc.approvedCodes();
     const failed   = this.modulesSvc.loadFailed();
-    const isAdmin  = isClientView ? true : this.authService.isStoreAdmin();
-
-    return this.STORE_CARD_DEFS.filter(card => {
-      if (card.adminOnly && !isAdmin) return false;
-      if (!card.moduleCode)           return true;   // sin gate de módulo (Usuarios, Módulos ERP)
-      if (failed)                     return true;   // fallback si API falla
-      return approved.has(card.moduleCode);
+    const isAdmin  = isCV ? true : this.authService.isStoreAdmin();
+    return this.STORE_CARDS.filter(c => {
+      if (c.adminOnly && !isAdmin) return false;
+      if (!c.moduleCode)           return true;
+      if (failed)                  return true;
+      return approved.has(c.moduleCode);
     });
   });
 
-  /** true si la empresa tiene al menos un módulo en estado PENDING */
-  hasPendingModules = computed(() => {
-    if (!this.authService.isStoreUser()) return false;
-    return this.modulesSvc.pendingCodes().size > 0;
-  });
-
-  /** Cantidad de módulos PENDING (para mostrar en mensajes) */
+  hasPendingModules  = computed(() => this.authService.isStoreUser() && this.modulesSvc.pendingCodes().size > 0);
   pendingModulesCount = computed(() => this.modulesSvc.pendingCodes().size);
 
-  /**
-   * Mostrar sección de analytics solo si la empresa tiene MOD_INVOICING aprobado.
-   * Si loadFailed (API inalcanzable) se muestra igualmente como fallback.
-   */
   hasAnalytics = computed(() => {
-    const isClientView = this.adminViewSvc.isClientViewMode();
-    if (!isClientView && !this.authService.isStoreUser()) return false;
+    const isCV = this.adminViewSvc.isClientViewMode();
+    if (!isCV && !this.authService.isStoreUser()) return false;
     return this.modulesSvc.approvedCodes().has('MOD_INVOICING') || this.modulesSvc.loadFailed();
   });
 
-  // ── Getters de presentación ─────────────────────────────────────────
+  // ── Getters ──────────────────────────────────────────────────────
+  get firstName(): string { return this.authService.currentUser()?.full_name?.split(' ')?.[0] ?? ''; }
 
-  get firstName(): string {
-    return this.authService.currentUser()?.full_name?.split(' ')?.[0] ?? '';
+  get todayDate(): string {
+    const d = new Date();
+    const wd = d.toLocaleDateString('es-EC', { weekday: 'long' });
+    const mo = d.toLocaleDateString('es-EC', { month: 'long' });
+    return `Dashboard · Hoy ${wd} ${d.getDate()} de ${mo}, ${d.getFullYear()}`;
   }
 
-  get greeting(): string {
-    const h = new Date().getHours();
-    if (h < 12) return 'Buenos días';
-    if (h < 18) return 'Buenas tardes';
-    return 'Buenas noches';
+  get todayInvoiceCount(): number {
+    if (!this.data) return 0;
+    const today = new Date().toDateString();
+    return this.data.recentInvoices.filter(
+      inv => inv.status === 'ISSUED' && new Date(inv.issue_date).toDateString() === today
+    ).length;
   }
 
-  private buildChartOptions(data: DashboardData): any {
-    const days = data.revenueByDay;
-    const exp  = data.expensesByDay;
-    return {
-      series: [
-        { name: 'Ingresos', data: days.map(d => d.amount) },
-        { name: 'Gastos',   data: exp.map(d => d.amount)  },
-      ],
-      chart:       { type: 'area' as const, height: 300, toolbar: { show: false }, fontFamily: 'inherit' },
-      xaxis:       {
-        categories: days.map(d => d.date),
-        labels:     { style: { fontSize: '11px', colors: '#64748b' } },
-        axisBorder: { show: false },
-        axisTicks:  { show: false },
-      },
-      yaxis:       {
-        min: 0,
-        labels: { formatter: (v: number) => `$${v.toFixed(0)}`, style: { fontSize: '11px', colors: '#64748b' } },
-      },
-      colors:  ['#22c55e', '#f43f5e'],
-      fill:    {
-        type: 'gradient',
-        gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0.01, stops: [0, 100] },
-      },
-      stroke:      { curve: 'smooth' as const, width: [2, 2] },
-      dataLabels:  { enabled: false },
-      grid:        { borderColor: '#f1f5f9', strokeDashArray: 4, padding: { left: 0, right: 0 } },
-      legend:      { position: 'top' as const, horizontalAlign: 'right' as const, fontSize: '12px' },
-      tooltip:     { y: { formatter: (v: number) => `$${v.toFixed(2)}` } },
-    };
-  }
-
-  // ── Ciclo de vida ───────────────────────────────────────────────────
-
+  // ── Lifecycle ─────────────────────────────────────────────────────
   ngOnInit(): void {
-    const isClientView = this.adminViewSvc.isClientViewMode();
-
-    // Usuarios de plataforma fuera del modo cliente: no necesitan analytics
-    if (!isClientView && !this.authService.isStoreUser()) {
-      this.loading = false;
-      return;
-    }
-
-    // En modo cliente el catálogo ya fue cargado por AdminViewService; solo continuamos.
-    // Para usuarios de tienda siempre refrescamos el catálogo.
-    if (isClientView) {
+    const isCV = this.adminViewSvc.isClientViewMode();
+    if (!isCV && !this.authService.isStoreUser()) { this.loading = false; return; }
+    if (isCV) {
       this.afterCatalogReady();
     } else {
       this.modulesSvc.loadCatalog().subscribe({
@@ -219,51 +122,107 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Decide si cargar analytics una vez que el catálogo de módulos está listo */
   private afterCatalogReady(): void {
-    // En modo cliente el platform admin no tiene company_id en el token,
-    // las llamadas a invoices/products/customers darían 403 — no cargar analytics.
-    if (this.adminViewSvc.isClientViewMode()) {
-      this.loading = false;
-      return;
-    }
-    if (this.hasAnalytics()) {
-      this.load();
-    } else {
-      this.loading = false;
-    }
+    if (this.adminViewSvc.isClientViewMode()) { this.loading = false; return; }
+    this.hasAnalytics() ? this.load() : (this.loading = false);
   }
 
   load(): void {
     this.loading = !this.data;
-    this.sub = this.dashboardService.getDashboardData().pipe(
-      finalize(() => { this.loading = false; })
-    ).subscribe({
-      next: data => {
-        this.data = data;
+    this.sub = forkJoin({
+      dashboard: this.dashboardService.getDashboardData(),
+      products:  this.productsService.list({ page: 1, limit: 100 }).pipe(
+        catchError(() => of({ data: [] as Product[], total: 0, page: 1, limit: 100, totalPages: 0 }))
+      ),
+    }).pipe(finalize(() => { this.loading = false; })).subscribe({
+      next: ({ dashboard, products }) => {
+        this.data = dashboard;
         this.lastUpdated = new Date();
-        this.chartOptions = this.buildChartOptions(data);
+        this.lowStockList.set(
+          products.data
+            .filter(p => p.stock < p.min_stock && p.status === 'ACTIVE')
+            .sort((a, b) => (a.stock / Math.max(a.min_stock, 1)) - (b.stock / Math.max(b.min_stock, 1)))
+            .slice(0, 4)
+        );
+        this.onDataLoaded(dashboard);
       },
       error: () => {},
     });
   }
 
-  refresh(): void {
-    this.sub?.unsubscribe();
-    this.data = null;
-    this.chartOptions = {};
-    this.load();
+  refresh(): void { this.sub?.unsubscribe(); this.data = null; this.load(); }
+  ngOnDestroy(): void { this.sub?.unsubscribe(); }
+
+  // ── Chart builders ───────────────────────────────────────────────
+  private onDataLoaded(data: DashboardData): void {
+    const values = data.revenueByDay.map(d => d.amount);
+    this.todaySales = values[values.length - 1] ?? 0;
+    this.sparkPath  = this.buildSparkPath(values, 200, 32);
+    this.sparkArea  = this.buildSparkArea(values, 200, 32);
+    this.buildBarData(data.revenueByDay);
+    const total = values.reduce((s, v) => s + v, 0);
+    this.chartStats = {
+      avg:  total / (values.length || 1),
+      vat:  total * 0.13,
+      best: Math.max(...values, 0),
+    };
   }
 
-  ngOnDestroy(): void {
-    this.sub?.unsubscribe();
+  private buildSparkPath(values: number[], w: number, h: number): string {
+    if (!values.length || values.every(v => v === 0)) return `M2,${h - 2} L${w - 2},${h - 2}`;
+    const max = Math.max(...values), min = Math.min(...values), range = max - min || 1;
+    const pad = 2, step = (w - pad * 2) / (values.length - 1);
+    return values.map((v, i) => {
+      const x = (pad + i * step).toFixed(1);
+      const y = (pad + (h - pad * 2) * (1 - (v - min) / range)).toFixed(1);
+      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+    }).join(' ');
   }
 
-  formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(value);
+  private buildSparkArea(values: number[], w: number, h: number): string {
+    return this.buildSparkPath(values, w, h) + ` L${w - 2},${h} L2,${h} Z`;
   }
 
-  formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('es-EC', { day: '2-digit', month: 'short' });
+  private buildBarData(days: RevenueByDay[]): void {
+    const W = 760, H = 220, PL = 44, PR = 12, PT = 14, PB = 28;
+    const max = Math.max(...days.map(d => d.amount), 1);
+    const step = (W - PL - PR) / days.length;
+    const barW = step * 0.65;
+
+    this.chartGridLines = Array.from({ length: 5 }, (_, i) => {
+      const value = (max / 4) * i;
+      const y = H - PB - (H - PT - PB) * (value / max);
+      return { y, value: Math.round(value), isZero: i === 0 };
+    });
+
+    this.chartBars = days.map((d, i) => ({
+      x: PL + i * step + (step - barW) / 2,
+      y: H - PB - (H - PT - PB) * (d.amount / max || 0),
+      w: barW,
+      h: (H - PT - PB) * (d.amount / max || 0),
+      isLast: i === days.length - 1,
+    }));
+
+    const every = Math.ceil(days.length / 5);
+    this.chartLabels = days
+      .map((d, i) => ({ x: PL + i * step + step / 2, text: d.date.split(',')[0] }))
+      .filter((_, i) => i === 0 || i % every === 0 || i === days.length - 1);
+  }
+
+  // ── Formatters ────────────────────────────────────────────────────
+  formatCurrency(v: number): string {
+    return new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(v);
+  }
+
+  stockPct(p: Product): number {
+    return Math.min(100, Math.round((p.stock / Math.max(p.min_stock, 1)) * 100));
+  }
+
+  stockState(p: Product): 'out' | 'low' {
+    return p.stock === 0 ? 'out' : 'low';
+  }
+
+  customerName(inv: any): string {
+    return inv.customer?.full_name ?? 'Consumidor Final';
   }
 }

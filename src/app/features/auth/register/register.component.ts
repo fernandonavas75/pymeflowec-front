@@ -2,14 +2,10 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { AuthService } from '../../../core/services/auth.service';
 import { ModuleRequestService } from '../../../core/services/module-request.service';
 import { PlatformModule } from '../../../core/models/module-request.model';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password');
@@ -21,59 +17,23 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatCheckboxModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AppIconComponent],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss'],
 })
 export class RegisterComponent implements OnInit {
-  private fb             = inject(FormBuilder);
-  private authService    = inject(AuthService);
-  private moduleService  = inject(ModuleRequestService);
-  private router         = inject(Router);
+  private fb            = inject(FormBuilder);
+  private authService   = inject(AuthService);
+  private moduleService = inject(ModuleRequestService);
+  private router        = inject(Router);
 
-  step            = signal(1);
-  loading         = signal(false);
-  error           = signal('');
-  showPassword    = signal(false);
-  showConfirm     = signal(false);
+  step             = signal(1);
+  loading          = signal(false);
+  error            = signal('');
+  showPassword     = signal(false);
+  showConfirm      = signal(false);
   availableModules = signal<PlatformModule[]>([]);
   selectedModules  = signal<Set<number>>(new Set());
-
-  benefits = [
-    'Facturación electrónica SRI integrada',
-    'Control de inventario en tiempo real',
-    'Reportes y dashboards automáticos',
-    'Multi-usuario con roles y permisos',
-    'Soporte técnico incluido',
-  ];
-
-  moduleIcons: Record<string, string> = {
-    inventory:   'inventory_2',
-    sales:       'point_of_sale',
-    invoicing:   'receipt_long',
-    purchases:   'local_shipping',
-    accounting:  'account_balance',
-    expenses:    'payments',
-    reports:     'bar_chart',
-    crm:         'people',
-    cash:        'account_balance_wallet',
-  };
-
-  getModuleIcon(code: string): string {
-    return this.moduleIcons[code] ?? 'extension';
-  }
-
-  toggleShowPassword(): void { this.showPassword.update(v => !v); }
-  toggleShowConfirm(): void  { this.showConfirm.update(v => !v); }
 
   orgForm = this.fb.group({
     company_name:  ['', [Validators.required, Validators.minLength(2)]],
@@ -97,14 +57,8 @@ export class RegisterComponent implements OnInit {
   }
 
   goStep(n: number): void {
-    if (n === 2 && this.orgForm.invalid) {
-      this.orgForm.markAllAsTouched();
-      return;
-    }
-    if (n === 3 && this.userForm.invalid) {
-      this.userForm.markAllAsTouched();
-      return;
-    }
+    if (n === 2 && this.orgForm.invalid)  { this.orgForm.markAllAsTouched(); return; }
+    if (n === 3 && this.userForm.invalid) { this.userForm.markAllAsTouched(); return; }
     this.error.set('');
     this.step.set(n);
   }
@@ -115,19 +69,23 @@ export class RegisterComponent implements OnInit {
     this.selectedModules.set(s);
   }
 
-  isModuleSelected(id: number): boolean {
-    return this.selectedModules().has(id);
+  isModuleSelected(id: number): boolean { return this.selectedModules().has(id); }
+
+  get pwLen(): number { return this.userForm.get('password')?.value?.length ?? 0; }
+  get pwStrength(): 'weak' | 'ok' | 'good' {
+    return this.pwLen < 6 ? 'weak' : this.pwLen < 10 ? 'ok' : 'good';
+  }
+
+  get passwordMismatch(): boolean {
+    return !!this.userForm.errors?.['passwordMismatch'] && !!this.userForm.get('confirm_password')?.touched;
   }
 
   onSubmit(): void {
     if (this.orgForm.invalid || this.userForm.invalid) return;
-
     this.loading.set(true);
     this.error.set('');
-
     const orgV  = this.orgForm.value;
     const userV = this.userForm.value;
-
     this.authService.register({
       company_name:  orgV.company_name!,
       company_ruc:   orgV.company_ruc!,
@@ -139,15 +97,10 @@ export class RegisterComponent implements OnInit {
     }).subscribe({
       next: () => {
         const selected = [...this.selectedModules()];
-        if (selected.length === 0) {
-          this.router.navigate(['/dashboard']);
-          return;
-        }
-        // Request selected modules sequentially then redirect
-        const requests = selected.map(id => this.moduleService.requestModule(id));
+        if (selected.length === 0) { this.router.navigate(['/dashboard']); return; }
         let done = 0;
-        requests.forEach(req => {
-          req.subscribe({
+        selected.forEach(id => {
+          this.moduleService.requestModule(id).subscribe({
             next:  () => { done++; if (done === selected.length) this.router.navigate(['/dashboard']); },
             error: () => { done++; if (done === selected.length) this.router.navigate(['/dashboard']); },
           });
@@ -161,13 +114,12 @@ export class RegisterComponent implements OnInit {
     });
   }
 
-  // ── Helpers ──────────────────────────────────────────────────
   getOrgError(field: string): string {
     const c = this.orgForm.get(field);
     if (!c?.touched) return '';
     if (c.hasError('required'))  return 'Este campo es requerido';
     if (c.hasError('minlength')) return 'Mínimo 2 caracteres';
-    if (c.hasError('pattern'))   return 'El RUC debe tener exactamente 13 dígitos numéricos';
+    if (c.hasError('pattern'))   return 'El RUC debe tener exactamente 13 dígitos';
     if (c.hasError('email'))     return 'Email inválido';
     return '';
   }
@@ -175,14 +127,9 @@ export class RegisterComponent implements OnInit {
   getUserError(field: string): string {
     const c = this.userForm.get(field);
     if (!c?.touched) return '';
-    if (c.hasError('required'))          return 'Este campo es requerido';
-    if (c.hasError('minlength'))         return field === 'password' ? 'Mínimo 8 caracteres' : 'Mínimo 2 caracteres';
-    if (c.hasError('email'))             return 'Email inválido';
-    if (c.hasError('passwordMismatch'))  return 'Las contraseñas no coinciden';
+    if (c.hasError('required'))  return 'Este campo es requerido';
+    if (c.hasError('minlength')) return field === 'password' ? 'Mínimo 8 caracteres' : 'Mínimo 2 caracteres';
+    if (c.hasError('email'))     return 'Email inválido';
     return '';
-  }
-
-  get passwordMismatch(): boolean {
-    return !!this.userForm.errors?.['passwordMismatch'] && !!this.userForm.get('confirm_password')?.touched;
   }
 }

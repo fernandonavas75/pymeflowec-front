@@ -1,102 +1,248 @@
-<div class="page-container">
-  <div class="page-header">
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Facturas</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Historial de facturas emitidas</p>
+      <div class="page-title">Facturas</div>
+      <div class="page-sub-en">
+        Invoices · ${{ totalIssued() | number:'1.2-2' }} emitidos · IVA ${{ taxIssued() | number:'1.2-2' }}
+      </div>
     </div>
-    @if (!authService.isStoreWarehouse()) {
-      <a routerLink="/invoices/new" mat-flat-button color="primary" class="flex items-center gap-2">
-        <mat-icon>add</mat-icon>
-        Nueva factura
-      </a>
-    }
+    <div class="page-actions">
+      <button class="btn secondary" type="button">
+        <app-icon name="download" [size]="14"/>Exportar CSV
+      </button>
+      @if (!authService.isStoreWarehouse()) {
+        <a routerLink="/invoices/new" class="btn primary">
+          <app-icon name="plus" [size]="14"/>Nueva factura
+        </a>
+      }
+    </div>
   </div>
 
-  <div class="filters-bar">
-    <mat-form-field appearance="outline" class="status-filter">
-      <mat-label>Filtrar por estado</mat-label>
-      <mat-select [formControl]="statusCtrl">
-        <mat-option value="">Todos</mat-option>
-        <mat-option value="ISSUED">Emitidas</mat-option>
-        <mat-option value="CANCELLED">Canceladas</mat-option>
-      </mat-select>
-    </mat-form-field>
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tabFilter() === 'all'" (click)="tabFilter.set('all')" type="button">
+      Todas <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tabFilter() === 'issued'" (click)="tabFilter.set('issued')" type="button">
+      Emitidas <span class="count">{{ issuedCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tabFilter() === 'cancelled'" (click)="tabFilter.set('cancelled')" type="button">
+      Canceladas <span class="count">{{ cancelledCount() }}</span>
+    </button>
   </div>
 
-  <div class="table-container">
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input placeholder="Buscar por número o cliente…" [formControl]="searchCtrl"/>
+    </div>
+    <button class="filter-chip" type="button">
+      <app-icon name="filter" [size]="13"/>Fecha
+    </button>
+    <button class="filter-chip" type="button">
+      <app-icon name="users" [size]="13"/>Vendedor
+    </button>
+    <button class="filter-chip" type="button">
+      <app-icon name="filter" [size]="13"/>Cliente
+    </button>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+
     @if (loading()) {
-      <div class="loading-overlay">
-        @for (i of [1,2,3,4,5]; track i) {
-          <div class="skeleton-row">
-            <div class="skeleton h-4 w-28"></div>
-            <div class="skeleton h-4 w-32"></div>
-            <div class="skeleton h-4 w-24"></div>
-            <div class="skeleton h-4 w-20"></div>
-            <div class="skeleton h-4 w-16"></div>
-            <div class="skeleton h-4 w-20"></div>
-            <div class="skeleton h-6 w-20 rounded-full"></div>
-            <div class="skeleton h-8 w-16"></div>
-          </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3,4,5,6]; track i) {
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
         }
       </div>
+
+    } @else if (filteredInvoices().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="file_text" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron facturas</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">
+            Limpiar búsqueda
+          </button>
+        }
+      </div>
+
     } @else {
-      <table mat-table [dataSource]="invoices()" class="w-full">
-        <ng-container matColumnDef="number">
-          <th mat-header-cell *matHeaderCellDef>Número</th>
-          <td mat-cell *matCellDef="let inv">
-            <span class="font-mono text-sm font-medium text-indigo-600">{{ inv.invoice_number }}</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="customer">
-          <th mat-header-cell *matHeaderCellDef>Cliente</th>
-          <td mat-cell *matCellDef="let inv">{{ inv.customer?.full_name || 'Consumidor final' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef>Fecha emisión</th>
-          <td mat-cell *matCellDef="let inv">{{ formatDate(inv.issue_date) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="subtotal">
-          <th mat-header-cell *matHeaderCellDef>Subtotal</th>
-          <td mat-cell *matCellDef="let inv">${{ inv.subtotal | number:'1.2-2' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="tax_amount">
-          <th mat-header-cell *matHeaderCellDef>IVA</th>
-          <td mat-cell *matCellDef="let inv">${{ inv.tax_amount | number:'1.2-2' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="total">
-          <th mat-header-cell *matHeaderCellDef>Total</th>
-          <td mat-cell *matCellDef="let inv" class="font-bold">${{ inv.total | number:'1.2-2' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let inv">
-            <app-status-badge [status]="inv.status" type="invoice" />
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let inv">
-            <a [routerLink]="['/invoices', inv.id]" mat-icon-button matTooltip="Ver detalle">
-              <mat-icon class="text-indigo-400">visibility</mat-icon>
-            </a>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="cursor-pointer" [routerLink]="['/invoices', row.id]"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
-            No se encontraron facturas
-          </td>
-        </tr>
-      </table>
-      <mat-paginator
-        [length]="total()"
-        [pageSize]="limit()"
-        [pageIndex]="page() - 1"
-        [pageSizeOptions]="[10, 20, 50]"
-        (page)="onPageChange($event)"
-        showFirstLastButtons
-      />
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Cliente</th>
+              <th>Vendedor</th>
+              <th class="num">Items</th>
+              <th class="num">Subtotal</th>
+              <th class="num">IVA</th>
+              <th class="num">Total</th>
+              <th>Estado</th>
+              <th>Emitida</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of filteredInvoices(); track inv.id) {
+              <tr style="cursor:pointer" (click)="selectInvoice(inv)">
+                <td><span class="mono" style="color:var(--accent);font-size:12.5px">{{ inv.invoice_number }}</span></td>
+                <td><strong>{{ inv.customer?.full_name ?? 'Consumidor final' }}</strong></td>
+                <td style="color:var(--text-muted-ds)">—</td>
+                <td class="num mono">{{ inv.details?.length ?? '—' }}</td>
+                <td class="num mono">${{ inv.subtotal | number:'1.2-2' }}</td>
+                <td class="num mono" style="color:var(--text-muted-ds)">${{ inv.tax_amount | number:'1.2-2' }}</td>
+                <td class="num mono"><strong>${{ inv.total | number:'1.2-2' }}</strong></td>
+                <td>
+                  @if (inv.status === 'ISSUED') {
+                    <span class="badge success"><span class="dot"></span>Emitida</span>
+                  } @else {
+                    <span class="badge danger"><span class="dot"></span>Cancelada</span>
+                  }
+                </td>
+                <td class="mono" style="color:var(--text-subtle);font-size:12px">{{ formatDateTime(inv.issue_date) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
+
   </div>
+
+  <!-- ── Invoice Drawer ─────────────────────────────────────────── -->
+  @if (selectedInvoice()) {
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <div class="drawer" style="width:580px">
+
+      <div class="drawer-head">
+        <div>
+          <div class="t">{{ selectedInvoice()!.invoice_number }}</div>
+          <div style="font-size:12px;color:var(--text-subtle);margin-top:4px;display:flex;align-items:center;gap:8px">
+            @if (selectedInvoice()!.status === 'ISSUED') {
+              <span class="badge success"><span class="dot"></span>Emitida</span>
+            } @else {
+              <span class="badge danger"><span class="dot"></span>Cancelada</span>
+            }
+            <span class="mono">{{ formatDateLong(selectedInvoice()!.issue_date) }}</span>
+          </div>
+        </div>
+        <button class="btn ghost sm" (click)="closeDrawer()" type="button">
+          <app-icon name="x" [size]="16"/>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+
+        @if (drawerLoading()) {
+          <div style="display:flex;flex-direction:column;gap:10px">
+            @for (i of [1,2,3]; track i) {
+              <div class="skel" style="height:36px;border-radius:var(--radius-sm-ds)"></div>
+            }
+          </div>
+        } @else {
+
+          <!-- Cliente / Vendedor -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+            <div>
+              <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">Cliente</div>
+              <div style="font-weight:600;font-size:14px">{{ selectedInvoice()!.customer?.full_name ?? 'Consumidor final' }}</div>
+              @if (selectedInvoice()!.customer?.document_number) {
+                <div class="mono" style="font-size:11.5px;color:var(--text-subtle)">{{ selectedInvoice()!.customer!.document_number }}</div>
+              }
+            </div>
+            <div>
+              <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">Vendedor</div>
+              <div style="font-weight:600;font-size:14px">—</div>
+            </div>
+          </div>
+
+          <!-- Detalle -->
+          <div style="font-size:11px;font-weight:600;color:var(--text-subtle);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px">Detalle</div>
+
+          <div style="border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);overflow:hidden;margin-bottom:16px">
+            @if (selectedInvoice()!.details && selectedInvoice()!.details!.length > 0) {
+              <table class="ds-table" style="font-size:12.5px">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th class="num">Cant.</th>
+                    <th class="num">P. unit</th>
+                    <th class="num">IVA</th>
+                    <th class="num">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (d of selectedInvoice()!.details; track d.id) {
+                    <tr>
+                      <td>
+                        <div style="font-weight:600">{{ d.product_name }}</div>
+                        @if (d.product?.sku) {
+                          <div class="mono" style="font-size:10.5px;color:var(--text-subtle)">{{ d.product!.sku }}</div>
+                        }
+                      </td>
+                      <td class="num mono">{{ d.quantity }}</td>
+                      <td class="num mono">${{ d.unit_price | number:'1.2-2' }}</td>
+                      <td class="num mono" style="color:var(--text-muted-ds)">{{ d.tax_percentage }}%</td>
+                      <td class="num mono" style="font-weight:600">${{ d.line_total | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              <div class="empty" style="padding:24px">
+                <app-icon name="file_text" [size]="24" style="opacity:.25"/>
+                <p style="font-size:12.5px">Sin detalles registrados</p>
+              </div>
+            }
+          </div>
+
+          <!-- Totals -->
+          <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px">
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted-ds);margin-bottom:4px">
+              <span>Subtotal</span><span class="mono">${{ selectedInvoice()!.subtotal | number:'1.2-2' }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted-ds);margin-bottom:10px">
+              <span>IVA 15%</span><span class="mono">${{ selectedInvoice()!.tax_amount | number:'1.2-2' }}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;border-top:1px solid var(--border-ds)">
+              <span style="font-weight:700;font-size:14px">Total</span>
+              <span class="mono" style="font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-0.02em">${{ selectedInvoice()!.total | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+        }
+      </div>
+
+      <div class="drawer-foot">
+        <button class="btn ghost" type="button">
+          <app-icon name="printer" [size]="14"/>Imprimir
+        </button>
+        <button class="btn secondary" type="button" (click)="downloadPdf()" [disabled]="pdfLoading()">
+          @if (pdfLoading()) {
+            <span class="btn-spinner"></span>
+          } @else {
+            <app-icon name="download" [size]="14"/>
+          }
+          PDF
+        </button>
+        @if (selectedInvoice()!.status === 'ISSUED') {
+          <button class="btn danger" type="button" (click)="cancelInvoice()" [disabled]="actionLoading()">
+            @if (actionLoading()) {
+              <span class="btn-spinner"></span>
+            } @else {
+              <app-icon name="x" [size]="14"/>
+            }
+            Cancelar factura
+          </button>
+        }
+      </div>
+
+    </div>
+  }
+
 </div>

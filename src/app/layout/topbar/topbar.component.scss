@@ -1,187 +1,92 @@
-.topbar {
-  height: 56px;
-  background: var(--bg-topbar);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 20px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
+// Host is transparent to the grid — .ds-topbar (on the inner <header>) is the grid item.
+:host { display: contents; }
 
-.topbar-spacer { flex: 1; }
-
-.client-view-chip {
+// ── Client mode chip ──────────────────────────────────────────────
+.client-chip {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px 4px 10px;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 4px 10px 4px 8px;
+  background: oklch(0.72 0.14 75 / 0.12);
+  border: 1px solid oklch(0.72 0.14 75 / 0.30);
   border-radius: 20px;
-  font-size: 0.8125rem;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #d97706;
-  max-width: 240px;
+  color: oklch(0.52 0.16 75);
+  max-width: 200px;
   overflow: hidden;
-
-  mat-icon {
-    font-size: 15px;
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-  }
-
   span {
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
+  @media (max-width: 640px) { display: none; }
+}
+.chip-exit {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: oklch(0.72 0.14 75 / 0.20);
+  color: oklch(0.52 0.16 75);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  &:hover { background: oklch(0.72 0.14 75 / 0.40); }
+}
 
+// ── Company tag ───────────────────────────────────────────────────
+.company-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-subtle);
   @media (max-width: 640px) { display: none; }
 }
 
-.chip-exit {
+// ── User button ───────────────────────────────────────────────────
+.user-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  background: rgba(245, 158, 11, 0.2);
-  border: none;
-  border-radius: 50%;
-  color: #d97706;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--border-ds);
+  border-radius: var(--radius-sm-ds);
+  background: none;
   cursor: pointer;
-  padding: 0;
-  transition: background 0.12s ease;
-
-  &:hover { background: rgba(245, 158, 11, 0.4); }
-
-  mat-icon {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
-  }
-}
-
-.topbar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-
+  transition: background 0.12s ease, border-color 0.12s ease;
   &:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-  }
-
-  mat-icon { font-size: 20px; }
-}
-
-.company-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-muted);
-
-  .company-icon {
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
+    background: var(--surface-2);
+    border-color: var(--border-strong-ds);
   }
 }
-
-.topbar-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-
-  &:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-  }
-
-  mat-icon { font-size: 20px; }
+.user-btn-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
 }
-
-.user-menu-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 10px 4px 4px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-
-  &:hover {
-    background: var(--bg-hover);
-    border-color: var(--text-muted);
-  }
-}
-
-.user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, var(--primary), #8b5cf6);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.user-info {
+.user-btn-meta {
   display: flex;
   flex-direction: column;
   text-align: left;
   gap: 1px;
-
+  .n {
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--text-ds);
+    white-space: nowrap;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .r {
+    font-size: 11px;
+    color: var(--text-subtle);
+    white-space: nowrap;
+  }
   @media (max-width: 640px) { display: none; }
-}
-
-.user-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  white-space: nowrap;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-role {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.chevron {
-  font-size: 16px;
-  color: var(--text-muted);
 }
