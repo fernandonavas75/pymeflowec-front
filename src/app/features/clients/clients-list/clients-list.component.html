@@ -122,11 +122,14 @@
               <label>Tipo de documento</label>
               <div class="seg">
                 <button type="button" [class.active]="form.get('customer_type')?.value === 'CEDULA'"
+                        [disabled]="!isNew && form.get('customer_type')?.value === 'FINAL_CONSUMER'"
                         (click)="form.get('customer_type')?.setValue('CEDULA')">Cédula</button>
                 <button type="button" [class.active]="form.get('customer_type')?.value === 'RUC'"
+                        [disabled]="!isNew && form.get('customer_type')?.value === 'FINAL_CONSUMER'"
                         (click)="form.get('customer_type')?.setValue('RUC')">RUC</button>
-                <button type="button" [class.active]="form.get('customer_type')?.value === 'FINAL_CONSUMER'"
-                        (click)="form.get('customer_type')?.setValue('FINAL_CONSUMER')">Cons. Final</button>
+                @if (!isNew && form.get('customer_type')?.value === 'FINAL_CONSUMER') {
+                  <button type="button" class="active" disabled>Cons. Final</button>
+                }
               </div>
             </div>
 

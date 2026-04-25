@@ -1,96 +1,234 @@
-<div class="page-container">
-  <div class="page-header">
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Usuarios</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestiona los usuarios del sistema</p>
+      <div class="page-title">Usuarios</div>
+      <div class="page-sub-en">Users · {{ totalCount() }} registrados</div>
     </div>
-    <a routerLink="/users/new" mat-flat-button color="primary" class="flex items-center gap-2">
-      <mat-icon>person_add</mat-icon>
-      Nuevo usuario
-    </a>
+    <div class="page-actions">
+      <button class="btn primary" type="button" (click)="openNew()">
+        <app-icon name="plus" [size]="14"/>Nuevo usuario
+      </button>
+    </div>
   </div>
 
-  <div class="filters-bar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Buscar usuarios</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [formControl]="searchCtrl" placeholder="Nombre o email...">
-    </mat-form-field>
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todos <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'ACTIVE'" (click)="tab.set('ACTIVE')" type="button">
+      Activos <span class="count">{{ activeCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'INACTIVE'" (click)="tab.set('INACTIVE')" type="button">
+      Inactivos <span class="count">{{ inactiveCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'LOCKED'" (click)="tab.set('LOCKED')" type="button">
+      Bloqueados <span class="count">{{ lockedCount() }}</span>
+    </button>
   </div>
 
-  <div class="table-container">
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar por nombre o email…"/>
+    </div>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
     @if (loading()) {
-      <div class="loading-overlay">
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
         @for (i of [1,2,3,4,5]; track i) {
-          <div class="skeleton-row">
-            <div class="skeleton h-4 w-32"></div>
-            <div class="skeleton h-4 w-40"></div>
-            <div class="skeleton h-4 w-24"></div>
-            <div class="skeleton h-6 w-20 rounded-full"></div>
-            <div class="skeleton h-8 w-24"></div>
-          </div>
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
         }
       </div>
+
+    } @else if (filteredUsers().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="users" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron usuarios</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">Limpiar búsqueda</button>
+        }
+      </div>
+
     } @else {
-      <table mat-table [dataSource]="users()" class="w-full">
-        <ng-container matColumnDef="full_name">
-          <th mat-header-cell *matHeaderCellDef>Nombre</th>
-          <td mat-cell *matCellDef="let u">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-600">
-                {{ getInitials(u.full_name) }}
-              </div>
-              <span class="font-medium text-slate-900 dark:text-slate-100">{{ u.full_name }}</span>
-            </div>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let u" class="text-slate-600 dark:text-slate-400">{{ u.email }}</td>
-        </ng-container>
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Rol</th>
-          <td mat-cell *matCellDef="let u">
-            <span class="badge bg-indigo-50 text-indigo-700 capitalize">{{ u.role?.name || '—' }}</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let u">
-            <app-status-badge [status]="u.status" type="user" />
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let u">
-            <div class="flex items-center gap-1">
-              <a [routerLink]="['/users', u.id, 'edit']" mat-icon-button matTooltip="Editar">
-                <mat-icon class="text-slate-400 dark:text-slate-500">edit</mat-icon>
-              </a>
-              <button mat-icon-button [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'" (click)="confirmToggle(u)">
-                <mat-icon [class.text-green-500]="u.status === 'ACTIVE'" [class.text-slate-400]="u.status !== 'ACTIVE'">
-                  {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-                </mat-icon>
-              </button>
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
-            No se encontraron usuarios
-          </td>
-        </tr>
-      </table>
-      <mat-paginator
-        [length]="total()"
-        [pageSize]="limit()"
-        [pageIndex]="page() - 1"
-        [pageSizeOptions]="[10, 20, 50]"
-        (page)="onPageChange($event)"
-        showFirstLastButtons
-      />
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Registrado</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of filteredUsers(); track u.id) {
+              <tr style="cursor:pointer" (click)="openEdit(u)">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div class="ds-avatar">{{ getInitials(u.full_name) }}</div>
+                    <strong>{{ u.full_name }}</strong>
+                  </div>
+                </td>
+                <td style="color:var(--text-muted-ds)">{{ u.email }}</td>
+                <td><span class="badge neutral">{{ roleLabel(u.role?.name) }}</span></td>
+                <td>
+                  <span class="badge"
+                    [class.success]="u.status === 'ACTIVE'"
+                    [class.neutral]="u.status === 'INACTIVE'"
+                    [class.warn]="u.status === 'LOCKED'">
+                    {{ statusLabel(u.status) }}
+                  </span>
+                </td>
+                <td class="mono" style="font-size:12px;color:var(--text-muted-ds)">
+                  {{ formatDate(u.created_at) }}
+                </td>
+                <td style="text-align:right">
+                  <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+                    <button class="btn ghost sm" title="Editar" type="button"
+                            (click)="$event.stopPropagation(); openEdit(u)">
+                      <app-icon name="edit" [size]="13"/>
+                    </button>
+                    <button class="btn ghost sm"
+                            [title]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                            type="button"
+                            (click)="$event.stopPropagation(); confirmToggle(u)">
+                      <app-icon name="power" [size]="13"/>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
   </div>
+
+  <!-- ── Inline Modal ────────────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nuevo usuario' : 'Editar usuario' }}</div>
+            <div class="d">
+              {{ isNew ? 'Agrega un nuevo usuario al sistema.' : 'Actualiza la información de ' + editing()?.full_name + '.' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            @if (isPlatformCreating) {
+              <div class="mfield">
+                <label>Empresa <span style="color:var(--danger)">*</span></label>
+                <select class="m-input" formControlName="company_id">
+                  <option [value]="null" disabled>Selecciona una empresa…</option>
+                  @for (c of companies(); track c.id) {
+                    <option [value]="c.id">{{ c.name }}</option>
+                  }
+                </select>
+                @if (form.get('company_id')?.touched && form.get('company_id')?.invalid) {
+                  <div class="hint" style="color:var(--danger)">Selecciona una empresa</div>
+                }
+              </div>
+            }
+
+            <div class="mfield">
+              <label>Nombre completo <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Juan Pérez" formControlName="full_name"/>
+              @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Email <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" type="email" placeholder="usuario@empresa.com" formControlName="email"/>
+              @if (form.get('email')?.touched && form.get('email')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa un email válido</div>
+              }
+            </div>
+
+            @if (isNew) {
+              <div class="mfield">
+                <label>Contraseña <span style="color:var(--danger)">*</span></label>
+                <div style="position:relative">
+                  <input class="m-input" [type]="showPassword() ? 'text' : 'password'"
+                         placeholder="Mínimo 6 caracteres" formControlName="password"
+                         style="padding-right:40px"/>
+                  <button type="button" (click)="togglePassword()"
+                          style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                                 background:none;border:none;cursor:pointer;
+                                 color:var(--text-muted-ds);display:flex;align-items:center;padding:0">
+                    <app-icon [name]="showPassword() ? 'eye_off' : 'eye'" [size]="15"/>
+                  </button>
+                </div>
+                @if (form.get('password')?.touched && form.get('password')?.invalid) {
+                  <div class="hint" style="color:var(--danger)">Mínimo 6 caracteres</div>
+                }
+              </div>
+            }
+
+            <div class="mfield">
+              <label>Rol <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="role_id">
+                <option [value]="null" disabled>Selecciona un rol…</option>
+                @for (role of roles(); track role.id) {
+                  <option [value]="role.id">{{ roleLabel(role.name) }}</option>
+                }
+              </select>
+              @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Selecciona un rol</div>
+              }
+            </div>
+
+            @if (!isNew) {
+              <div class="ds-alert accent" style="margin-top:12px">
+                <app-icon name="user" [size]="16" style="flex-shrink:0"/>
+                <div>
+                  <div class="t">Información del usuario</div>
+                  <div class="d">
+                    Rol actual: <strong>{{ roleLabel(editing()?.role?.name) }}</strong> ·
+                    Estado: <strong>{{ statusLabel(editing()!.status) }}</strong> ·
+                    registrado el {{ formatDate(editing()!.created_at) }}
+                  </div>
+                </div>
+              </div>
+            }
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          @if (!isNew) {
+            <button class="btn danger" style="margin-right:auto" type="button" (click)="deleteUser(editing()!)">
+              <app-icon name="trash" [size]="13"/>Eliminar
+            </button>
+          }
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="saveUser()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear usuario' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

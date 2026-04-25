@@ -93,7 +93,7 @@
           </thead>
           <tbody>
             @for (p of filteredProducts(); track p.id) {
-              <tr>
+              <tr style="cursor:pointer" title="Ver ficha del producto" (click)="openProductPopup(p, $event)">
                 <td>
                   @if (p.sku) {
                     <span class="mono" style="font-size:12.5px">{{ p.sku }}</span>
@@ -115,7 +115,7 @@
                     <span style="color:var(--text-subtle);font-weight:500">min {{ p.min_stock }}</span>
                   </div>
                 </td>
-                <td>
+                <td (click)="$event.stopPropagation()">
                   <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end">
                     @if (canAdjustStock()) {
                       <button class="btn ghost sm" title="Ajustar stock" (click)="openStockDialog(p)" type="button">
@@ -128,9 +128,11 @@
                         <app-icon name="edit" [size]="13"/>
                       </a>
                       <button class="btn ghost sm" type="button"
-                              [title]="p.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                              [title]="p.status === 'ACTIVE' ? 'Desactivar producto' : 'Activar producto'"
+                              [style.color]="p.status === 'ACTIVE' ? 'var(--warn)' : 'var(--success)'"
                               (click)="toggleStatus(p)">
-                        <app-icon [name]="p.status === 'ACTIVE' ? 'eye' : 'eye_off'" [size]="13"/>
+                        <app-icon name="power" [size]="13"/>
+                        {{ p.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}
                       </button>
                       <button class="btn ghost sm" title="Eliminar"
                               style="color:var(--danger)" (click)="deleteProduct(p)" type="button">
@@ -147,4 +149,93 @@
     }
 
   </div>
+
+  <!-- ── Product popup ─────────────────────────────────────────── -->
+  @if (productPopup(); as p) {
+    <div class="modal-backdrop" (click)="closeProductPopup()">
+      <div class="modal-box" style="width:400px" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="ds-modal-head">
+          <div>
+            <div class="t">Ficha del producto</div>
+            <div class="d">{{ p.name }}</div>
+          </div>
+          <button class="topbar-btn" type="button" (click)="closeProductPopup()">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="ds-modal-body">
+
+          <!-- SKU + estado -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+            @if (p.sku) {
+              <span class="badge neutral mono" style="font-size:12px;padding:4px 10px">{{ p.sku }}</span>
+            } @else {
+              <span style="font-size:12px;color:var(--text-subtle)">Sin SKU</span>
+            }
+            <span class="badge"
+                  [class.success]="p.status === 'ACTIVE'"
+                  [class.neutral]="p.status !== 'ACTIVE'">
+              {{ p.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+            </span>
+          </div>
+
+          <!-- Nombre -->
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Nombre</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:16px">{{ p.name }}</div>
+
+          <!-- Proveedor -->
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Proveedor</div>
+          <div style="font-size:13px;margin-bottom:16px">{{ p.supplier?.name ?? '—' }}</div>
+
+          <!-- Precio venta -->
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Precio de venta</div>
+          <div style="font-family:var(--font-display);font-size:24px;font-weight:700;letter-spacing:-0.02em;color:var(--accent);margin-bottom:16px">
+            ${{ p.sale_price | number:'1.2-2' }}
+          </div>
+
+          <!-- Stock -->
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Stock actual</div>
+          <div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:12px 16px">
+            <div style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.02em;min-width:48px"
+                 [style.color]="stockState(p) === 'out' ? 'var(--danger)' : stockState(p) === 'low' ? 'var(--warn)' : 'var(--text-ds)'">
+              {{ p.stock }}
+            </div>
+            <div style="flex:1">
+              <div style="height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden">
+                <div style="height:100%;border-radius:3px;transition:width .3s ease"
+                     [style.width.%]="stockPct(p)"
+                     [style.background]="stockState(p) === 'out' ? 'var(--danger)' : stockState(p) === 'low' ? 'var(--warn)' : 'var(--success)'">
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">
+                mín. {{ p.min_stock }} unidades
+                @if (stockState(p) === 'out') {
+                  · <span style="color:var(--danger);font-weight:600">Agotado</span>
+                } @else if (stockState(p) === 'low') {
+                  · <span style="color:var(--warn);font-weight:600">Stock bajo</span>
+                }
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="ds-modal-foot">
+          @if (canEdit()) {
+            <a [routerLink]="['/products', p.id, 'edit']" class="btn secondary" (click)="closeProductPopup()">
+              <app-icon name="edit" [size]="14"/>Editar
+            </a>
+          }
+          <button class="btn ghost" type="button" (click)="closeProductPopup()">Cerrar</button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

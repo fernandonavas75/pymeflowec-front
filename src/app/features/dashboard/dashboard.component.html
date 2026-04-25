@@ -223,7 +223,7 @@
                 </div>
               </div>
             </div>
-          } @else {
+          } @else if (hasRequestableModules() && authService.isStoreAdmin()) {
             <div class="ds-alert accent">
               <app-icon name="sparkles" [size]="20" class="alert-icon"/>
               <div style="flex:1">

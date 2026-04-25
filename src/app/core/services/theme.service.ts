@@ -18,6 +18,12 @@ export class ThemeService {
     this.apply();
   }
 
+  reset(): void {
+    localStorage.removeItem(this.KEY);
+    this.isDark.set(false);
+    this.apply();
+  }
+
   private apply(): void {
     const theme = this.isDark() ? 'dark' : 'light';
     document.documentElement.classList.toggle('dark', this.isDark());

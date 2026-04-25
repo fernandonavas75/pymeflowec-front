@@ -79,7 +79,6 @@
               <th>Número</th>
               <th>Cliente</th>
               <th>Vendedor</th>
-              <th class="num">Items</th>
               <th class="num">Subtotal</th>
               <th class="num">IVA</th>
               <th class="num">Total</th>
@@ -92,8 +91,7 @@
               <tr style="cursor:pointer" (click)="selectInvoice(inv)">
                 <td><span class="mono" style="color:var(--accent);font-size:12.5px">{{ inv.invoice_number }}</span></td>
                 <td><strong>{{ inv.customer?.full_name ?? 'Consumidor final' }}</strong></td>
-                <td style="color:var(--text-muted-ds)">—</td>
-                <td class="num mono">{{ inv.details?.length ?? '—' }}</td>
+                <td style="color:var(--text-muted-ds)">{{ $any(inv).createdBy?.full_name ?? '—' }}</td>
                 <td class="num mono">${{ inv.subtotal | number:'1.2-2' }}</td>
                 <td class="num mono" style="color:var(--text-muted-ds)">${{ inv.tax_amount | number:'1.2-2' }}</td>
                 <td class="num mono"><strong>${{ inv.total | number:'1.2-2' }}</strong></td>
@@ -157,7 +155,7 @@
             </div>
             <div>
               <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">Vendedor</div>
-              <div style="font-weight:600;font-size:14px">—</div>
+              <div style="font-weight:600;font-size:14px">{{ $any(selectedInvoice()!).createdBy?.full_name ?? '—' }}</div>
             </div>
           </div>
 
@@ -178,9 +176,16 @@
                 </thead>
                 <tbody>
                   @for (d of selectedInvoice()!.details; track d.id) {
-                    <tr>
+                    <tr [style.cursor]="d.product_id ? 'pointer' : 'default'"
+                        [title]="d.product_id ? 'Ver ficha del producto' : ''"
+                        (click)="openProductPopup(d, $event)">
                       <td>
-                        <div style="font-weight:600">{{ d.product_name }}</div>
+                        <div style="font-weight:600;display:flex;align-items:center;gap:6px">
+                          {{ d.product_name }}
+                          @if (d.product_id) {
+                            <app-icon name="external_link" [size]="11" style="color:var(--text-subtle);flex-shrink:0"/>
+                          }
+                        </div>
                         @if (d.product?.sku) {
                           <div class="mono" style="font-size:10.5px;color:var(--text-subtle)">{{ d.product!.sku }}</div>
                         }
@@ -242,6 +247,102 @@
         }
       </div>
 
+    </div>
+  }
+
+  <!-- ── Product popup ─────────────────────────────────────────── -->
+  @if (productPopup() || productPopupLoading()) {
+    <div class="modal-backdrop" (click)="closeProductPopup()">
+      <div class="modal-box" style="width:400px" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="ds-modal-head">
+          <div>
+            <div class="t">Ficha del producto</div>
+            @if (productPopup()?.name) {
+              <div class="d">{{ productPopup()!.name }}</div>
+            }
+          </div>
+          <button class="topbar-btn" type="button" (click)="closeProductPopup()">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="ds-modal-body">
+
+          @if (productPopup(); as p) {
+
+            <!-- SKU + estado -->
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+              @if (p.sku) {
+                <span class="badge neutral mono" style="font-size:12px;padding:4px 10px">{{ p.sku }}</span>
+              } @else {
+                <span style="font-size:12px;color:var(--text-subtle)">Sin SKU</span>
+              }
+              <span class="badge"
+                    [class.success]="p.status === 'ACTIVE'"
+                    [class.neutral]="p.status !== 'ACTIVE'">
+                {{ p.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+
+            <!-- Nombre -->
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Nombre</div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">{{ p.name }}</div>
+
+            <!-- Proveedor -->
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Proveedor</div>
+            <div style="font-size:13px;margin-bottom:16px">{{ p.supplier?.name ?? '—' }}</div>
+
+            <!-- Precio venta -->
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Precio de venta</div>
+            <div style="font-family:var(--font-display);font-size:24px;font-weight:700;letter-spacing:-0.02em;color:var(--accent);margin-bottom:16px">
+              ${{ p.sale_price | number:'1.2-2' }}
+            </div>
+
+            <!-- Stock -->
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Stock actual</div>
+            <div style="display:flex;align-items:center;gap:12px;background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:12px 16px">
+              <div style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.02em;min-width:48px"
+                   [style.color]="stockState(p) === 'out' ? 'var(--danger)' : stockState(p) === 'low' ? 'var(--warn)' : 'var(--text-ds)'">
+                {{ p.stock }}
+              </div>
+              <div style="flex:1">
+                <div style="height:6px;background:var(--surface-3);border-radius:3px;overflow:hidden">
+                  <div style="height:100%;border-radius:3px;transition:width .3s ease"
+                       [style.width.%]="stockPct(p)"
+                       [style.background]="stockState(p) === 'out' ? 'var(--danger)' : stockState(p) === 'low' ? 'var(--warn)' : 'var(--success)'">
+                  </div>
+                </div>
+                <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">
+                  mín. {{ p.min_stock }} unidades
+                  @if (stockState(p) === 'out') {
+                    · <span style="color:var(--danger);font-weight:600">Agotado</span>
+                  } @else if (stockState(p) === 'low') {
+                    · <span style="color:var(--warn);font-weight:600">Stock bajo</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+          } @else {
+            <!-- skeleton mientras carga -->
+            <div style="display:flex;flex-direction:column;gap:10px">
+              @for (i of [1,2,3,4]; track i) {
+                <div class="skel" style="height:36px;border-radius:var(--radius-sm-ds)"></div>
+              }
+            </div>
+          }
+
+        </div>
+
+        <!-- Footer -->
+        <div class="ds-modal-foot">
+          <button class="btn ghost" type="button" (click)="closeProductPopup()">Cerrar</button>
+        </div>
+
+      </div>
     </div>
   }
 

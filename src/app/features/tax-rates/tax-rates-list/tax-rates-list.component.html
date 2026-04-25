@@ -1,0 +1,167 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Tasas de impuesto</div>
+      <div class="page-sub-en">Tax Rates · {{ totalCount() }} registradas</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn primary" type="button" (click)="openNew()">
+        <app-icon name="plus" [size]="14"/>Nueva tasa
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todas <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'active'" (click)="tab.set('active')" type="button">
+      Activas <span class="count">{{ activeCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'inactive'" (click)="tab.set('inactive')" type="button">
+      Inactivas <span class="count">{{ inactiveCount() }}</span>
+    </button>
+  </div>
+
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar por nombre…"/>
+    </div>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+    @if (loading()) {
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3]; track i) {
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+        }
+      </div>
+
+    } @else if (filteredRates().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="percent" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron tasas de impuesto</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">Limpiar búsqueda</button>
+        }
+      </div>
+
+    } @else {
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th class="num">Porcentaje</th>
+              <th>Vigente desde</th>
+              <th>Vigente hasta</th>
+              <th>Estado</th>
+              <th style="width:48px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of filteredRates(); track r.id) {
+              <tr style="cursor:pointer" (click)="openEdit(r)">
+                <td><strong>{{ r.tax_name }}</strong></td>
+                <td class="num mono"><strong>{{ r.percentage }}%</strong></td>
+                <td>{{ formatDate(r.valid_from) }}</td>
+                <td style="color:var(--text-muted-ds)">{{ formatDate(r.valid_to) }}</td>
+                <td>
+                  @if (r.is_active) {
+                    <span class="badge success">Activa</span>
+                  } @else {
+                    <span class="badge neutral">Inactiva</span>
+                  }
+                </td>
+                <td style="text-align:right">
+                  <button class="btn ghost sm" title="Editar" type="button"
+                          (click)="$event.stopPropagation(); openEdit(r)">
+                    <app-icon name="edit" [size]="13"/>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── Inline Modal ────────────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nueva tasa de impuesto' : 'Editar tasa' }}</div>
+            <div class="d">
+              {{ isNew ? 'Agrega una nueva tasa de IVA u otro impuesto.' : 'Modifica "' + editing()?.tax_name + '".' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Nombre <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Ej: IVA" formControlName="tax_name"/>
+              @if (form.get('tax_name')?.touched && form.get('tax_name')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Campo requerido</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Porcentaje (%) <span style="color:var(--danger)">*</span></label>
+              <input class="m-input mono" type="number" placeholder="15" min="0" max="100"
+                     formControlName="percentage"/>
+              @if (form.get('percentage')?.touched && form.get('percentage')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa un valor entre 0 y 100</div>
+              }
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Vigente desde</label>
+                <input class="m-input" type="date" formControlName="valid_from"/>
+              </div>
+              <div class="mfield">
+                <label>Vigente hasta <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+                <input class="m-input" type="date" formControlName="valid_to"/>
+              </div>
+            </div>
+
+            <div class="mfield" style="margin-top:4px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" formControlName="is_active"/>
+                Tasa activa
+              </label>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="save()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear tasa' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

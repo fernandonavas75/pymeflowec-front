@@ -1,98 +1,106 @@
-<div class="page-container">
-  <div class="page-header">
-    <a routerLink="/users" mat-icon-button>
-      <mat-icon>arrow_back</mat-icon>
-    </a>
-    <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
-        {{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}
-      </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        {{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}
-      </p>
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div style="display:flex;align-items:center;gap:12px">
+      <a routerLink="/users" class="btn ghost sm">
+        <app-icon name="arrow_left" [size]="16"/>
+      </a>
+      <div>
+        <div class="page-title">{{ isEdit ? 'Editar usuario' : 'Nuevo usuario' }}</div>
+        <div class="page-sub-en">{{ isEdit ? 'Actualiza los datos del usuario' : 'Crea un nuevo usuario del sistema' }}</div>
+      </div>
     </div>
   </div>
 
   @if (loading()) {
-    <div class="flex justify-center py-20">
-      <mat-spinner diameter="48"></mat-spinner>
+    <div style="padding:72px 24px;display:flex;justify-content:center">
+      <div class="skel" style="width:400px;height:320px;border-radius:var(--radius-ds)"></div>
     </div>
   } @else {
-    <div class="form-card" style="max-width: 600px">
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="flex flex-col gap-4">
+    <div class="card" style="max-width:560px">
+      <div class="card-body">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
-          <!-- Selector de empresa: solo visible para admin de plataforma al crear -->
           @if (isPlatformCreating) {
-            <mat-form-field appearance="outline">
-              <mat-label>Empresa *</mat-label>
-              <mat-select formControlName="company_id">
+            <div class="mfield">
+              <label>Empresa <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="company_id">
+                <option [value]="null" disabled>Selecciona una empresa…</option>
                 @for (c of companies(); track c.id) {
-                  <mat-option [value]="c.id">{{ c.name }}</mat-option>
+                  <option [value]="c.id">{{ c.name }}</option>
                 }
-              </mat-select>
+              </select>
               @if (form.get('company_id')?.touched && form.get('company_id')?.invalid) {
-                <mat-error>Selecciona una empresa</mat-error>
+                <div class="hint" style="color:var(--danger)">Selecciona una empresa</div>
               }
-              <mat-hint>El usuario pertenecerá a esta empresa</mat-hint>
-            </mat-form-field>
+              <div class="hint">El usuario pertenecerá a esta empresa</div>
+            </div>
           }
 
-          <mat-form-field appearance="outline">
-            <mat-label>Nombre completo *</mat-label>
-            <input matInput formControlName="full_name">
+          <div class="mfield">
+            <label>Nombre completo <span style="color:var(--danger)">*</span></label>
+            <input class="m-input" placeholder="Juan Pérez" formControlName="full_name"/>
             @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
-              <mat-error>Mínimo 3 caracteres</mat-error>
+              <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
             }
-          </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Email *</mat-label>
-            <input matInput type="email" formControlName="email">
+          <div class="mfield">
+            <label>Email <span style="color:var(--danger)">*</span></label>
+            <input class="m-input" type="email" placeholder="usuario@empresa.com" formControlName="email"/>
             @if (form.get('email')?.touched && form.get('email')?.invalid) {
-              <mat-error>Ingresa un email válido</mat-error>
+              <div class="hint" style="color:var(--danger)">Ingresa un email válido</div>
             }
-          </mat-form-field>
+          </div>
 
           @if (!isEdit) {
-            <mat-form-field appearance="outline">
-              <mat-label>Contraseña *</mat-label>
-              <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password">
-              <button mat-icon-button matSuffix type="button" (click)="togglePassword()">
-                <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
-              </button>
+            <div class="mfield">
+              <label>Contraseña <span style="color:var(--danger)">*</span></label>
+              <div style="position:relative">
+                <input class="m-input" [type]="showPassword() ? 'text' : 'password'"
+                       placeholder="Mínimo 6 caracteres" formControlName="password"
+                       style="padding-right:40px"/>
+                <button type="button" (click)="togglePassword()"
+                        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                               background:none;border:none;cursor:pointer;
+                               color:var(--text-muted-ds);display:flex;align-items:center;padding:0">
+                  <app-icon [name]="showPassword() ? 'eye_off' : 'eye'" [size]="15"/>
+                </button>
+              </div>
               @if (form.get('password')?.touched && form.get('password')?.invalid) {
-                <mat-error>Mínimo 6 caracteres</mat-error>
+                <div class="hint" style="color:var(--danger)">Mínimo 6 caracteres</div>
               }
-            </mat-form-field>
+            </div>
           }
 
-          <mat-form-field appearance="outline">
-            <mat-label>Rol *</mat-label>
-            <mat-select formControlName="role_id">
+          <div class="mfield">
+            <label>Rol <span style="color:var(--danger)">*</span></label>
+            <select class="m-input" formControlName="role_id">
+              <option [value]="null" disabled>Selecciona un rol…</option>
               @for (role of roles(); track role.id) {
-                <mat-option [value]="role.id">
-                  {{ role.name === 'STORE_ADMIN' ? 'Administrador' : 'Vendedor' }}
-                </mat-option>
+                <option [value]="role.id">
+                  {{ role.name === 'STORE_ADMIN' ? 'Administrador' : role.name === 'STORE_SELLER' ? 'Vendedor' : 'Almacén' }}
+                </option>
               }
-            </mat-select>
+            </select>
             @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {
-              <mat-error>Selecciona un rol</mat-error>
+              <div class="hint" style="color:var(--danger)">Selecciona un rol</div>
             }
-          </mat-form-field>
-        </div>
+          </div>
 
-        <div class="form-actions">
-          <a routerLink="/users" mat-stroked-button>Cancelar</a>
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-            @if (saving()) {
-              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
-            } @else {
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+            <a routerLink="/users" class="btn secondary">Cancelar</a>
+            <button class="btn primary" type="submit" [disabled]="saving()">
+              @if (saving()) { <span class="btn-spinner"></span> }
+              @else { <app-icon name="check" [size]="14"/> }
               {{ isEdit ? 'Guardar cambios' : 'Crear usuario' }}
-            }
-          </button>
-        </div>
-      </form>
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   }
+
 </div>

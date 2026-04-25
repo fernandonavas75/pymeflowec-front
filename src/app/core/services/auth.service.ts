@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, map, tap } from 'rxjs';
 import { ApiService } from './api.service';
+import { ThemeService } from './theme.service';
 import { AuthUser, LoginRequest, LoginResponse, RegisterRequest } from '../models/auth.model';
 
 const TOKEN_KEY = 'pf_token';
@@ -14,6 +15,7 @@ const USER_KEY = 'pf_user';
 export class AuthService {
   private api = inject(ApiService);
   private router = inject(Router);
+  private theme = inject(ThemeService);
 
   currentUser = signal<AuthUser | null>(null);
   isAuthenticated = computed(() => !!this.currentUser());
@@ -77,6 +79,7 @@ export class AuthService {
   logout(): void {
     this.clearStorage();
     this.currentUser.set(null);
+    this.theme.reset();
     this.router.navigate(['/login']);
   }
 

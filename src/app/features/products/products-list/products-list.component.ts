@@ -2,12 +2,14 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
-import { startWith, finalize } from 'rxjs';
+import { startWith, finalize, forkJoin } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProductsService } from '../../../core/services/products.service';
 import { Product } from '../../../core/models/product.model';
+import { TaxRate } from '../../../core/models/tax-rate.model';
+import { TaxRatesService } from '../../../core/services/tax-rates.service';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -20,15 +22,18 @@ import { StockAdjustDialogComponent } from '../stock-adjust-dialog/stock-adjust-
   templateUrl: './products-list.component.html',
 })
 export class ProductsListComponent implements OnInit {
-  private productsService = inject(ProductsService);
-  private dialog          = inject(MatDialog);
-  private snackBar        = inject(MatSnackBar);
-  authService             = inject(AuthService);
+  private productsService  = inject(ProductsService);
+  private taxRatesService  = inject(TaxRatesService);
+  private dialog           = inject(MatDialog);
+  private snackBar         = inject(MatSnackBar);
+  authService              = inject(AuthService);
 
   private allProducts = signal<Product[]>([]);
-  loading    = signal(true);
-  tabFilter  = signal<'all' | 'low' | 'out'>('all');
-  searchCtrl = new FormControl('');
+  private taxRatesMap = signal<Record<number, TaxRate>>({});
+  loading        = signal(true);
+  tabFilter      = signal<'all' | 'low' | 'out'>('all');
+  searchCtrl     = new FormControl('');
+  productPopup   = signal<Product | null>(null);
 
   private searchQuery = toSignal(
     this.searchCtrl.valueChanges.pipe(startWith('')),
@@ -56,11 +61,19 @@ export class ProductsListComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.productsService.list({ page: 1, limit: 1000 })
+    forkJoin({
+      products: this.productsService.list({ page: 1, limit: 1000 }),
+      taxes:    this.taxRatesService.list({ page: 1, limit: 100 }),
+    })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: res => this.allProducts.set(res.data ?? []),
-        error: ()  => this.allProducts.set([]),
+        next: ({ products, taxes }) => {
+          const map: Record<number, TaxRate> = {};
+          for (const t of taxes.data ?? []) map[t.id] = t;
+          this.taxRatesMap.set(map);
+          this.allProducts.set(products.data ?? []);
+        },
+        error: () => this.allProducts.set([]),
       });
   }
 
@@ -73,12 +86,19 @@ export class ProductsListComponent implements OnInit {
   }
 
   taxLabel(p: Product): string {
-    const pct = p.tax_rate?.percentage ?? 0;
+    const pct = p.tax_rate?.percentage
+      ?? (p.tax_rate_id ? this.taxRatesMap()[p.tax_rate_id]?.percentage : undefined)
+      ?? 0;
     return pct === 0 ? '0%' : pct + '%';
   }
 
   openStockDialog(product: Product): void {
-    const ref = this.dialog.open(StockAdjustDialogComponent, { data: product, width: '400px' });
+    const ref = this.dialog.open(StockAdjustDialogComponent, {
+      data: product,
+      width: '480px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
     ref.afterClosed().subscribe(result => { if (result) this.load(); });
   }
 
@@ -111,6 +131,13 @@ export class ProductsListComponent implements OnInit {
       }
     });
   }
+
+  openProductPopup(product: Product, event: MouseEvent): void {
+    event.stopPropagation();
+    this.productPopup.set(product);
+  }
+
+  closeProductPopup(): void { this.productPopup.set(null); }
 
   canEdit(): boolean        { return this.authService.isSystemUser() || this.authService.isStoreAdmin(); }
   canAdjustStock(): boolean { return this.authService.isStoreAdmin() || this.authService.isStoreWarehouse(); }

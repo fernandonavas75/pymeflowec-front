@@ -12,7 +12,7 @@ import { Product } from '../../../core/models/product.model';
   selector: 'app-stock-adjust-dialog',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, AppIconComponent],
-  styles: [`:host { display: flex; flex-direction: column; max-height: 90vh; width: 440px; }`],
+  styles: [`:host { display: flex; flex-direction: column; overflow: hidden; }`],
   template: `
     <!-- Header -->
     <div class="ds-modal-head">

@@ -1,71 +1,74 @@
-<div class="page-container">
-  <div class="page-header">
-    <a routerLink="/suppliers" mat-icon-button>
-      <mat-icon>arrow_back</mat-icon>
-    </a>
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ isEdit ? 'Editar proveedor' : 'Nuevo proveedor' }}</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{{ isEdit ? 'Actualiza los datos del proveedor' : 'Registra un nuevo proveedor' }}</p>
+      <div class="page-title">{{ isEdit ? 'Editar proveedor' : 'Nuevo proveedor' }}</div>
+      <div class="page-sub-en">{{ isEdit ? 'Actualiza los datos del proveedor' : 'Registra un nuevo proveedor' }}</div>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/suppliers" class="btn secondary">
+        <app-icon name="arrow-left" [size]="14"/>Volver
+      </a>
     </div>
   </div>
 
   @if (loading()) {
-    <div class="flex justify-center py-20">
-      <mat-spinner diameter="48"></mat-spinner>
+    <div style="padding:72px 24px;display:flex;justify-content:center">
+      <div class="skel" style="width:100%;max-width:560px;height:360px;border-radius:var(--radius-ds)"></div>
     </div>
   } @else {
-    <div class="form-card">
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="form-grid">
-          <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Nombre / Razón Social *</mat-label>
-            <input matInput formControlName="name">
+    <div class="card" style="max-width:560px">
+      <div class="card-body">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+          <div class="mfield">
+            <label>Nombre / Razón Social <span style="color:var(--danger)">*</span></label>
+            <input class="m-input" placeholder="Distribuidora ABC S.A." formControlName="name"/>
             @if (form.get('name')?.touched && form.get('name')?.invalid) {
-              <mat-error>El nombre es requerido (mínimo 2 caracteres)</mat-error>
+              <div class="hint" style="color:var(--danger)">El nombre es requerido (mínimo 2 caracteres)</div>
             }
-          </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>RUC</mat-label>
-            <input matInput formControlName="ruc" placeholder="0000000000001" maxlength="13">
-            @if (form.get('ruc')?.touched && form.get('ruc')?.invalid) {
-              <mat-error>El RUC debe tener 13 dígitos</mat-error>
-            }
-          </mat-form-field>
+          <div class="mfield-row">
+            <div class="mfield">
+              <label>RUC <span style="color:var(--text-muted-ds);font-weight:400">(13 dígitos)</span></label>
+              <input class="m-input mono" placeholder="1790012345001" maxlength="13" formControlName="ruc"/>
+              @if (form.get('ruc')?.touched && form.get('ruc')?.invalid) {
+                <div class="hint" style="color:var(--danger)">El RUC debe tener 13 dígitos</div>
+              }
+            </div>
+            <div class="mfield">
+              <label>Teléfono</label>
+              <input class="m-input mono" placeholder="0987654321" formControlName="phone"/>
+            </div>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Teléfono</mat-label>
-            <input matInput formControlName="phone" placeholder="0987654321">
-            @if (form.get('phone')?.touched && form.get('phone')?.invalid) {
-              <mat-error>Ingresa un teléfono válido</mat-error>
-            }
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Email</mat-label>
-            <input matInput type="email" formControlName="email">
+          <div class="mfield">
+            <label>Email</label>
+            <input class="m-input" type="email" placeholder="contacto@proveedor.com" formControlName="email"/>
             @if (form.get('email')?.touched && form.get('email')?.invalid) {
-              <mat-error>Ingresa un email válido</mat-error>
+              <div class="hint" style="color:var(--danger)">Ingresa un email válido</div>
             }
-          </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Dirección</mat-label>
-            <textarea matInput formControlName="address" rows="2"></textarea>
-          </mat-form-field>
-        </div>
+          <div class="mfield">
+            <label>Dirección</label>
+            <input class="m-input" placeholder="Av. Ejemplo 123, Ciudad" formControlName="address"/>
+          </div>
 
-        <div class="form-actions">
-          <a routerLink="/suppliers" mat-stroked-button>Cancelar</a>
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-            @if (saving()) {
-              <mat-spinner diameter="20" class="inline-block"></mat-spinner>
-            } @else {
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px">
+            <a routerLink="/suppliers" class="btn secondary">Cancelar</a>
+            <button class="btn primary" type="submit" [disabled]="saving()">
+              @if (saving()) { <span class="btn-spinner"></span> }
+              @else { <app-icon name="check" [size]="13"/> }
               {{ isEdit ? 'Guardar cambios' : 'Crear proveedor' }}
-            }
-          </button>
-        </div>
-      </form>
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   }
+
 </div>

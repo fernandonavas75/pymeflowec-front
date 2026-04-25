@@ -1,87 +1,309 @@
-<div class="page-container">
-  <div class="page-header">
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Proveedores</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Gestiona la red de proveedores</p>
+      <div class="page-title">Proveedores</div>
+      <div class="page-sub-en">Suppliers · {{ totalCount() }} registrados</div>
     </div>
     @if (canEdit()) {
-      <a routerLink="/suppliers/new" mat-flat-button color="primary" class="flex items-center gap-2">
-        <mat-icon>add_business</mat-icon>
-        Nuevo proveedor
-      </a>
+      <div class="page-actions">
+        <button class="btn primary" type="button" (click)="openNew()">
+          <app-icon name="plus" [size]="14"/>Nuevo proveedor
+        </button>
+      </div>
     }
   </div>
 
-  <div class="filters-bar">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Buscar proveedores</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [formControl]="searchCtrl" placeholder="Nombre, RUC...">
-    </mat-form-field>
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todos <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'ruc'" (click)="tab.set('ruc')" type="button">
+      Con RUC <span class="count">{{ rucCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'no_ruc'" (click)="tab.set('no_ruc')" type="button">
+      Sin RUC <span class="count">{{ noRucCount() }}</span>
+    </button>
   </div>
 
-  <div class="table-container">
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar por nombre, RUC, email o teléfono…"/>
+    </div>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
     @if (loading()) {
-      <div class="loading-overlay">
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
         @for (i of [1,2,3,4,5]; track i) {
-          <div class="skeleton-row">
-            <div class="skeleton h-4 w-40"></div>
-            <div class="skeleton h-4 w-28"></div>
-            <div class="skeleton h-4 w-36"></div>
-            <div class="skeleton h-4 w-24"></div>
-            <div class="skeleton h-8 w-24"></div>
-          </div>
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
         }
       </div>
+
+    } @else if (filteredSuppliers().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="building" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron proveedores</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">Limpiar búsqueda</button>
+        }
+      </div>
+
     } @else {
-      <table mat-table [dataSource]="suppliers()" class="w-full">
-        <ng-container matColumnDef="name">
-          <th mat-header-cell *matHeaderCellDef>Nombre</th>
-          <td mat-cell *matCellDef="let s" class="font-medium">{{ s.name }}</td>
-        </ng-container>
-        <ng-container matColumnDef="ruc">
-          <th mat-header-cell *matHeaderCellDef>RUC</th>
-          <td mat-cell *matCellDef="let s" class="font-mono text-sm">{{ s.ruc || '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let s">{{ s.email || '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="phone">
-          <th mat-header-cell *matHeaderCellDef>Teléfono</th>
-          <td mat-cell *matCellDef="let s">{{ s.phone || '—' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let s">
-            <div class="flex items-center gap-1">
-              @if (canEdit()) {
-                <a [routerLink]="['/suppliers', s.id, 'edit']" mat-icon-button matTooltip="Editar">
-                  <mat-icon class="text-slate-400 dark:text-slate-500">edit</mat-icon>
-                </a>
-                <button mat-icon-button matTooltip="Eliminar" (click)="deleteSupplier(s)">
-                  <mat-icon class="text-red-400">delete</mat-icon>
-                </button>
-              }
-            </div>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400 dark:text-slate-500" [attr.colspan]="displayedColumns.length">
-            No se encontraron proveedores
-          </td>
-        </tr>
-      </table>
-      <mat-paginator
-        [length]="total()"
-        [pageSize]="limit()"
-        [pageIndex]="page() - 1"
-        [pageSizeOptions]="[10, 20, 50]"
-        (page)="onPageChange($event)"
-        showFirstLastButtons
-      />
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Nombre / Razón Social</th>
+              <th>RUC</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Dirección</th>
+              <th>Registrado</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of filteredSuppliers(); track s.id) {
+              <tr style="cursor:pointer" (click)="openDrawer(s)">
+                <td><strong>{{ s.name }}</strong></td>
+                <td class="mono" style="font-size:12px">{{ s.ruc || '—' }}</td>
+                <td style="color:var(--text-muted-ds)">{{ s.email || '—' }}</td>
+                <td class="mono" style="font-size:12px">{{ s.phone || '—' }}</td>
+                <td style="color:var(--text-muted-ds);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  {{ s.address || '—' }}
+                </td>
+                <td style="color:var(--text-muted-ds);font-size:12px">{{ formatDate(s.created_at) }}</td>
+                <td style="text-align:right">
+                  @if (canEdit()) {
+                    <button class="btn ghost sm" title="Editar" type="button"
+                            (click)="$event.stopPropagation(); openEdit(s)">
+                      <app-icon name="edit" [size]="13"/>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
   </div>
+
+  <!-- ── Supplier Drawer (productos) ────────────────────────────── -->
+  @if (drawerSupplier()) {
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <div class="drawer" style="width:600px">
+
+      <div class="drawer-head">
+        <div>
+          <div class="t">{{ drawerSupplier()!.name }}</div>
+          <div style="font-size:12px;color:var(--text-subtle);margin-top:4px;display:flex;align-items:center;gap:10px">
+            @if (drawerSupplier()!.ruc) {
+              <span class="mono">RUC {{ drawerSupplier()!.ruc }}</span>
+            }
+            @if (drawerSupplier()!.phone) {
+              <span>· {{ drawerSupplier()!.phone }}</span>
+            }
+            @if (drawerSupplier()!.email) {
+              <span>· {{ drawerSupplier()!.email }}</span>
+            }
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          @if (canEdit()) {
+            <button class="btn ghost sm" title="Editar proveedor" type="button"
+                    (click)="openEdit(drawerSupplier()!)">
+              <app-icon name="edit" [size]="14"/>
+            </button>
+          }
+          <button class="btn ghost sm" (click)="closeDrawer()" type="button">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+      </div>
+
+      <div class="drawer-body">
+
+        <!-- Resumen info -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+          <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+            <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">Productos</div>
+            <div style="font-size:22px;font-weight:700;color:var(--text-ds)">{{ supplierProducts().length }}</div>
+          </div>
+          <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+            <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">Stock bajo</div>
+            <div style="font-size:22px;font-weight:700;color:var(--warn)">{{ drawerLowCount() }}</div>
+          </div>
+          <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+            <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px">Agotados</div>
+            <div style="font-size:22px;font-weight:700;color:var(--danger)">{{ drawerOutCount() }}</div>
+          </div>
+        </div>
+
+        <!-- Label sección -->
+        <div style="font-size:11px;font-weight:600;color:var(--text-subtle);letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px">
+          Inventario del proveedor
+        </div>
+
+        @if (supplierProducts().length === 0) {
+          <div class="empty" style="padding:48px 16px">
+            <app-icon name="package" [size]="32" style="opacity:.2"/>
+            <p style="margin:0;font-size:13px;color:var(--text-muted-ds)">Sin productos asignados a este proveedor</p>
+          </div>
+        } @else {
+          <div style="border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);overflow:hidden">
+            <table class="ds-table" style="font-size:12.5px">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th class="num">Stock</th>
+                  <th class="num">Mín.</th>
+                  <th class="num">P. compra</th>
+                  <th class="num">P. venta</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of supplierProducts(); track p.id) {
+                  <tr>
+                    <td>
+                      <div style="font-weight:600">{{ p.name }}</div>
+                      @if (p.sku) {
+                        <div class="mono" style="font-size:10.5px;color:var(--text-subtle)">{{ p.sku }}</div>
+                      }
+                    </td>
+                    <td class="num mono" [style.color]="stockLabel(p) === 'out' ? 'var(--danger)' : stockLabel(p) === 'low' ? 'var(--warn)' : 'var(--success)'">
+                      <strong>{{ p.stock }}</strong>
+                    </td>
+                    <td class="num mono" style="color:var(--text-muted-ds)">{{ p.min_stock }}</td>
+                    <td class="num mono" style="color:var(--text-muted-ds)">${{ p.purchase_price | number:'1.2-2' }}</td>
+                    <td class="num mono" style="font-weight:600">${{ p.sale_price | number:'1.2-2' }}</td>
+                    <td>
+                      @if (stockLabel(p) === 'out') {
+                        <span class="badge danger">Agotado</span>
+                      } @else if (stockLabel(p) === 'low') {
+                        <span class="badge warn">Stock bajo</span>
+                      } @else {
+                        <span class="badge success">OK</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+      </div>
+
+      <div class="drawer-foot">
+        @if (canEdit()) {
+          <button class="btn danger" type="button" (click)="deleteSupplier(drawerSupplier()!)">
+            <app-icon name="trash" [size]="13"/>Eliminar proveedor
+          </button>
+        }
+        <button class="btn secondary" type="button" (click)="closeDrawer()" style="margin-left:auto">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ── Inline Modal (crear / editar) ──────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nuevo proveedor' : 'Editar proveedor' }}</div>
+            <div class="d">
+              {{ isNew ? 'Registra un nuevo proveedor.' : 'Actualiza los datos de ' + editing()?.name + '.' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Nombre / Razón Social <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Distribuidora ABC S.A." formControlName="name"/>
+              @if (form.get('name')?.touched && form.get('name')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 2 caracteres</div>
+              }
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>RUC <span style="color:var(--text-muted-ds);font-weight:400">(13 dígitos)</span></label>
+                <input class="m-input mono" placeholder="1790012345001" maxlength="13" formControlName="ruc"/>
+                @if (form.get('ruc')?.touched && form.get('ruc')?.invalid) {
+                  <div class="hint" style="color:var(--danger)">El RUC debe tener 13 dígitos</div>
+                }
+              </div>
+              <div class="mfield">
+                <label>Teléfono</label>
+                <input class="m-input mono" placeholder="0987654321" formControlName="phone"/>
+              </div>
+            </div>
+
+            <div class="mfield">
+              <label>Email</label>
+              <input class="m-input" type="email" placeholder="contacto@proveedor.com" formControlName="email"/>
+              @if (form.get('email')?.touched && form.get('email')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa un email válido</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Dirección</label>
+              <input class="m-input" placeholder="Av. Ejemplo 123, Ciudad" formControlName="address"/>
+            </div>
+
+            @if (!isNew) {
+              <div class="ds-alert accent" style="margin-top:12px">
+                <app-icon name="building" [size]="16" style="flex-shrink:0"/>
+                <div>
+                  <div class="t">Información del proveedor</div>
+                  <div class="d">
+                    {{ supplierProducts().length > 0
+                      ? supplierProducts().length + ' producto(s) asignado(s) · registrado el ' + formatDate(editing()!.created_at)
+                      : 'Sin productos asignados · registrado el ' + formatDate(editing()!.created_at) }}
+                  </div>
+                </div>
+              </div>
+            }
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          @if (!isNew) {
+            <button class="btn danger" style="margin-right:auto" type="button" (click)="deleteSupplier(editing()!)">
+              <app-icon name="trash" [size]="13"/>Eliminar
+            </button>
+          }
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="saveSupplier()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear proveedor' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

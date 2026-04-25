@@ -1440,3 +1440,190 @@ Ecuador, 2025
 ---
 
 *PymeFlow EC es un sistema desarrollado como demostración de una solución SaaS empresarial aplicable al contexto de las PyMEs ecuatorianas. El proyecto abarca el diseño arquitectónico, la implementación frontend con Angular 17 y su integración con una API REST bajo principios de multi-tenencia, seguridad basada en roles y generación de documentos fiscales.*
+
+
+
+
+
+# PymeFlowEc — Frontend Angular
+
+Proyecto de tesis. ERP multi-tenant para PYMEs ecuatorianas.
+**Stack:** Angular 17+ · SCSS · Angular Material · Tailwind · ApexCharts
+**Backend:** `http://localhost:8080` · **Frontend dev:** `http://localhost:5173` (o `ng serve`)
+
+---
+
+## Arquitectura clave
+
+```
+src/app/
+├── core/
+│   ├── guards/          — authGuard, permissionGuard, roleGuard  ← NO TOCAR
+│   ├── interceptors/    — token, error, client-view             ← NO TOCAR
+│   ├── models/          — Invoice, Product, User, Role, etc.    ← NO TOCAR
+│   └── services/        — toda la capa HTTP + theme.service.ts  ← NO TOCAR (salvo theme)
+├── features/            — pantallas de la app (ver lista abajo)
+├── layout/              — sidebar, topbar, main-layout
+└── shared/components/   — stat-card, status-badge, confirm-dialog, coming-soon
+```
+
+**No modificar nunca:** rutas (`app.routes.ts`), guards, interceptors, modelos ni servicios HTTP.
+La migración es solo de **capa de presentación**: templates HTML + SCSS.
+
+---
+
+## Design handoff
+
+El paquete de diseño definitivo está en:
+```
+C:\Users\navas\.claude\projects\...\design-handoff\pymeflowec\project\angular-handoff\
+```
+Archivos clave:
+- `auth.component.scss` — estilos para Login y Register (layout `.auth-wrap` / `.aside` / `.main-col`)
+- `landing.component.scss` — estilos para Landing (`landing-nav`, `.hero`, `.section`, `.f-card`, `.price-card`, `.cta-banner`)
+- `login.component.ts` — plantilla de referencia para Login
+- `register.component.ts` — plantilla de referencia para Register
+- `landing.component.ts` — plantilla de referencia para Landing
+
+### Token aliases (en `styles.scss`)
+Los componentes del handoff usan nombres cortos (`--border`, `--text`, `--radius`). Se añadieron aliases en `:root`:
+```scss
+--border: var(--border-ds);  --text: var(--text-ds);  --radius: var(--radius-ds); etc.
+```
+
+---
+
+## Migración del prototipo React → Angular
+
+El prototipo de referencia también está en `pymeflowec/project/src/` (archivos JSX/HTML).
+**El prototipo es React — no se copia pegando. Se reescribe el template en Angular usando las mismas clases CSS.**
+
+### Nomenclatura de clases CSS
+
+El design system usa prefijo `ds-` solo donde el nombre ya existía en Material/Tailwind:
+
+| Clase prototipo | Clase Angular (global) | Nota |
+|---|---|---|
+| `.sidebar` | `.ds-sidebar` | evita conflicto con Material |
+| `.topbar` | `.ds-topbar` | evita conflicto |
+| `.table` | `.ds-table` | evita conflicto con Tailwind |
+| `.tabs` / `.tab` | `.ds-tabs` / `.ds-tab` | evita conflicto |
+| `.alert` | `.ds-alert` | evita conflicto |
+| `.modal` | `.ds-modal` | evita conflicto |
+| `.avatar` | `.ds-avatar` | evita conflicto |
+| `.stack` | `.ds-stack` | evita conflicto |
+| Resto: `.btn`, `.card`, `.kpi`, `.badge`, `.drawer`, `.filters`, etc. | igual que prototipo | sin prefijo |
+
+### Tokens CSS disponibles (definidos en `styles.scss`)
+
+```scss
+--bg, --surface, --surface-2, --surface-3
+--border-ds, --border-strong-ds   (alias cortos: --border, --border-strong)
+--text-ds, --text-muted-ds, --text-subtle  (alias: --text, --text-muted)
+--accent, --accent-hover, --accent-soft, --accent-soft-strong, --on-accent
+--success, --success-soft, --warn, --warn-soft, --danger, --danger-soft
+--radius-ds (10px), --radius-sm-ds (6px), --radius-lg-ds (14px)  (alias: --radius, --radius-sm, --radius-lg)
+--shadow-sm-ds, --shadow-ds, --shadow-lg-ds  (alias: --shadow-sm, --shadow, --shadow-lg)
+--font-ui, --font-display, --font-mono
+--sidebar-w (248px), --sidebar-w-collapsed (64px), --topbar-h (60px)
+--density-row, --density-gap, --density-pad
+```
+
+Dark mode: `[data-theme="dark"]` en `<html>` (escrito por `ThemeService`).
+Density: `[data-density="compact"]` en `<html>`.
+Accent: `[data-accent="emerald|amber"]` en `<html>`.
+
+---
+
+## Estado de la migración
+
+### ✅ Fase 1 — Fundaciones (COMPLETA)
+- `src/index.html` — Fuentes: Inter Tight (400–800) + JetBrains Mono (400–600) añadidas
+- `src/styles.scss` — Tokens + ~40 clases utilitarias + aliases + `.platform-banner`, `.page-tabs`, `.modal-backdrop`, `.mfield`, `.m-input`, `.seg`, `.btn-spinner`, etc.
+- `src/app/core/services/theme.service.ts` — `apply()` escribe `data-theme` en `<html>`
+
+### ✅ Fase 2 — Shell (COMPLETA)
+- [x] `shared/components/app-icon/app-icon.component.ts` — ~60 SVGs Lucide inline; inputs: `name`, `size`(18), `strokeWidth`(1.75). Iconos añadidos: `sparkles`, `building`, `puzzle`
+- [x] `layout/main-layout/` — wrapper `.app`, `<main class="ds-content">`
+- [x] `layout/sidebar/` — `.ds-sidebar`, nav groups, `<app-icon>`
+- [x] `layout/topbar/` — `.ds-topbar`, user menu, `<app-icon>`
+
+### ✅ Fase 3 — Pantallas
+
+| # | Pantalla | Estado | Notas |
+|---|---|---|---|
+| 1 | Dashboard | ✅ | KPIs + SVG sparklines inline + SVG bar chart (sin ApexCharts). Tabs de rango (7d/30d/90d) |
+| 2 | Facturas — lista | ✅ | `ds-tabs` Todas/Emitidas/Canceladas + búsqueda. Drawer inline al hacer clic en fila (no navega). 9 columnas: NÚMERO·CLIENTE·VENDEDOR·ITEMS·SUBTOTAL·IVA·TOTAL·ESTADO·EMITIDA |
+| 3 | Facturas — detalle | ✅ | Ruta `/invoices/:id` sigue activa como página completa (acceso directo por URL) |
+| 4 | Productos — lista + ajuste stock | ✅ | `ds-tabs` Todos/Stock bajo/Agotados + búsqueda client-side. 8 columnas. `stock-adjust-dialog` |
+| 5 | POS / Nueva factura | ✅ | Grid de tiles de producto + panel carrito + drawer selector de cliente. Totales reactivos con signals |
+| 6 | Clientes — lista + modal | ✅ | `ds-tabs` con conteo por tipo + columnas COMPRAS/TOTAL. Modal inline: historial del cliente (`.ds-alert.accent`) cuando edita |
+| 7 | Platform — Empresas | ✅ | `.platform-banner`, tabs, `.ds-table` |
+| 8 | Platform — Solicitudes módulos | ✅ | Vista dual: platform vs store catalog |
+| 9 | Auth — Login | ✅ | Diseño handoff: `.auth-wrap` / `.aside` / `.main-col` |
+| 10 | Auth — Register | ✅ | 3 pasos: Empresa → Admin → Módulos |
+| 11 | Landing | ✅ | nav, hero, features, pricing, FAQ, CTA |
+
+### ⏳ Pendiente de migrar al nuevo diseño
+
+| Pantalla | Archivo | Referencia | Patrón sugerido |
+|---|---|---|---|
+| Proveedores — lista | `features/suppliers/` | `customers.jsx` (mismo patrón) | `ds-tabs` + tabla 7 col + modal inline |
+| Usuarios | `features/users/` | CRUD patrón clientes | Modal inline, roles como badges |
+| Tasas de IVA | `features/tax-rates/` | CRUD patrón clientes | Tabla simple + modal inline |
+| Platform — Auditoría | `features/platform/audit-logs/` | `src/screens/audit.jsx` | Filtros de fecha + tabla de eventos |
+| Company detail | `features/companies/company-detail/` | — | Tabs info / módulos / usuarios |
+
+### ⏳ Fase 4 — Limpieza (PENDIENTE)
+- Desinstalar `@angular/material` cuando ningún componente lo use
+- Borrar SCSS viejos componente a componente
+- Dejar solo los tokens nuevos en `styles.scss`
+- Revisar `invoice-detail.component` (página completa) — evaluar si se mantiene o se elimina la ruta directa
+
+---
+
+## Convenciones importantes
+
+- **Iconos:** usar `<app-icon name="...">` en todos los templates nuevos. Los `mat-menu` internos pueden mantener `<mat-icon>` temporalmente.
+- **Tablas:** usar `<table class="ds-table">`.
+- **Tabs de pantalla:** usar `<div class="ds-tabs"><button class="ds-tab" [class.active]="...">` con `<span class="count">N</span>` dentro del botón.
+- **Modales inline:** para listas (clientes, etc.) usar `@if (modalOpen())` con `.modal-backdrop` → `.modal-box`. Ver `clients-list.component.html` como referencia.
+- **Drawers inline:** para paneles laterales (facturas, clientes) usar `@if (selected())` con `.drawer-backdrop` + `.drawer`. El drawer tiene `drawer-head`, `drawer-body`, `drawer-foot`.
+- **Diálogos:** mantener `MatDialog` (con `ConfirmDialogComponent`) para confirmaciones destructivas.
+- **Toasts:** mantener `MatSnackBar`.
+- **Formularios:** `ReactiveFormsModule`. En formularios nuevos usar `.mfield` + `.m-input` (no `mat-form-field`).
+- **ApexCharts:** EVITAR — reemplazar con SVG inline para sparklines y gráficos de barras simples (evita freeze del navegador).
+- **Carga de datos client-side:** para pantallas con tabs + búsqueda, cargar todos los registros de una vez (`limit: 500` o `limit: 1000`) y filtrar con `computed()`. Patrón: `private allItems = signal<T[]>([])` + `filteredItems = computed(...)`.
+- **`toSignal` para búsqueda:** `const q = toSignal(ctrl.valueChanges.pipe(startWith('')), { initialValue: '' })` luego usar en `computed()`.
+- **Campos extra del backend:** si el backend retorna campos no definidos en el modelo TypeScript, usar `$any(obj).fieldName` en el template.
+- **IVA Ecuador:** siempre 15%.
+- **RUC:** 13 dígitos · **Cédula:** 10 dígitos.
+- **Consumidor Final:** opción por defecto en selector de cliente.
+
+---
+
+## Archivos de referencia del prototipo
+
+Todos están en `design-handoff/pymeflowec/project/`:
+
+| Archivo | Contenido |
+|---|---|
+| `angular-handoff/auth.component.scss` | SCSS para Login y Register |
+| `angular-handoff/landing.component.scss` | SCSS para Landing |
+| `angular-handoff/login.component.ts` | Plantilla Login |
+| `angular-handoff/register.component.ts` | Plantilla Register |
+| `angular-handoff/landing.component.ts` | Plantilla Landing |
+| `src/screens/auth.jsx` | Auth React (referencia visual) |
+| `src/screens/landing.jsx` | Landing React (referencia visual) |
+| `src/screens/audit.jsx` | Auditoría (pendiente) |
+| `styles.css` | Design system CSS completo |
+
+---
+
+## Comandos útiles
+
+```bash
+ng serve                                 # dev server en localhost:4200
+ng build                                 # build de producción
+ng build --configuration development     # build dev (más rápido)
+```

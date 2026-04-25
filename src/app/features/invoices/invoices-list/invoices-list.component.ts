@@ -8,7 +8,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { InvoicesService } from '../../../core/services/invoices.service';
 import { InvoicePdfService } from '../../../core/services/invoice-pdf.service';
-import { Invoice } from '../../../core/models/invoice.model';
+import { ProductsService } from '../../../core/services/products.service';
+import { Invoice, InvoiceDetail } from '../../../core/models/invoice.model';
+import { Product } from '../../../core/models/product.model';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -20,11 +22,12 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './invoices-list.component.html',
 })
 export class InvoicesListComponent implements OnInit {
-  private invoicesService = inject(InvoicesService);
-  private pdfService      = inject(InvoicePdfService);
-  private snackBar        = inject(MatSnackBar);
-  private dialog          = inject(MatDialog);
-  authService             = inject(AuthService);
+  private invoicesService  = inject(InvoicesService);
+  private productsService  = inject(ProductsService);
+  private pdfService       = inject(InvoicePdfService);
+  private snackBar         = inject(MatSnackBar);
+  private dialog           = inject(MatDialog);
+  authService              = inject(AuthService);
 
   private allInvoices = signal<Invoice[]>([]);
   loading         = signal(true);
@@ -34,6 +37,9 @@ export class InvoicesListComponent implements OnInit {
   drawerLoading   = signal(false);
   actionLoading   = signal(false);
   pdfLoading      = signal(false);
+
+  productPopup        = signal<Product | null>(null);
+  productPopupLoading = signal(false);
 
   private searchQuery = toSignal(
     this.searchCtrl.valueChanges.pipe(startWith('')),
@@ -79,7 +85,11 @@ export class InvoicesListComponent implements OnInit {
     if (!inv.details) {
       this.drawerLoading.set(true);
       this.invoicesService.getById(inv.id).subscribe({
-        next: full => { this.selectedInvoice.set(full); this.drawerLoading.set(false); },
+        next: full => {
+          this.selectedInvoice.set(full);
+          this.allInvoices.update(list => list.map(i => i.id === full.id ? full : i));
+          this.drawerLoading.set(false);
+        },
         error: ()   => this.drawerLoading.set(false),
       });
     }
@@ -124,6 +134,30 @@ export class InvoicesListComponent implements OnInit {
         error: () => this.actionLoading.set(false),
       });
     });
+  }
+
+  openProductPopup(detail: InvoiceDetail, event: MouseEvent): void {
+    event.stopPropagation();
+    if (!detail.product_id) return;
+    this.productPopupLoading.set(true);
+    this.productPopup.set(detail.product ?? null);
+    this.productsService.getById(detail.product_id).subscribe({
+      next: p  => { this.productPopup.set(p); this.productPopupLoading.set(false); },
+      error: () => this.productPopupLoading.set(false),
+    });
+  }
+
+  closeProductPopup(): void {
+    this.productPopup.set(null);
+    this.productPopupLoading.set(false);
+  }
+
+  stockPct(p: Product): number {
+    return Math.min(100, Math.round((p.stock / Math.max(p.min_stock * 2, 1)) * 100));
+  }
+
+  stockState(p: Product): 'low' | 'out' | '' {
+    return p.stock === 0 ? 'out' : p.stock <= p.min_stock ? 'low' : '';
   }
 
   formatDateTime(date: string): string {

@@ -83,6 +83,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   hasPendingModules  = computed(() => this.authService.isStoreUser() && this.modulesSvc.pendingCodes().size > 0);
   pendingModulesCount = computed(() => this.modulesSvc.pendingCodes().size);
+  hasRequestableModules = computed(() =>
+    !this.modulesSvc.loadFailed() &&
+    this.modulesSvc.catalog().some(m => m.status !== 'APPROVED' && m.status !== 'PENDING')
+  );
 
   hasAnalytics = computed(() => {
     const isCV = this.adminViewSvc.isClientViewMode();
