@@ -923,6 +923,60 @@ a { color: inherit; }
   }
 }
 
+// ── Filter dropdown ───────────────────────────────────────────────
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border-ds);
+  border-radius: var(--radius-ds);
+  box-shadow: var(--shadow-lg-ds);
+  z-index: 200;
+  padding: 6px;
+
+  &-sep { height: 1px; background: var(--border-ds); margin: 4px 0; }
+
+  &-item {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 7px 10px;
+    border-radius: var(--radius-sm-ds);
+    font-size: 12.5px; font-family: var(--font-ui);
+    color: var(--text-ds); background: none; border: none;
+    cursor: pointer; text-align: left; white-space: nowrap;
+    &:hover { background: var(--surface-2); }
+    &.selected { color: var(--accent); font-weight: 600; }
+  }
+
+  &-dates {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 8px 10px;
+    label {
+      display: block; margin-bottom: 3px;
+      font-size: 10.5px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-subtle);
+    }
+    input[type="date"] {
+      width: 100%; height: 30px; padding: 0 8px;
+      border: 1px solid var(--border-ds);
+      border-radius: var(--radius-sm-ds);
+      background: var(--surface-2);
+      font-size: 12.5px; font-family: var(--font-ui);
+      color: var(--text-ds); outline: none;
+      &:focus { border-color: var(--accent); }
+    }
+  }
+
+  &-foot {
+    display: flex; justify-content: flex-end; gap: 6px;
+    padding: 6px 4px 2px;
+    border-top: 1px solid var(--border-ds);
+    margin-top: 4px;
+  }
+}
+
 // ── Drawer ────────────────────────────────────────────────────────
 .drawer-backdrop {
   position: fixed; inset: 0;

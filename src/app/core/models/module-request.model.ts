@@ -1,4 +1,4 @@
-export type ModuleRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ModuleRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
 
 export interface PlatformModule {
   id: number;
@@ -19,6 +19,7 @@ export interface ModuleRequest {
   reviewed_by?: number | null;
   reviewed_at?: string | null;
   comments?: string | null;
+  expires_at?: string | null;
   created_at: string;
   updated_at: string;
   company?: { id: number; name: string } | null;
@@ -34,7 +35,8 @@ export interface CreateModuleRequestDto {
 
 /** Módulo de la plataforma con estado de acceso para la empresa actual */
 export interface ModuleCatalogItem extends PlatformModule {
-  /** APPROVED = activo, PENDING = solicitud en espera, REJECTED = rechazado, null = sin solicitud */
+  /** APPROVED = activo, PENDING = en espera, REJECTED = rechazado, REVOKED = revocado, null = sin solicitud */
   status: ModuleRequestStatus | null;
   request_id: number | null;
+  expires_at: string | null;
 }

@@ -1,109 +1,352 @@
-<!-- Platform view -->
+<!-- ═══════════════════════════════════════════════════════════
+     PLATFORM VIEW
+════════════════════════════════════════════════════════════ -->
 @if (isPlatformUser) {
   <div>
-    <div class="platform-banner"><span class="dot"></span>Zona interna · Platform Support</div>
+    <div class="platform-banner"><span class="dot"></span>Zona interna · Platform Admin</div>
 
     <div class="page">
       <div class="page-head">
         <div>
-          <h1 class="page-title">Solicitudes de módulos</h1>
-          <p class="page-sub-en">Module requests · {{ pendingCount() }} pendientes</p>
+          <h1 class="page-title">Módulos por empresa</h1>
+          <p class="page-sub-en">Company modules · {{ pendingCount() }} solicitudes pendientes</p>
         </div>
         <div class="page-actions">
-          <button class="btn secondary" (click)="loadAll()">
+          <button class="btn secondary" (click)="loadPlatformData()">
             <app-icon name="refresh" [size]="14" class="icon" />Actualizar
           </button>
         </div>
       </div>
 
+      <!-- Pending alert -->
       @if (pendingCount() > 0) {
         <div class="ds-alert" style="margin-bottom:20px">
           <app-icon name="sparkles" [size]="18" class="alert-icon" style="color:var(--accent)" />
           <div>
-            <div style="font-weight:600;font-size:13.5px">Tienes {{ pendingCount() }} solicitudes esperando</div>
+            <div style="font-weight:600;font-size:13.5px">{{ pendingCount() }} solicitudes esperando revisión</div>
             <div style="font-size:12.5px;color:var(--text-muted-ds);margin-top:2px">
-              Revisa y aprueba para activar módulos pagos en las empresas.
+              Haz clic en una empresa para gestionar sus módulos.
             </div>
           </div>
         </div>
       }
 
-      <!-- Tabs -->
-      <div class="page-tabs">
-        <div class="page-tab" [class.active]="tab() === 'pending'"  (click)="tab.set('pending')">
-          Pendientes <span class="tab-count">{{ pendingCount() }}</span>
+      <!-- Search -->
+      <div class="filters" style="margin-bottom:16px">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13" />
+          <input [formControl]="searchCtrl" placeholder="Buscar empresa o RUC…" />
         </div>
-        <div class="page-tab" [class.active]="tab() === 'approved'" (click)="tab.set('approved')">Aprobadas</div>
-        <div class="page-tab" [class.active]="tab() === 'rejected'" (click)="tab.set('rejected')">Rechazadas</div>
-        <div class="page-tab" [class.active]="tab() === 'all'"      (click)="tab.set('all')">Todas</div>
       </div>
 
-      @if (loading()) {
-        <div style="display:flex;flex-direction:column;gap:12px">
-          @for (i of [1,2,3,4]; track i) {
-            <div class="skel" style="height:80px;border-radius:var(--radius-ds)"></div>
+      <!-- Companies table -->
+      @if (loadingCompanies()) {
+        <div style="display:flex;flex-direction:column;gap:10px">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="skel" style="height:52px;border-radius:var(--radius-ds)"></div>
           }
         </div>
-      } @else if (filteredByTab().length === 0) {
-        <div class="empty" style="padding:72px 24px">
-          <app-icon name="puzzle" [size]="40" style="opacity:.25" />
-          <p>No hay solicitudes en esta categoría</p>
+      } @else if (filteredStats().length === 0) {
+        <div class="empty" style="padding:64px 24px">
+          <app-icon name="building" [size]="36" style="opacity:.25" />
+          <p>No se encontraron empresas</p>
         </div>
       } @else {
-        <div class="card">
-          @for (r of filteredByTab(); track r.id) {
-            <div style="padding:16px 20px;border-bottom:1px solid var(--border-ds);
-                        display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;
-                        &:last-child{border-bottom:none}">
-              <div style="width:40px;height:40px;border-radius:var(--radius-sm-ds);
-                          background:var(--accent-soft);color:var(--accent);display:grid;place-items:center">
-                <app-icon name="puzzle" [size]="20" />
+        <div class="card" style="overflow:hidden">
+          <table class="ds-table">
+            <thead>
+              <tr>
+                <th>Empresa</th>
+                <th>RUC</th>
+                <th>Estado</th>
+                <th style="text-align:center">Activos</th>
+                <th style="text-align:center">Pendientes</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredStats(); track row.company.id) {
+                <tr
+                  style="cursor:pointer"
+                  [class.selected]="selectedCompany()?.id === row.company.id"
+                  (click)="selectCompany(row.company)">
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:32px;height:32px;border-radius:var(--radius-sm-ds);
+                                  background:var(--accent-soft);color:var(--accent);
+                                  display:grid;place-items:center;flex-shrink:0">
+                        <app-icon name="building" [size]="15" />
+                      </div>
+                      <span style="font-weight:600;font-size:13.5px">{{ row.company.name }}</span>
+                    </div>
+                  </td>
+                  <td><span class="mono" style="font-size:12.5px;color:var(--text-muted-ds)">{{ row.company.ruc || '—' }}</span></td>
+                  <td>
+                    <span class="badge {{ companyStatusClass(row.company.status) }}">
+                      {{ companyStatusLabel(row.company.status) }}
+                    </span>
+                  </td>
+                  <td style="text-align:center">
+                    @if (row.approved > 0) {
+                      <span class="badge success">{{ row.approved }}</span>
+                    } @else {
+                      <span style="color:var(--text-subtle);font-size:12.5px">—</span>
+                    }
+                  </td>
+                  <td style="text-align:center">
+                    @if (row.pending > 0) {
+                      <span class="badge warn">{{ row.pending }}</span>
+                    } @else {
+                      <span style="color:var(--text-subtle);font-size:12.5px">—</span>
+                    }
+                  </td>
+                  <td style="text-align:right">
+                    <app-icon name="chevron_right" [size]="15" style="color:var(--text-subtle)" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div><!-- /page -->
+
+    <!-- ── Drawer: Company modules ───────────────────────── -->
+    @if (selectedCompany()) {
+      <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+      <div class="drawer" style="width:460px">
+        <div class="drawer-head">
+          <div>
+            <div style="font-weight:700;font-size:15px">{{ selectedCompany()!.name }}</div>
+            <div style="font-size:12px;color:var(--text-subtle);margin-top:2px">
+              <span class="mono">{{ selectedCompany()!.ruc || 'Sin RUC' }}</span>
+              <span style="margin:0 6px">·</span>
+              <span class="badge {{ companyStatusClass(selectedCompany()!.status) }}" style="font-size:11px">
+                {{ companyStatusLabel(selectedCompany()!.status) }}
+              </span>
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="closeDrawer()">
+            <app-icon name="x" [size]="16" />
+          </button>
+        </div>
+
+        <div class="drawer-body" style="padding:0">
+          @if (loadingModules()) {
+            <div style="padding:24px;display:flex;flex-direction:column;gap:10px">
+              @for (i of [1,2,3]; track i) {
+                <div class="skel" style="height:64px;border-radius:var(--radius-ds)"></div>
+              }
+            </div>
+          } @else {
+
+            <!-- ── Módulos activos ────────────────────────── -->
+            <div style="padding:16px 20px 8px;border-bottom:1px solid var(--border-ds)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                          letter-spacing:.06em;color:var(--text-subtle);margin-bottom:10px">
+                Módulos activos · {{ approvedModules().length }}
               </div>
-              <div>
-                <div style="font-weight:600;font-size:14px;margin-bottom:2px">
-                  <span style="color:var(--accent)">{{ r.module?.name }}</span>
-                  <span style="color:var(--text-subtle)"> · </span>
-                  {{ r.company?.name }}
+              @if (approvedModules().length === 0) {
+                <p style="font-size:13px;color:var(--text-subtle);padding:8px 0 12px">Sin módulos activos.</p>
+              } @else {
+                @for (item of approvedModules(); track item.id) {
+                  <div style="display:flex;align-items:center;justify-content:space-between;
+                              padding:10px 0;border-bottom:1px solid var(--border-ds);
+                              &:last-child{border-bottom:none}">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:34px;height:34px;border-radius:var(--radius-sm-ds);
+                                  background:var(--success-soft);color:var(--success);
+                                  display:grid;place-items:center;flex-shrink:0">
+                        <app-icon name="puzzle" [size]="16" />
+                      </div>
+                      <div>
+                        <div style="font-weight:600;font-size:13.5px">{{ item.name }}</div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+                          @if (isExpired(item.expires_at)) {
+                            <span style="font-size:11.5px;color:var(--danger);font-weight:600">
+                              <app-icon name="alert_circle" [size]="11" /> Vencido
+                            </span>
+                          } @else {
+                            <span style="font-size:11.5px;color:var(--text-subtle)">
+                              <app-icon name="clock" [size]="11" />
+                              {{ expiryLabel(item.expires_at) }}
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      class="btn danger sm"
+                      [disabled]="processingId() !== null && (processingId() === item.request_id || processingId() === -item.id)"
+                      (click)="revoke(item)">
+                      @if (processingId() !== null && (processingId() === item.request_id || processingId() === -item.id)) {
+                        <span class="btn-spinner"></span>
+                      } @else {
+                        <app-icon name="x" [size]="12" class="icon" />
+                      }
+                      Revocar
+                    </button>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- ── Solicitudes pendientes ─────────────────── -->
+            <div style="padding:16px 20px 8px;border-bottom:1px solid var(--border-ds)">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                          letter-spacing:.06em;color:var(--text-subtle);margin-bottom:10px">
+                Solicitudes pendientes · {{ pendingModules().length }}
+              </div>
+              @if (pendingModules().length === 0) {
+                <p style="font-size:13px;color:var(--text-subtle);padding:8px 0 12px">Sin solicitudes pendientes.</p>
+              } @else {
+                @for (item of pendingModules(); track item.id) {
+                  <div style="display:flex;align-items:center;justify-content:space-between;
+                              padding:10px 0;border-bottom:1px solid var(--border-ds);
+                              &:last-child{border-bottom:none}">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:34px;height:34px;border-radius:var(--radius-sm-ds);
+                                  background:var(--warn-soft);color:var(--warn);
+                                  display:grid;place-items:center;flex-shrink:0">
+                        <app-icon name="puzzle" [size]="16" />
+                      </div>
+                      <div>
+                        <div style="font-weight:600;font-size:13.5px">{{ item.name }}</div>
+                        <span class="badge warn" style="font-size:11px;margin-top:3px">Pendiente</span>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                      <button
+                        class="btn ghost sm"
+                        [disabled]="processingId() !== null && processingId() === item.request_id"
+                        (click)="reject(item)">
+                        <app-icon name="x" [size]="12" class="icon" />Rechazar
+                      </button>
+                      <button
+                        class="btn primary sm"
+                        [disabled]="processingId() !== null && processingId() === item.request_id"
+                        (click)="openApproveModal(item)">
+                        @if (processingId() !== null && processingId() === item.request_id) {
+                          <span class="btn-spinner"></span>
+                        } @else {
+                          <app-icon name="check" [size]="12" class="icon" />
+                        }
+                        Aprobar
+                      </button>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- ── Inactivos / rechazados / revocados ────── -->
+            @if (inactiveModules().length > 0) {
+              <div style="padding:16px 20px 12px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                            letter-spacing:.06em;color:var(--text-subtle);margin-bottom:10px">
+                  Inactivos · {{ inactiveModules().length }}
                 </div>
-                <div style="font-size:12px;color:var(--text-subtle);display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-                  <span style="display:inline-flex;align-items:center;gap:4px">
-                    <app-icon name="users" [size]="11" />{{ r.requested_by }}
-                  </span>
-                  <span class="mono">{{ r.created_at | date:'dd/MM HH:mm' }}</span>
-                  <span class="mono" style="color:var(--text-subtle)">{{ r.module?.code }}</span>
-                  <span class="status-dot" [attr.data-s]="r.status">{{ statusLabel(r.status) }}</span>
-                </div>
-                @if (r.comments) {
-                  <div style="margin-top:8px;padding:8px 12px;background:var(--surface-2);
-                              border-left:2px solid var(--accent);border-radius:4px;
-                              font-size:12.5px;color:var(--text-muted-ds);font-style:italic">
-                    "{{ r.comments }}"
+                @for (item of inactiveModules(); track item.id) {
+                  <div style="display:flex;align-items:center;gap:10px;
+                              padding:8px 0;border-bottom:1px solid var(--border-ds);
+                              &:last-child{border-bottom:none};opacity:.65">
+                    <div style="width:34px;height:34px;border-radius:var(--radius-sm-ds);
+                                background:var(--surface-2);color:var(--text-subtle);
+                                display:grid;place-items:center;flex-shrink:0">
+                      <app-icon name="puzzle" [size]="16" />
+                    </div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13px;color:var(--text-muted-ds)">{{ item.name }}</div>
+                    </div>
+                    @if (item.status === 'REVOKED') {
+                      <span class="badge danger" style="font-size:11px">Revocado</span>
+                    } @else {
+                      <span class="badge" style="font-size:11px">Rechazado</span>
+                    }
                   </div>
                 }
               </div>
-              <div style="display:flex;gap:6px">
-                @if (r.status.toLowerCase() === 'pending') {
-                  <button class="btn danger sm" (click)="deactivate(r)">
-                    <app-icon name="x" [size]="12" class="icon" />Rechazar
-                  </button>
-                  <button class="btn primary sm" (click)="activate(r)">
-                    <app-icon name="check" [size]="12" class="icon" />Aprobar
-                  </button>
-                } @else {
-                  <button class="btn ghost sm">
-                    <app-icon name="eye" [size]="12" class="icon" />Ver detalle
-                  </button>
-                }
-              </div>
+            }
+
+          }<!-- /else loading -->
+        </div><!-- /drawer-body -->
+
+        <div class="drawer-foot">
+          <button class="btn secondary" (click)="closeDrawer()">Cerrar</button>
+        </div>
+      </div><!-- /drawer -->
+    }
+
+    <!-- ── Approve modal ─────────────────────────────────── -->
+    @if (approveTarget()) {
+      <div class="modal-backdrop" style="z-index:200" (click)="closeApproveModal()">
+        <div class="modal-box" style="width:420px;padding:28px" (click)="$event.stopPropagation()">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+            <div>
+              <div style="font-weight:700;font-size:16px;margin-bottom:4px">Aprobar módulo</div>
+              <div style="font-size:13px;color:var(--text-muted-ds)">{{ approveTarget()!.name }}</div>
+            </div>
+            <button class="btn ghost sm" (click)="closeApproveModal()">
+              <app-icon name="x" [size]="16" />
+            </button>
+          </div>
+
+          <!-- Tipo de aprobación -->
+          <div style="margin-bottom:20px">
+            <div style="font-size:12px;font-weight:600;color:var(--text-muted-ds);
+                        text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+              Tipo de aprobación
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button
+                class="btn"
+                [class.primary]="approveMode() === 'permanent'"
+                [class.secondary]="approveMode() !== 'permanent'"
+                (click)="approveMode.set('permanent')">
+                <app-icon name="check" [size]="14" class="icon" />Permanente
+              </button>
+              <button
+                class="btn"
+                [class.primary]="approveMode() === 'temporal'"
+                [class.secondary]="approveMode() !== 'temporal'"
+                (click)="approveMode.set('temporal')">
+                <app-icon name="clock" [size]="14" class="icon" />Temporal
+              </button>
+            </div>
+            <p style="font-size:12px;color:var(--text-subtle);margin-top:8px">
+              @if (approveMode() === 'permanent') {
+                El módulo quedará activo indefinidamente hasta que se revoque manualmente.
+              } @else {
+                El acceso se desactivará automáticamente en la fecha indicada.
+              }
+            </p>
+          </div>
+
+          <!-- Date picker (solo temporal) -->
+          @if (approveMode() === 'temporal') {
+            <div class="mfield" style="margin-bottom:20px">
+              <label>Fecha de expiración</label>
+              <input type="date" class="m-input" [formControl]="expiresAtCtrl" [min]="minDate" />
             </div>
           }
+
+          <!-- Actions -->
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn secondary" (click)="closeApproveModal()">Cancelar</button>
+            <button class="btn primary" (click)="confirmApprove()">
+              <app-icon name="check" [size]="14" class="icon" />Confirmar aprobación
+            </button>
+          </div>
         </div>
-      }
-    </div>
-  </div>
+      </div>
+    }
+
+  </div><!-- /platform wrapper -->
 
 } @else {
-  <!-- Store view — module catalog -->
+<!-- ═══════════════════════════════════════════════════════════
+     STORE VIEW — Module catalog
+════════════════════════════════════════════════════════════ -->
   <div class="page">
     <div class="page-head">
       <div>
@@ -141,17 +384,25 @@
                 <span class="badge success">Activo</span>
               } @else if (item.status === 'PENDING') {
                 <span class="badge warn">En espera</span>
+              } @else if (item.status === 'REVOKED') {
+                <span class="badge danger">Revocado</span>
               }
             </div>
             <div style="font-weight:700;font-size:15px;margin-bottom:4px;color:var(--text-ds)">{{ item.name }}</div>
             <div style="font-size:13px;color:var(--text-muted-ds);margin-bottom:16px">{{ item.description }}</div>
-            @if (!item.status) {
+            @if (!item.status || item.status === 'REJECTED' || item.status === 'REVOKED') {
               <button class="btn primary sm" style="width:100%"
                       [disabled]="requestingId() === item.id"
                       (click)="requestModule(item)">
                 @if (requestingId() === item.id) { <span class="btn-spinner"></span> }
                 Solicitar módulo
               </button>
+            }
+            @if (item.status === 'APPROVED' && item.expires_at) {
+              <div style="font-size:11.5px;color:var(--text-subtle);text-align:center">
+                <app-icon name="clock" [size]="11" />
+                {{ expiryLabel(item.expires_at) }}
+              </div>
             }
           </div>
         }

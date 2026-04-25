@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -41,6 +41,15 @@ export class InvoicesListComponent implements OnInit {
   productPopup        = signal<Product | null>(null);
   productPopupLoading = signal(false);
 
+  // Filter state
+  dateFrom       = signal('');
+  dateTo         = signal('');
+  vendorFilter   = signal('');
+  clientFilter   = signal('');
+  showDatePanel   = signal(false);
+  showVendorPanel = signal(false);
+  showClientPanel = signal(false);
+
   private searchQuery = toSignal(
     this.searchCtrl.valueChanges.pipe(startWith('')),
     { initialValue: '' }
@@ -55,16 +64,48 @@ export class InvoicesListComponent implements OnInit {
   );
   taxIssued = computed(() => this.totalIssued() * 0.15);
 
+  uniqueVendors = computed(() => {
+    const set = new Set<string>();
+    for (const inv of this.allInvoices()) {
+      const name = (inv as any).createdBy?.full_name as string | undefined;
+      if (name) set.add(name);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
+  uniqueClients = computed(() => {
+    const set = new Set<string>();
+    for (const inv of this.allInvoices()) {
+      if (inv.customer?.full_name) set.add(inv.customer.full_name);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  });
+
   filteredInvoices = computed(() => {
     let list = this.allInvoices();
+
     const tab = this.tabFilter();
     if (tab === 'issued')    list = list.filter(i => i.status === 'ISSUED');
     if (tab === 'cancelled') list = list.filter(i => i.status === 'CANCELLED');
-    const q = (this.searchQuery() ?? '').toLowerCase();
+
+    const q = (this.searchQuery() ?? '').toLowerCase().trim();
     if (q) list = list.filter(i =>
       i.invoice_number.toLowerCase().includes(q) ||
-      (i.customer?.full_name ?? '').toLowerCase().includes(q)
+      (i.customer?.full_name ?? '').toLowerCase().includes(q) ||
+      (i.customer?.document_number ?? '').toLowerCase().includes(q)
     );
+
+    const from = this.dateFrom();
+    const to   = this.dateTo();
+    if (from) list = list.filter(i => i.issue_date.slice(0, 10) >= from);
+    if (to)   list = list.filter(i => i.issue_date.slice(0, 10) <= to);
+
+    const vendor = this.vendorFilter();
+    if (vendor) list = list.filter(i => (i as any).createdBy?.full_name === vendor);
+
+    const client = this.clientFilter();
+    if (client) list = list.filter(i => i.customer?.full_name === client);
+
     return list;
   });
 
@@ -150,6 +191,40 @@ export class InvoicesListComponent implements OnInit {
   closeProductPopup(): void {
     this.productPopup.set(null);
     this.productPopupLoading.set(false);
+  }
+
+  @HostListener('document:click')
+  closeAllPanels(): void {
+    this.showDatePanel.set(false);
+    this.showVendorPanel.set(false);
+    this.showClientPanel.set(false);
+  }
+
+  toggleDatePanel(e: MouseEvent): void {
+    e.stopPropagation();
+    const next = !this.showDatePanel();
+    this.closeAllPanels();
+    this.showDatePanel.set(next);
+  }
+
+  toggleVendorPanel(e: MouseEvent): void {
+    e.stopPropagation();
+    const next = !this.showVendorPanel();
+    this.closeAllPanels();
+    this.showVendorPanel.set(next);
+  }
+
+  toggleClientPanel(e: MouseEvent): void {
+    e.stopPropagation();
+    const next = !this.showClientPanel();
+    this.closeAllPanels();
+    this.showClientPanel.set(next);
+  }
+
+  clearDateFilter(): void {
+    this.dateFrom.set('');
+    this.dateTo.set('');
+    this.showDatePanel.set(false);
   }
 
   stockPct(p: Product): number {

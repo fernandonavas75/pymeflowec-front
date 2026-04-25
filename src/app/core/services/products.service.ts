@@ -4,6 +4,12 @@ import { ApiService } from './api.service';
 import { Product, CreateProductDto, UpdateProductDto, AdjustStockDto } from '../models/product.model';
 import { PaginatedResponse, PaginationParams, ApiResponse, ApiListResponse } from '../models/pagination.model';
 
+export interface BulkCreateResult {
+  created_count: number;
+  failed_count: number;
+  failed: { row: number; name: string; errors: string[] }[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -60,5 +66,9 @@ export class ProductsService {
 
   remove(id: number | string): Observable<void> {
     return this.api.delete<void>(`/products/${id}`);
+  }
+
+  bulkCreate(products: object[]): Observable<BulkCreateResult> {
+    return this.api.post<{ success: true } & BulkCreateResult>('/products/bulk', { products });
   }
 }

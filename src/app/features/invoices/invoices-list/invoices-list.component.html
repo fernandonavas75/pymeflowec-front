@@ -37,17 +37,103 @@
   <div class="filters">
     <div class="filter-search">
       <app-icon name="search" [size]="13"/>
-      <input placeholder="Buscar por número o cliente…" [formControl]="searchCtrl"/>
+      <input placeholder="Buscar por número, cliente o documento…" [formControl]="searchCtrl"/>
     </div>
-    <button class="filter-chip" type="button">
-      <app-icon name="filter" [size]="13"/>Fecha
-    </button>
-    <button class="filter-chip" type="button">
-      <app-icon name="users" [size]="13"/>Vendedor
-    </button>
-    <button class="filter-chip" type="button">
-      <app-icon name="filter" [size]="13"/>Cliente
-    </button>
+
+    <!-- Fecha -->
+    <div style="position:relative">
+      <button class="filter-chip" [class.active]="dateFrom() || dateTo()" type="button" (click)="toggleDatePanel($event)">
+        <app-icon name="calendar" [size]="13"/>
+        <span>{{ (dateFrom() || dateTo()) ? 'Fecha ·' : 'Fecha' }}</span>
+        @if (dateFrom() || dateTo()) {
+          <span style="display:inline-flex;align-items:center;margin-left:2px" (click)="$event.stopPropagation(); clearDateFilter()">
+            <app-icon name="x" [size]="11"/>
+          </span>
+        }
+      </button>
+      @if (showDatePanel()) {
+        <div class="filter-dropdown" (click)="$event.stopPropagation()">
+          <div class="filter-dropdown-dates">
+            <div>
+              <label>Desde</label>
+              <input type="date" [value]="dateFrom()" (change)="dateFrom.set($any($event.target).value)"/>
+            </div>
+            <div>
+              <label>Hasta</label>
+              <input type="date" [value]="dateTo()" (change)="dateTo.set($any($event.target).value)"/>
+            </div>
+          </div>
+          <div class="filter-dropdown-foot">
+            <button class="btn ghost sm" type="button" (click)="clearDateFilter()">Limpiar</button>
+            <button class="btn primary sm" type="button" (click)="showDatePanel.set(false)">Aplicar</button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Vendedor -->
+    <div style="position:relative">
+      <button class="filter-chip" [class.active]="vendorFilter()" type="button" (click)="toggleVendorPanel($event)">
+        <app-icon name="users" [size]="13"/>
+        <span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ vendorFilter() || 'Vendedor' }}</span>
+        @if (vendorFilter()) {
+          <span style="display:inline-flex;align-items:center;margin-left:2px" (click)="$event.stopPropagation(); vendorFilter.set('')">
+            <app-icon name="x" [size]="11"/>
+          </span>
+        }
+      </button>
+      @if (showVendorPanel()) {
+        <div class="filter-dropdown" (click)="$event.stopPropagation()">
+          <button class="filter-dropdown-item" [class.selected]="!vendorFilter()" type="button"
+                  (click)="vendorFilter.set(''); showVendorPanel.set(false)">
+            Todos los vendedores
+          </button>
+          <div class="filter-dropdown-sep"></div>
+          @for (v of uniqueVendors(); track v) {
+            <button class="filter-dropdown-item" [class.selected]="vendorFilter() === v" type="button"
+                    (click)="vendorFilter.set(v); showVendorPanel.set(false)">
+              @if (vendorFilter() === v) { <app-icon name="check" [size]="12"/> }
+              {{ v }}
+            </button>
+          }
+          @if (uniqueVendors().length === 0) {
+            <div style="padding:10px 12px;font-size:12px;color:var(--text-subtle)">Sin datos</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Cliente -->
+    <div style="position:relative">
+      <button class="filter-chip" [class.active]="clientFilter()" type="button" (click)="toggleClientPanel($event)">
+        <app-icon name="user" [size]="13"/>
+        <span style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ clientFilter() || 'Cliente' }}</span>
+        @if (clientFilter()) {
+          <span style="display:inline-flex;align-items:center;margin-left:2px" (click)="$event.stopPropagation(); clientFilter.set('')">
+            <app-icon name="x" [size]="11"/>
+          </span>
+        }
+      </button>
+      @if (showClientPanel()) {
+        <div class="filter-dropdown" style="max-height:260px;overflow-y:auto" (click)="$event.stopPropagation()">
+          <button class="filter-dropdown-item" [class.selected]="!clientFilter()" type="button"
+                  (click)="clientFilter.set(''); showClientPanel.set(false)">
+            Todos los clientes
+          </button>
+          <div class="filter-dropdown-sep"></div>
+          @for (c of uniqueClients(); track c) {
+            <button class="filter-dropdown-item" [class.selected]="clientFilter() === c" type="button"
+                    (click)="clientFilter.set(c); showClientPanel.set(false)">
+              @if (clientFilter() === c) { <app-icon name="check" [size]="12"/> }
+              {{ c }}
+            </button>
+          }
+          @if (uniqueClients().length === 0) {
+            <div style="padding:10px 12px;font-size:12px;color:var(--text-subtle)">Sin datos</div>
+          }
+        </div>
+      }
+    </div>
   </div>
 
   <!-- ── Table card ──────────────────────────────────────────────── -->
@@ -67,6 +153,12 @@
         @if (searchCtrl.value) {
           <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">
             Limpiar búsqueda
+          </button>
+        }
+        @if (dateFrom() || dateTo() || vendorFilter() || clientFilter()) {
+          <button class="btn ghost sm" type="button"
+                  (click)="dateFrom.set(''); dateTo.set(''); vendorFilter.set(''); clientFilter.set('')">
+            Limpiar filtros
           </button>
         }
       </div>

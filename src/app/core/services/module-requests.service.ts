@@ -38,12 +38,24 @@ export class ModuleRequestsService {
     return this.http.post<ApiResponse<ModuleRequest>>(this.base, dto).pipe(map(r => r?.data));
   }
 
-  approve(id: number): Observable<void> {
-    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/approve`, {}).pipe(map(() => void 0));
+  approve(id: number, expiresAt?: string): Observable<void> {
+    const body: Record<string, unknown> = {};
+    if (expiresAt) body['expires_at'] = expiresAt;
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/approve`, body).pipe(map(() => void 0));
   }
 
   reject(id: number, comments?: string): Observable<void> {
     return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/reject`, { comments }).pipe(map(() => void 0));
+  }
+
+  revoke(id: number): Observable<void> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/${id}/revoke`, {}).pipe(map(() => void 0));
+  }
+
+  revokeByModule(companyId: number, moduleId: number): Observable<void> {
+    return this.http.patch<ApiResponse<ModuleRequest>>(`${this.base}/revoke-module`, {
+      company_id: companyId, module_id: moduleId,
+    }).pipe(map(() => void 0));
   }
 
   listPlatformModules(): Observable<PlatformModule[]> {

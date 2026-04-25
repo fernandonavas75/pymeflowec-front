@@ -13,6 +13,9 @@
         <button class="btn secondary" type="button">
           <app-icon name="download" [size]="14"/>Exportar
         </button>
+        <button class="btn secondary" type="button" (click)="openCsvImport()">
+          <app-icon name="upload" [size]="14"/>Importar CSV
+        </button>
         <a routerLink="/products/new" class="btn primary">
           <app-icon name="plus" [size]="14"/>Nuevo producto
         </a>

@@ -14,6 +14,7 @@ import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.c
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { StockAdjustDialogComponent } from '../stock-adjust-dialog/stock-adjust-dialog.component';
+import { CsvImportDialogComponent } from '../csv-import-dialog/csv-import-dialog.component';
 
 @Component({
   selector: 'app-products-list',
@@ -138,6 +139,15 @@ export class ProductsListComponent implements OnInit {
   }
 
   closeProductPopup(): void { this.productPopup.set(null); }
+
+  openCsvImport(): void {
+    const ref = this.dialog.open(CsvImportDialogComponent, {
+      width: '760px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
+    ref.afterClosed().subscribe(result => { if (result) this.load(); });
+  }
 
   canEdit(): boolean        { return this.authService.isSystemUser() || this.authService.isStoreAdmin(); }
   canAdjustStock(): boolean { return this.authService.isStoreAdmin() || this.authService.isStoreWarehouse(); }
