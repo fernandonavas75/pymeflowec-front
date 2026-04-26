@@ -105,6 +105,14 @@ export class AuthService {
     );
   }
 
+  forgotPassword(email: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post('/users/forgot-password', { email });
+  }
+
+  resetPassword(token: string, new_password: string): Observable<{ success: boolean; message: string }> {
+    return this.api.post('/users/reset-password', { token, new_password });
+  }
+
   refreshToken(): Observable<{ access_token: string }> {
     const refresh_token = this.getRefreshToken();
     // Backend spreads at top level: { success, access_token }

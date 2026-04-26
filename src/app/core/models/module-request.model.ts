@@ -1,4 +1,4 @@
-export type ModuleRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
+export type ModuleRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED' | 'EXPIRED';
 
 export interface PlatformModule {
   id: number;
@@ -39,4 +39,6 @@ export interface ModuleCatalogItem extends PlatformModule {
   status: ModuleRequestStatus | null;
   request_id: number | null;
   expires_at: string | null;
+  /** true cuando el acceso fue activado como demo de trial (approved_by === null) */
+  is_trial: boolean;
 }

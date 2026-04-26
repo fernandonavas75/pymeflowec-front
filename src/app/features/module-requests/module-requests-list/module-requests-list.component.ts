@@ -92,7 +92,7 @@ export class ModuleRequestsListComponent implements OnInit {
   approvedModules = computed(() => this.companyModules().filter(m => m.status === 'APPROVED'));
   pendingModules  = computed(() => this.companyModules().filter(m => m.status === 'PENDING'));
   inactiveModules = computed(() =>
-    this.companyModules().filter(m => m.status === 'REJECTED' || m.status === 'REVOKED')
+    this.companyModules().filter(m => m.status === 'REJECTED' || m.status === 'REVOKED' || m.status === 'EXPIRED')
   );
 
   // ── Lifecycle ─────────────────────────────────────────────
@@ -103,6 +103,7 @@ export class ModuleRequestsListComponent implements OnInit {
   // ── Platform methods ──────────────────────────────────────
   loadPlatformData(): void {
     this.loadingCompanies.set(true);
+    const currentCompany = this.selectedCompany();
     forkJoin({
       companies: this.companiesSvc.list({ limit: 500 }),
       requests:  this.svc.listAll({ limit: 1000 }),
@@ -110,13 +111,21 @@ export class ModuleRequestsListComponent implements OnInit {
       next: ({ companies, requests }) => {
         this.companies.set(companies.data);
         this.allRequests.set(requests.data);
+        if (currentCompany) {
+          this.loadingModules.set(true);
+          this.modulesSvc.loadCatalogForCompany(currentCompany.id)
+            .pipe(finalize(() => this.loadingModules.set(false)))
+            .subscribe({
+              next: items => this.companyModules.set(items),
+              error: () => {},
+            });
+        }
       },
       error: () => {},
     });
   }
 
   selectCompany(company: Company): void {
-    if (this.selectedCompany()?.id === company.id) return;
     this.selectedCompany.set(company);
     this.companyModules.set([]);
     this.approveTarget.set(null);
@@ -255,6 +264,12 @@ export class ModuleRequestsListComponent implements OnInit {
     return !!expiresAt && new Date(expiresAt) < new Date();
   }
 
+  trialDaysLeft(expiresAt: string | null | undefined): number {
+    if (!expiresAt) return 0;
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    return Math.max(0, Math.ceil(diff / 86_400_000));
+  }
+
   companyStatusClass(s: string): string {
     const m: Record<string, string> = { ACTIVE: 'success', INACTIVE: '', SUSPENDED: 'warn', PENDING: 'warn' };
     return m[s] ?? '';
@@ -277,8 +292,14 @@ export class ModuleRequestsListComponent implements OnInit {
   requestModule(item: ModuleCatalogItem): void {
     this.requestingId.set(item.id);
     this.svc.create({ module_id: item.id }).subscribe({
-      next: () => {
+      next: (newRequest) => {
         this.snackBar.open(`Solicitud enviada para "${item.name}"`, 'OK', { duration: 3000 });
+        this.catalog.update(items =>
+          items.map(i => i.id === item.id
+            ? { ...i, status: 'PENDING' as const, request_id: newRequest?.id ?? i.request_id }
+            : i
+          )
+        );
         this.requestingId.set(null);
         this.loadCatalog();
       },

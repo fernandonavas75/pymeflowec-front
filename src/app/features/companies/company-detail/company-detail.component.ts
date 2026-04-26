@@ -168,20 +168,22 @@ export class CompanyDetailComponent implements OnInit {
       APPROVED: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
       PENDING:  'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
       REJECTED: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+      REVOKED:  'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+      EXPIRED:  'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
     };
     return status ? (map[status] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-500') : 'bg-slate-100 dark:bg-slate-700 text-slate-400';
   }
 
   moduleStatusLabel(status: string | null): string {
     const map: Record<string, string> = {
-      APPROVED: 'Activo', PENDING: 'Pendiente', REJECTED: 'Rechazado',
+      APPROVED: 'Activo', PENDING: 'Pendiente', REJECTED: 'Rechazado', REVOKED: 'Revocado', EXPIRED: 'Expirado',
     };
     return status ? (map[status] ?? status) : 'Sin solicitud';
   }
 
   moduleStatusIcon(status: string | null): string {
     const map: Record<string, string> = {
-      APPROVED: 'check_circle', PENDING: 'hourglass_empty', REJECTED: 'cancel',
+      APPROVED: 'check_circle', PENDING: 'hourglass_empty', REJECTED: 'cancel', REVOKED: 'cancel', EXPIRED: 'event_busy',
     };
     return map[status ?? ''] ?? 'radio_button_unchecked';
   }

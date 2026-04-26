@@ -52,7 +52,7 @@ export class RegisterComponent implements OnInit {
   ngOnInit(): void {
     this.moduleService.getPublicModules().subscribe({
       next: mods => this.availableModules.set(mods),
-      error: () => {},
+      error: (err) => console.error('[Register] Error cargando módulos públicos:', err),
     });
   }
 
@@ -91,24 +91,16 @@ export class RegisterComponent implements OnInit {
       company_ruc:   orgV.company_ruc!,
       company_email: orgV.company_email || undefined,
       company_phone: orgV.company_phone || undefined,
-      full_name: userV.full_name!,
-      email:     userV.email!,
-      password:  userV.password!,
+      full_name:  userV.full_name!,
+      email:      userV.email!,
+      password:   userV.password!,
+      module_ids: this.selectedModules().size > 0 ? [...this.selectedModules()].map(Number) : undefined,
     }).subscribe({
-      next: () => {
-        const selected = [...this.selectedModules()];
-        if (selected.length === 0) { this.router.navigate(['/dashboard']); return; }
-        let done = 0;
-        selected.forEach(id => {
-          this.moduleService.requestModule(id).subscribe({
-            next:  () => { done++; if (done === selected.length) this.router.navigate(['/dashboard']); },
-            error: () => { done++; if (done === selected.length) this.router.navigate(['/dashboard']); },
-          });
-        });
-      },
+      next:  () => this.router.navigate(['/dashboard']),
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err?.error?.message || 'Error al registrar. Intenta de nuevo.');
+        const detail = err?.error?.errors?.map((e: { field: string; message: string }) => e.message).join(', ');
+        this.error.set(detail || err?.error?.message || 'Error al registrar. Intenta de nuevo.');
         this.step.set(1);
       },
     });
