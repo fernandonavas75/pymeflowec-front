@@ -1,23 +1,15 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
-import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { ReactiveFormsModule, FormBuilder, FormControl, Validators } from '@angular/forms';
+import { startWith, finalize } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user.model';
-import { PaginatedResponse, ApiListResponse } from '../../../core/models/pagination.model';
-import { map } from 'rxjs';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { ApiListResponse } from '../../../core/models/pagination.model';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 interface PlatformRole { id: number; name: string; }
@@ -25,82 +17,71 @@ interface PlatformRole { id: number; name: string; }
 @Component({
   selector: 'app-support-users-list',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
-    MatPaginatorModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    MatDialogModule,
-    StatusBadgeComponent,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, AppIconComponent],
   templateUrl: './support-users-list.component.html',
 })
 export class SupportUsersListComponent implements OnInit {
   private api      = inject(ApiService);
   private dialog   = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private fb       = inject(FormBuilder);
   authService      = inject(AuthService);
 
-  users            = signal<User[]>([]);
-  loading          = signal(true);
-  total            = signal(0);
-  page             = signal(1);
-  limit            = signal(20);
-  displayedColumns = ['avatar', 'full_name', 'email', 'role', 'status', 'created', 'actions'];
-
-  // ── Formulario de creación ────────────────────────────────────────────
-  showForm   = signal(false);
-  saving     = signal(false);
-  roles      = signal<PlatformRole[]>([]);
-
-  createForm = new FormGroup({
-    full_name: new FormControl('',  [Validators.required, Validators.minLength(3)]),
-    email:     new FormControl('',  [Validators.required, Validators.email]),
-    password:  new FormControl('',  [Validators.required, Validators.minLength(8)]),
-    role_id:   new FormControl<number | null>(null, Validators.required),
-  });
+  private allUsers = signal<User[]>([]);
+  loading      = signal(true);
+  saving       = signal(false);
+  modalOpen    = signal(false);
+  showPassword = signal(false);
+  tab          = signal<'all' | 'ACTIVE' | 'INACTIVE' | 'LOCKED'>('all');
+  roles        = signal<PlatformRole[]>([]);
+  selectedUser = signal<User | null>(null);
+  newRoleId    = signal<number | null>(null);
 
   searchCtrl = new FormControl('');
+  private searchQuery = toSignal(
+    this.searchCtrl.valueChanges.pipe(startWith('')),
+    { initialValue: '' }
+  );
 
-  getInitials(fullName: string): string {
-    return fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  }
+  form = this.fb.group({
+    full_name: ['', [Validators.required, Validators.minLength(3)]],
+    email:     ['', [Validators.required, Validators.email]],
+    password:  ['', [Validators.required, Validators.minLength(8)]],
+    role_id:   [null as number | null, Validators.required],
+  });
+
+  totalCount    = computed(() => this.allUsers().length);
+  activeCount   = computed(() => this.allUsers().filter(u => u.status === 'ACTIVE').length);
+  inactiveCount = computed(() => this.allUsers().filter(u => u.status === 'INACTIVE').length);
+  lockedCount   = computed(() => this.allUsers().filter(u => u.status === 'LOCKED').length);
+
+  filteredUsers = computed(() => {
+    let list = this.allUsers();
+    const t = this.tab();
+    if (t !== 'all') list = list.filter(u => u.status === t);
+    const q = (this.searchQuery() ?? '').toLowerCase();
+    if (q) list = list.filter(u =>
+      u.full_name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q)
+    );
+    return list;
+  });
 
   ngOnInit(): void {
-    this.loadUsers();
-    this.searchCtrl.valueChanges.pipe(debounceTime(400), distinctUntilChanged()).subscribe(() => {
-      this.page.set(1);
-      this.loadUsers();
-    });
+    this.load();
     if (this.authService.isPlatformAdmin()) {
       this.loadRoles();
     }
   }
 
-  loadUsers(): void {
+  load(): void {
     this.loading.set(true);
-    const params: Record<string, string | number | boolean | undefined> = {
-      page:  this.page(),
-      limit: this.limit(),
-    };
-    if (this.searchCtrl.value) params['search'] = this.searchCtrl.value;
-
-    this.api.get<ApiListResponse<User>>('/platform/users', params).pipe(
-      map(res => ({
-        data:       res.data ?? [],
-        total:      res.pagination?.total ?? 0,
-      } as Pick<PaginatedResponse<User>, 'data' | 'total'>)),
-      finalize(() => this.loading.set(false)),
-    ).subscribe({
-      next: res => { this.users.set(res.data); this.total.set(res.total); },
-      error: ()  => this.users.set([]),
-    });
+    this.api.get<ApiListResponse<User>>('/platform/users', { limit: 500 })
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: res => this.allUsers.set(res.data ?? []),
+        error: ()  => this.allUsers.set([]),
+      });
   }
 
   private loadRoles(): void {
@@ -109,28 +90,22 @@ export class SupportUsersListComponent implements OnInit {
     });
   }
 
-  onPageChange(e: PageEvent): void {
-    this.page.set(e.pageIndex + 1);
-    this.limit.set(e.pageSize);
-    this.loadUsers();
-  }
-
-  toggleForm(): void {
-    this.showForm.update(v => !v);
-    if (!this.showForm()) this.createForm.reset();
+  openNew(): void {
+    this.form.reset({ full_name: '', email: '', password: '', role_id: null });
+    this.showPassword.set(false);
+    this.modalOpen.set(true);
   }
 
   submitCreate(): void {
-    if (this.createForm.invalid) { this.createForm.markAllAsTouched(); return; }
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
-    this.api.post<{ success: boolean; data: User }>('/platform/users', this.createForm.value)
+    this.api.post<{ success: boolean; data: User }>('/platform/users', this.form.value)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
           this.snackBar.open('Usuario creado correctamente', 'OK', { duration: 3000 });
-          this.showForm.set(false);
-          this.createForm.reset();
-          this.loadUsers();
+          this.modalOpen.set(false);
+          this.load();
         },
         error: err => this.snackBar.open(err?.error?.message || 'Error al crear', 'OK', { duration: 4000 }),
       });
@@ -153,7 +128,7 @@ export class SupportUsersListComponent implements OnInit {
       this.api.patch<{ success: boolean; data: User }>(path).subscribe({
         next: () => {
           this.snackBar.open(isActive ? 'Usuario desactivado' : 'Usuario activado', 'OK', { duration: 3000 });
-          this.loadUsers();
+          this.load();
         },
         error: err => this.snackBar.open(err?.error?.message || 'Error', 'OK', { duration: 4000 }),
       });
@@ -171,10 +146,18 @@ export class SupportUsersListComponent implements OnInit {
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
       this.api.patch<{ success: boolean; data: User }>(`/platform/users/${user.id}/lock`).subscribe({
-        next: () => { this.snackBar.open('Cuenta bloqueada', 'OK', { duration: 3000 }); this.loadUsers(); },
+        next: () => { this.snackBar.open('Cuenta bloqueada', 'OK', { duration: 3000 }); this.load(); },
         error: err => this.snackBar.open(err?.error?.message || 'Error', 'OK', { duration: 4000 }),
       });
     });
+  }
+
+  getInitials(fullName: string): string {
+    return fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  statusLabel(s: string): string {
+    return s === 'ACTIVE' ? 'Activo' : s === 'INACTIVE' ? 'Inactivo' : 'Bloqueado';
   }
 
   roleLabel(name: string): string {
@@ -185,9 +168,39 @@ export class SupportUsersListComponent implements OnInit {
     return map[name] ?? name;
   }
 
-  roleClass(name: string): string {
-    return name === 'PLATFORM_ADMIN'
-      ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300'
-      : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300';
+  formatDate(date: string): string {
+    return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  togglePassword(): void { this.showPassword.update(v => !v); }
+
+  selectUser(u: User): void  { this.selectedUser.set(u); this.newRoleId.set(u.role?.id ?? null); }
+  closeDrawer(): void        { this.selectedUser.set(null); this.newRoleId.set(null); }
+
+  confirmChangeRole(user: User): void {
+    const roleId = this.newRoleId();
+    if (!roleId || roleId === user.role?.id) return;
+    const label = this.roleLabel(this.roles().find(r => r.id === roleId)?.name ?? '');
+    this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title:       'Cambiar rol',
+        message:     `¿Cambiar el rol de "${user.full_name}" a "${label}"?`,
+        confirmText: 'Confirmar',
+        danger:      false,
+      },
+    }).afterClosed().subscribe(ok => {
+      if (!ok) return;
+      this.saving.set(true);
+      this.api.put<{ success: boolean; data: User }>(`/platform/users/${user.id}`, { role_id: roleId })
+        .pipe(finalize(() => this.saving.set(false)))
+        .subscribe({
+          next: () => {
+            this.snackBar.open('Rol actualizado correctamente', 'OK', { duration: 3000 });
+            this.closeDrawer();
+            this.load();
+          },
+          error: err => this.snackBar.open(err?.error?.message || 'Error al cambiar rol', 'OK', { duration: 4000 }),
+        });
+    });
   }
 }

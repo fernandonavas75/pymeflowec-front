@@ -1,176 +1,338 @@
-<div class="page-container">
-  <div class="page-header">
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
     <div>
-      <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">Usuarios de soporte</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Administradores y personal de soporte de la plataforma</p>
+      <div class="page-title">Usuarios de soporte</div>
+      <div class="page-sub-en">Support users · {{ totalCount() }} registrados</div>
     </div>
-    <!-- Solo PLATFORM_ADMIN puede crear usuarios -->
     @if (authService.isPlatformAdmin()) {
-      <button mat-flat-button color="primary" (click)="toggleForm()">
-        <mat-icon>{{ showForm() ? 'close' : 'person_add' }}</mat-icon>
-        {{ showForm() ? 'Cancelar' : 'Nuevo usuario' }}
-      </button>
+      <div class="page-actions">
+        <button class="btn primary" type="button" (click)="openNew()">
+          <app-icon name="plus" [size]="14"/>Nuevo usuario
+        </button>
+      </div>
     }
   </div>
 
-  <!-- Formulario de creación -->
-  @if (showForm()) {
-    <div class="form-card mb-4">
-      <h2 class="text-base font-semibold text-slate-700 dark:text-slate-200 mb-4">Crear usuario de soporte</h2>
-      <form [formGroup]="createForm" (ngSubmit)="submitCreate()"
-            class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todos <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'ACTIVE'" (click)="tab.set('ACTIVE')" type="button">
+      Activos <span class="count">{{ activeCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'INACTIVE'" (click)="tab.set('INACTIVE')" type="button">
+      Inactivos <span class="count">{{ inactiveCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'LOCKED'" (click)="tab.set('LOCKED')" type="button">
+      Bloqueados <span class="count">{{ lockedCount() }}</span>
+    </button>
+  </div>
 
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Nombre completo</mat-label>
-          <input matInput formControlName="full_name" />
-          @if (createForm.get('full_name')?.hasError('required') && createForm.get('full_name')?.touched) {
-            <mat-error>Requerido</mat-error>
-          }
-        </mat-form-field>
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar por nombre o email…"/>
+    </div>
+  </div>
 
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" type="email" />
-          @if (createForm.get('email')?.hasError('email') && createForm.get('email')?.touched) {
-            <mat-error>Email inválido</mat-error>
-          }
-        </mat-form-field>
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+    @if (loading()) {
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+        }
+      </div>
 
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Contraseña</mat-label>
-          <input matInput formControlName="password" type="password" />
-          @if (createForm.get('password')?.hasError('minlength') && createForm.get('password')?.touched) {
-            <mat-error>Mínimo 8 caracteres</mat-error>
-          }
-        </mat-form-field>
+    } @else if (filteredUsers().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="users" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron usuarios de soporte</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">Limpiar búsqueda</button>
+        }
+      </div>
 
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Rol</mat-label>
-          <mat-select formControlName="role_id">
-            @for (r of roles(); track r.id) {
-              <mat-option [value]="r.id">{{ roleLabel(r.name) }}</mat-option>
+    } @else {
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Registrado</th>
+              @if (authService.isPlatformAdmin()) {
+                <th style="width:80px"></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (u of filteredUsers(); track u.id) {
+              <tr style="cursor:pointer"
+                  [class.selected]="selectedUser()?.id === u.id"
+                  (click)="selectUser(u)">
+                <td>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div class="ds-avatar">{{ getInitials(u.full_name) }}</div>
+                    <strong>{{ u.full_name }}</strong>
+                  </div>
+                </td>
+                <td style="color:var(--text-muted-ds)">{{ u.email }}</td>
+                <td>
+                  <span class="badge"
+                    [class.accent]="u.role?.name === 'PLATFORM_ADMIN'"
+                    [class.neutral]="u.role?.name !== 'PLATFORM_ADMIN'">
+                    {{ roleLabel(u.role?.name ?? '') }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge"
+                    [class.success]="u.status === 'ACTIVE'"
+                    [class.neutral]="u.status === 'INACTIVE'"
+                    [class.warn]="u.status === 'LOCKED'">
+                    {{ statusLabel(u.status) }}
+                  </span>
+                </td>
+                <td class="mono" style="font-size:12px;color:var(--text-muted-ds)">
+                  {{ formatDate(u.created_at) }}
+                </td>
+                @if (authService.isPlatformAdmin()) {
+                  <td style="text-align:right" (click)="$event.stopPropagation()">
+                    <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+                      <button class="btn ghost sm"
+                              [title]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                              type="button"
+                              (click)="confirmToggle(u)">
+                        <app-icon name="power" [size]="13"/>
+                      </button>
+                      @if (u.status !== 'LOCKED') {
+                        <button class="btn ghost sm" title="Bloquear cuenta" type="button"
+                                (click)="confirmLock(u)">
+                          <app-icon name="lock" [size]="13"/>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                }
+              </tr>
             }
-          </mat-select>
-          @if (createForm.get('role_id')?.hasError('required') && createForm.get('role_id')?.touched) {
-            <mat-error>Selecciona un rol</mat-error>
-          }
-        </mat-form-field>
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
 
-        <div class="md:col-span-2 flex justify-end gap-2">
-          <button mat-stroked-button type="button" (click)="toggleForm()">Cancelar</button>
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-            @if (saving()) { <mat-spinner diameter="18" class="inline-block mr-2"></mat-spinner> }
-            Crear usuario
-          </button>
+  <!-- ── User Drawer ────────────────────────────────────────────── -->
+  @if (selectedUser()) {
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <div class="drawer">
+
+      <div class="drawer-head">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="ds-avatar" style="width:40px;height:40px;font-size:15px;flex-shrink:0">
+            {{ getInitials(selectedUser()!.full_name) }}
+          </div>
+          <div>
+            <div class="t">{{ selectedUser()!.full_name }}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+              <span class="badge"
+                [class.accent]="selectedUser()!.role?.name === 'PLATFORM_ADMIN'"
+                [class.neutral]="selectedUser()!.role?.name !== 'PLATFORM_ADMIN'">
+                {{ roleLabel(selectedUser()!.role?.name ?? '') }}
+              </span>
+              <span class="badge"
+                [class.success]="selectedUser()!.status === 'ACTIVE'"
+                [class.neutral]="selectedUser()!.status === 'INACTIVE'"
+                [class.warn]="selectedUser()!.status === 'LOCKED'">
+                <span class="dot"></span>{{ statusLabel(selectedUser()!.status) }}
+              </span>
+            </div>
+          </div>
         </div>
-      </form>
+        <button class="btn ghost sm" (click)="closeDrawer()" type="button">
+          <app-icon name="x" [size]="16"/>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+
+        <!-- Datos de contacto -->
+        <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px">
+          Información de cuenta
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:0;border:1px solid var(--border-ds);border-radius:var(--radius-ds);overflow:hidden;margin-bottom:18px">
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-ds)">
+            <app-icon name="mail" [size]="15" style="color:var(--text-subtle);flex-shrink:0"/>
+            <div>
+              <div style="font-size:10.5px;color:var(--text-subtle);margin-bottom:1px">Email</div>
+              <div style="font-size:13.5px;font-weight:500">{{ selectedUser()!.email }}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-ds)">
+            <app-icon name="shield" [size]="15" style="color:var(--text-subtle);flex-shrink:0"/>
+            <div>
+              <div style="font-size:10.5px;color:var(--text-subtle);margin-bottom:1px">Rol</div>
+              <div style="font-size:13.5px;font-weight:500">{{ roleLabel(selectedUser()!.role?.name ?? '') }}</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px">
+            <app-icon name="calendar" [size]="15" style="color:var(--text-subtle);flex-shrink:0"/>
+            <div>
+              <div style="font-size:10.5px;color:var(--text-subtle);margin-bottom:1px">Registrado</div>
+              <div style="font-size:13.5px;font-weight:500">{{ formatDate(selectedUser()!.created_at) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cambiar rol — solo PLATFORM_ADMIN y no sobre sí mismo -->
+        @if (authService.isPlatformAdmin() && selectedUser()!.id !== authService.currentUser()?.id) {
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:10px">
+            Cambiar rol
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:18px">
+            <select class="m-input" style="flex:1"
+                    [value]="newRoleId()"
+                    (change)="newRoleId.set(+$any($event.target).value)">
+              @for (r of roles(); track r.id) {
+                <option [value]="r.id">{{ roleLabel(r.name) }}</option>
+              }
+            </select>
+            <button class="btn primary sm" type="button"
+                    [disabled]="saving() || newRoleId() === selectedUser()!.role?.id"
+                    (click)="confirmChangeRole(selectedUser()!)">
+              @if (saving()) { <span class="btn-spinner"></span> } @else { <app-icon name="check" [size]="13"/> }
+              Guardar
+            </button>
+          </div>
+        }
+
+        <!-- Alerta estado -->
+        @if (selectedUser()!.status === 'LOCKED') {
+          <div class="ds-alert warn">
+            <app-icon name="lock" [size]="16" style="flex-shrink:0"/>
+            <div>
+              <div class="t">Cuenta bloqueada</div>
+              <div class="d">Este usuario no puede iniciar sesión hasta que un administrador lo desbloquee.</div>
+            </div>
+          </div>
+        } @else if (selectedUser()!.status === 'INACTIVE') {
+          <div class="ds-alert" style="border-color:var(--border-ds)">
+            <app-icon name="alert_circle" [size]="16" style="flex-shrink:0;color:var(--text-subtle)"/>
+            <div>
+              <div class="t" style="color:var(--text-ds)">Cuenta inactiva</div>
+              <div class="d">Este usuario no puede iniciar sesión. Actívalo para restaurar el acceso.</div>
+            </div>
+          </div>
+        }
+
+      </div>
+
+      @if (authService.isPlatformAdmin()) {
+        <div class="drawer-foot">
+          <button class="btn ghost"
+                  [title]="selectedUser()!.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
+                  type="button"
+                  (click)="confirmToggle(selectedUser()!)">
+            <app-icon name="power" [size]="14"/>
+            {{ selectedUser()!.status === 'ACTIVE' ? 'Desactivar' : 'Activar' }}
+          </button>
+          @if (selectedUser()!.status !== 'LOCKED') {
+            <button class="btn danger" type="button" (click)="confirmLock(selectedUser()!)">
+              <app-icon name="lock" [size]="14"/>Bloquear
+            </button>
+          }
+        </div>
+      }
+
     </div>
   }
 
-  <!-- Buscador -->
-  <div class="table-container mb-4 p-4">
-    <mat-form-field appearance="outline" class="w-full max-w-sm">
-      <mat-label>Buscar usuario</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-      <input matInput [formControl]="searchCtrl" placeholder="Nombre o email…" />
-    </mat-form-field>
-  </div>
+  <!-- ── Inline Modal — Crear usuario ───────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
 
-  <!-- Tabla -->
-  <div class="table-container">
-    @if (loading()) {
-      <div class="flex justify-center py-20"><mat-spinner diameter="40"></mat-spinner></div>
-    } @else {
-      <table mat-table [dataSource]="users()" class="w-full">
+        <div class="modal-head">
+          <div>
+            <div class="t">Nuevo usuario de soporte</div>
+            <div class="d">Crea un administrador o staff de soporte de la plataforma.</div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
 
-        <!-- Avatar -->
-        <ng-container matColumnDef="avatar">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let u">
-            <div class="w-8 h-8 rounded-full bg-violet-600 text-white flex items-center justify-center text-xs font-bold">
-              {{ getInitials(u.full_name) }}
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Nombre completo <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Juan Pérez" formControlName="full_name"/>
+              @if (form.get('full_name')?.touched && form.get('full_name')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
+              }
             </div>
-          </td>
-        </ng-container>
 
-        <!-- Nombre -->
-        <ng-container matColumnDef="full_name">
-          <th mat-header-cell *matHeaderCellDef>Nombre</th>
-          <td mat-cell *matCellDef="let u" class="font-medium">{{ u.full_name }}</td>
-        </ng-container>
+            <div class="mfield">
+              <label>Email <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" type="email" placeholder="admin@pymeflow.ec" formControlName="email"/>
+              @if (form.get('email')?.touched && form.get('email')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa un email válido</div>
+              }
+            </div>
 
-        <!-- Email -->
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let u" class="text-sm text-slate-500">{{ u.email }}</td>
-        </ng-container>
-
-        <!-- Rol -->
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Rol</th>
-          <td mat-cell *matCellDef="let u">
-            <span class="badge text-xs" [ngClass]="roleClass(u.role?.name ?? '')">
-              {{ roleLabel(u.role?.name ?? '') }}
-            </span>
-          </td>
-        </ng-container>
-
-        <!-- Estado -->
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado</th>
-          <td mat-cell *matCellDef="let u">
-            <app-status-badge [status]="u.status" />
-          </td>
-        </ng-container>
-
-        <!-- Fecha -->
-        <ng-container matColumnDef="created">
-          <th mat-header-cell *matHeaderCellDef>Registrado</th>
-          <td mat-cell *matCellDef="let u" class="text-sm text-slate-500">
-            {{ u.created_at | date:'dd/MM/yyyy' }}
-          </td>
-        </ng-container>
-
-        <!-- Acciones — solo PLATFORM_ADMIN -->
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let u">
-            @if (authService.isPlatformAdmin()) {
-              <div class="flex gap-1 justify-end">
-                <button mat-icon-button
-                        [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar' : 'Activar'"
-                        (click)="confirmToggle(u)">
-                  <mat-icon [class.text-green-500]="u.status === 'ACTIVE'"
-                            [class.text-slate-400]="u.status !== 'ACTIVE'">
-                    {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-                  </mat-icon>
+            <div class="mfield">
+              <label>Contraseña <span style="color:var(--danger)">*</span></label>
+              <div style="position:relative">
+                <input class="m-input" [type]="showPassword() ? 'text' : 'password'"
+                       placeholder="Mínimo 8 caracteres" formControlName="password"
+                       style="padding-right:40px"/>
+                <button type="button" (click)="togglePassword()"
+                        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                               background:none;border:none;cursor:pointer;
+                               color:var(--text-muted-ds);display:flex;align-items:center;padding:0">
+                  <app-icon [name]="showPassword() ? 'eye_off' : 'eye'" [size]="15"/>
                 </button>
-                @if (u.status !== 'LOCKED') {
-                  <button mat-icon-button matTooltip="Bloquear cuenta" (click)="confirmLock(u)">
-                    <mat-icon class="text-red-400">lock</mat-icon>
-                  </button>
-                }
               </div>
-            }
-          </td>
-        </ng-container>
+              @if (form.get('password')?.touched && form.get('password')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 8 caracteres</div>
+              }
+            </div>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        <tr class="mat-row" *matNoDataRow>
-          <td class="mat-cell text-center py-12 text-slate-400" [attr.colspan]="displayedColumns.length">
-            No hay usuarios de soporte registrados
-          </td>
-        </tr>
-      </table>
+            <div class="mfield">
+              <label>Rol <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="role_id">
+                <option [value]="null" disabled>Selecciona un rol…</option>
+                @for (r of roles(); track r.id) {
+                  <option [value]="r.id">{{ roleLabel(r.name) }}</option>
+                }
+              </select>
+              @if (form.get('role_id')?.touched && form.get('role_id')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Selecciona un rol</div>
+              }
+            </div>
 
-      <mat-paginator
-        [length]="total()"
-        [pageSize]="limit()"
-        [pageIndex]="page() - 1"
-        [pageSizeOptions]="[10, 20, 50]"
-        (page)="onPageChange($event)"
-        showFirstLastButtons />
-    }
-  </div>
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="submitCreate()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            Crear usuario
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
 </div>

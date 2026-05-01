@@ -48,6 +48,54 @@
   @media (max-width: 640px) { display: none; }
 }
 
+// ── User dropdown ────────────────────────────────────────────────
+.user-menu-wrap {
+  position: relative;
+}
+.user-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+.user-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1px solid var(--border-ds);
+  border-radius: var(--radius-ds);
+  box-shadow: var(--shadow-lg-ds);
+  z-index: 100;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm-ds);
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-ui);
+  color: var(--text-ds);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  &:hover { background: var(--surface-2); }
+  &.danger { color: var(--danger); &:hover { background: var(--danger-soft); } }
+}
+.user-menu-divider {
+  height: 1px;
+  background: var(--border-ds);
+  margin: 2px 0;
+}
+
 // ── User button ───────────────────────────────────────────────────
 .user-btn {
   display: flex;

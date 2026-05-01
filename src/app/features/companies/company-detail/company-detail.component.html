@@ -1,215 +1,262 @@
-<div class="page-container">
+<div class="page">
 
   @if (loadingCompany()) {
-    <div class="flex justify-center py-20"><mat-spinner diameter="48"></mat-spinner></div>
+    <div style="display:flex;flex-direction:column;gap:12px;padding:24px 0">
+      <div class="skel" style="height:48px;border-radius:var(--radius-ds);max-width:320px"></div>
+      <div class="skel" style="height:36px;border-radius:var(--radius-sm-ds)"></div>
+      @for (i of [1,2,3]; track i) {
+        <div class="skel" style="height:120px;border-radius:var(--radius-ds)"></div>
+      }
+    </div>
+
   } @else if (!company()) {
-    <div class="text-center py-20 text-slate-400">Empresa no encontrada</div>
+    <div style="text-align:center;padding:72px 24px;color:var(--text-subtle)">
+      <app-icon name="building" [size]="40" style="opacity:.25"/>
+      <p style="margin:12px 0 16px">Empresa no encontrada</p>
+      <a routerLink="/companies" class="btn ghost sm">Volver</a>
+    </div>
+
   } @else {
-    <!-- Encabezado -->
-    <div class="page-header flex-wrap gap-3">
-      <div class="flex items-center gap-3">
-        <a routerLink="/companies" mat-icon-button matTooltip="Volver a empresas">
-          <mat-icon>arrow_back</mat-icon>
+
+    <!-- ── Header ───────────────────────────────────────────────────── -->
+    <div class="page-head" style="flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <a routerLink="/companies" class="btn ghost sm" title="Volver a empresas">
+          <app-icon name="arrow_left" [size]="15"/>
         </a>
         <div>
-          <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">{{ company()!.name }}</h1>
-          <div class="flex items-center gap-2 mt-1">
-            <span class="badge text-xs" [ngClass]="companyStatusClass(company()!.status)">
-              {{ companyStatusLabel(company()!.status) }}
+          <div class="page-title">{{ company()!.name }}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            <span class="badge"
+              [class.success]="company()!.status === 'ACTIVE'"
+              [class.danger]="company()!.status === 'SUSPENDED'"
+              [class.warn]="company()!.status === 'PENDING'"
+              [class.neutral]="company()!.status === 'INACTIVE'">
+              <span class="dot"></span>{{ companyStatusLabel(company()!.status) }}
             </span>
             @if (company()!.ruc) {
-              <span class="text-xs text-slate-400 font-mono">RUC {{ company()!.ruc }}</span>
+              <span class="mono" style="font-size:12px;color:var(--text-subtle)">RUC {{ company()!.ruc }}</span>
             }
           </div>
         </div>
       </div>
 
-      <!-- Acciones -->
-      <div class="flex gap-2 flex-wrap">
+      <div class="page-actions">
         @if (isCurrentClientView()) {
-          <button mat-stroked-button color="warn" (click)="exitClientView()">
-            <mat-icon>exit_to_app</mat-icon>
-            Salir modo cliente
+          <button class="btn danger" type="button" (click)="exitClientView()">
+            <app-icon name="exit_to_app" [size]="14"/>Salir modo cliente
           </button>
         } @else {
-          <button mat-flat-button color="primary" (click)="enterClientView()">
-            <mat-icon>visibility</mat-icon>
-            Ver como cliente
+          <button class="btn secondary" type="button" (click)="enterClientView()">
+            <app-icon name="visibility" [size]="14"/>Ver como cliente
           </button>
         }
         @if (authService.isPlatformAdmin()) {
-          <button mat-stroked-button
-                  [color]="company()!.status === 'ACTIVE' ? 'warn' : 'primary'"
+          <button class="btn"
+                  [class.danger]="company()!.status === 'ACTIVE'"
+                  [class.primary]="company()!.status !== 'ACTIVE'"
+                  type="button"
                   (click)="toggleStatus(company()!)">
-            <mat-icon>{{ company()!.status === 'ACTIVE' ? 'pause_circle' : 'play_circle' }}</mat-icon>
             {{ company()!.status === 'ACTIVE' ? 'Suspender' : 'Activar' }}
           </button>
         }
       </div>
     </div>
 
-    <!-- Tabs -->
-    <mat-tab-group animationDuration="150ms">
+    <!-- ── Tabs ──────────────────────────────────────────────────────── -->
+    <div class="ds-tabs">
+      <button class="ds-tab" [class.active]="activeTab() === 'info'"
+              (click)="activeTab.set('info')" type="button">
+        <app-icon name="building" [size]="13"/>Información
+      </button>
+      <button class="ds-tab" [class.active]="activeTab() === 'modules'"
+              (click)="activeTab.set('modules')" type="button">
+        <app-icon name="puzzle" [size]="13"/>Módulos
+        <span class="count">{{ modules().length }}</span>
+      </button>
+      <button class="ds-tab" [class.active]="activeTab() === 'users'"
+              (click)="activeTab.set('users')" type="button">
+        <app-icon name="users" [size]="13"/>Usuarios
+        <span class="count">{{ users().length }}</span>
+      </button>
+    </div>
 
-      <!-- ── Tab 1: Información ─────────────────────────────────── -->
-      <mat-tab label="Información">
-        <div class="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="table-container p-5 space-y-3">
-            <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Datos generales</h3>
+    <!-- ══ Tab: Información ═════════════════════════════════════════════ -->
+    @if (activeTab() === 'info') {
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+
+        <div class="card" style="padding:20px">
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px">
+            Datos generales
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
             @for (field of [
-              {label:'Nombre comercial',   value: company()!.name},
-              {label:'Razón social',       value: company()!.business_name},
-              {label:'RUC',                value: company()!.ruc},
-              {label:'Email',              value: company()!.email},
-              {label:'Teléfono',           value: company()!.phone},
-              {label:'Dirección',          value: company()!.address}
+              {label:'Nombre comercial', value: company()!.name},
+              {label:'Razón social',     value: $any(company()!).business_name},
+              {label:'RUC',              value: company()!.ruc},
+              {label:'Email',            value: company()!.email},
+              {label:'Teléfono',         value: company()!.phone},
+              {label:'Dirección',        value: $any(company()!).address}
             ]; track field.label) {
               @if (field.value) {
-                <div class="flex items-start gap-3">
-                  <span class="text-sm text-slate-400 w-36 shrink-0">{{ field.label }}</span>
-                  <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ field.value }}</span>
+                <div style="display:flex;gap:12px">
+                  <span style="font-size:12px;color:var(--text-subtle);width:140px;flex-shrink:0">{{ field.label }}</span>
+                  <span style="font-size:13px;font-weight:500;color:var(--text-ds)">{{ field.value }}</span>
                 </div>
               }
             }
           </div>
-          <div class="table-container p-5 space-y-3">
-            <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Registro</h3>
-            <div class="flex items-start gap-3">
-              <span class="text-sm text-slate-400 w-36 shrink-0">Registrada</span>
-              <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
+        </div>
+
+        <div class="card" style="padding:20px">
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px">
+            Registro
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;gap:12px">
+              <span style="font-size:12px;color:var(--text-subtle);width:140px;flex-shrink:0">Registrada</span>
+              <span style="font-size:13px;font-weight:500;color:var(--text-ds)">
                 {{ company()!.created_at | date:'dd/MM/yyyy HH:mm' }}
               </span>
             </div>
-            <div class="flex items-start gap-3">
-              <span class="text-sm text-slate-400 w-36 shrink-0">Actualizada</span>
-              <span class="text-sm font-medium text-slate-800 dark:text-slate-200">
+            <div style="display:flex;gap:12px">
+              <span style="font-size:12px;color:var(--text-subtle);width:140px;flex-shrink:0">Actualizada</span>
+              <span style="font-size:13px;font-weight:500;color:var(--text-ds)">
                 {{ company()!.updated_at | date:'dd/MM/yyyy HH:mm' }}
               </span>
             </div>
-            @if (company()!.deleted_at) {
-              <div class="flex items-start gap-3">
-                <span class="text-sm text-slate-400 w-36 shrink-0">Eliminada</span>
-                <span class="text-sm font-medium text-red-600">
-                  {{ company()!.deleted_at | date:'dd/MM/yyyy HH:mm' }}
+            @if ($any(company()!).deleted_at) {
+              <div style="display:flex;gap:12px">
+                <span style="font-size:12px;color:var(--text-subtle);width:140px;flex-shrink:0">Eliminada</span>
+                <span style="font-size:13px;font-weight:500;color:var(--danger)">
+                  {{ $any(company()!).deleted_at | date:'dd/MM/yyyy HH:mm' }}
                 </span>
               </div>
             }
           </div>
         </div>
-      </mat-tab>
 
-      <!-- ── Tab 2: Módulos ─────────────────────────────────────── -->
-      <mat-tab label="Módulos">
-        <div class="py-4">
-          @if (loadingModules()) {
-            <div class="flex justify-center py-12"><mat-spinner diameter="36"></mat-spinner></div>
-          } @else {
-            <div class="table-container">
-              <table mat-table [dataSource]="modules()" class="w-full">
+      </div>
+    }
 
-                <ng-container matColumnDef="name">
-                  <th mat-header-cell *matHeaderCellDef>Módulo</th>
-                  <td mat-cell *matCellDef="let m">
-                    <span class="font-medium">{{ m.name }}</span>
-                    @if (m.description) {
-                      <div class="text-xs text-slate-400">{{ m.description }}</div>
-                    }
-                  </td>
-                </ng-container>
-
-                <ng-container matColumnDef="code">
-                  <th mat-header-cell *matHeaderCellDef>Código</th>
-                  <td mat-cell *matCellDef="let m" class="font-mono text-sm text-slate-500">{{ m.code }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
-                  <td mat-cell *matCellDef="let m">
-                    <span class="badge text-xs flex items-center gap-1 w-fit" [ngClass]="moduleStatusClass(m.status)">
-                      <mat-icon style="font-size:14px;width:14px;height:14px;">{{ moduleStatusIcon(m.status) }}</mat-icon>
-                      {{ moduleStatusLabel(m.status) }}
-                    </span>
-                  </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="moduleColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: moduleColumns;"></tr>
-                <tr class="mat-row" *matNoDataRow>
-                  <td class="mat-cell text-center py-10 text-slate-400" colspan="3">Sin módulos disponibles</td>
+    <!-- ══ Tab: Módulos ═════════════════════════════════════════════════ -->
+    @if (activeTab() === 'modules') {
+      <div class="card">
+        @if (loadingModules()) {
+          <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+            @for (i of [1,2,3,4]; track i) {
+              <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+            }
+          </div>
+        } @else if (modules().length === 0) {
+          <div class="empty" style="padding:72px 24px">
+            <app-icon name="puzzle" [size]="40" style="opacity:.25"/>
+            <p>Sin módulos disponibles</p>
+          </div>
+        } @else {
+          <div class="card-body p0">
+            <table class="ds-table">
+              <thead>
+                <tr>
+                  <th>Módulo</th>
+                  <th style="width:200px">Código</th>
+                  <th style="width:140px">Estado</th>
                 </tr>
-              </table>
-            </div>
-          }
-        </div>
-      </mat-tab>
+              </thead>
+              <tbody>
+                @for (m of modules(); track m.id) {
+                  <tr>
+                    <td>
+                      <div style="font-weight:500">{{ m.name }}</div>
+                      @if (m.description) {
+                        <div style="font-size:11.5px;color:var(--text-muted-ds)">{{ m.description }}</div>
+                      }
+                    </td>
+                    <td class="mono" style="font-size:12px;color:var(--text-muted-ds)">{{ m.code }}</td>
+                    <td>
+                      <span class="badge"
+                        [class.success]="m.status === 'APPROVED'"
+                        [class.warn]="m.status === 'PENDING'"
+                        [class.danger]="m.status === 'REJECTED' || m.status === 'REVOKED' || m.status === 'EXPIRED'"
+                        [class.neutral]="!m.status">
+                        <span class="dot"></span>{{ moduleStatusLabel(m.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
 
-      <!-- ── Tab 3: Usuarios ────────────────────────────────────── -->
-      <mat-tab label="Usuarios">
-        <div class="py-4">
-          @if (loadingUsers()) {
-            <div class="flex justify-center py-12"><mat-spinner diameter="36"></mat-spinner></div>
-          } @else {
-            <div class="table-container">
-              <table mat-table [dataSource]="users()" class="w-full">
-
-                <ng-container matColumnDef="avatar">
-                  <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let u">
-                    <div class="w-8 h-8 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold">
-                      {{ getInitials(u.full_name) }}
-                    </div>
-                  </td>
-                </ng-container>
-
-                <ng-container matColumnDef="full_name">
-                  <th mat-header-cell *matHeaderCellDef>Nombre</th>
-                  <td mat-cell *matCellDef="let u" class="font-medium">{{ u.full_name }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="email">
-                  <th mat-header-cell *matHeaderCellDef>Email</th>
-                  <td mat-cell *matCellDef="let u" class="text-sm text-slate-500">{{ u.email }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="role">
-                  <th mat-header-cell *matHeaderCellDef>Rol</th>
-                  <td mat-cell *matCellDef="let u" class="text-sm">{{ roleLabel(u.role?.name ?? '') }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="status">
-                  <th mat-header-cell *matHeaderCellDef>Estado</th>
-                  <td mat-cell *matCellDef="let u">
-                    <app-status-badge [status]="u.status" />
-                  </td>
-                </ng-container>
-
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef></th>
-                  <td mat-cell *matCellDef="let u">
+    <!-- ══ Tab: Usuarios ════════════════════════════════════════════════ -->
+    @if (activeTab() === 'users') {
+      <div class="card">
+        @if (loadingUsers()) {
+          <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+            @for (i of [1,2,3,4,5]; track i) {
+              <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+            }
+          </div>
+        } @else if (users().length === 0) {
+          <div class="empty" style="padding:72px 24px">
+            <app-icon name="users" [size]="40" style="opacity:.25"/>
+            <p>Sin usuarios registrados</p>
+          </div>
+        } @else {
+          <div class="card-body p0">
+            <table class="ds-table">
+              <thead>
+                <tr>
+                  <th style="width:40px"></th>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th style="width:160px">Rol</th>
+                  <th style="width:120px">Estado</th>
+                  @if (authService.isPlatformAdmin()) {
+                    <th style="width:60px"></th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (u of users(); track u.id) {
+                  <tr>
+                    <td>
+                      <div class="ds-avatar">{{ getInitials(u.full_name) }}</div>
+                    </td>
+                    <td style="font-weight:500">{{ u.full_name }}</td>
+                    <td style="color:var(--text-muted-ds);font-size:13px">{{ u.email }}</td>
+                    <td>
+                      <span class="badge neutral">{{ roleLabel(u.role?.name ?? '') }}</span>
+                    </td>
+                    <td>
+                      <span class="badge"
+                        [class.success]="u.status === 'ACTIVE'"
+                        [class.neutral]="u.status === 'INACTIVE'"
+                        [class.warn]="u.status === 'LOCKED'">
+                        <span class="dot"></span>{{ statusLabel(u.status) }}
+                      </span>
+                    </td>
                     @if (authService.isPlatformAdmin()) {
-                      <button mat-icon-button
-                              [matTooltip]="u.status === 'ACTIVE' ? 'Desactivar usuario' : 'Activar usuario'"
-                              (click)="toggleUserStatus(u)">
-                        <mat-icon [class.text-green-500]="u.status === 'ACTIVE'"
-                                  [class.text-slate-400]="u.status !== 'ACTIVE'">
-                          {{ u.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off' }}
-                        </mat-icon>
-                      </button>
+                      <td style="text-align:right">
+                        <button class="btn ghost sm"
+                                [title]="u.status === 'ACTIVE' ? 'Desactivar usuario' : 'Activar usuario'"
+                                type="button"
+                                (click)="toggleUserStatus(u)">
+                          <app-icon name="power" [size]="13"/>
+                        </button>
+                      </td>
                     }
-                  </td>
-                </ng-container>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
 
-                <tr mat-header-row *matHeaderRowDef="userColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: userColumns;"></tr>
-                <tr class="mat-row" *matNoDataRow>
-                  <td class="mat-cell text-center py-10 text-slate-400" colspan="5">Sin usuarios registrados</td>
-                </tr>
-              </table>
-            </div>
-          }
-        </div>
-      </mat-tab>
-
-    </mat-tab-group>
   }
 </div>

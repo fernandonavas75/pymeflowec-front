@@ -2,12 +2,6 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTableModule } from '@angular/material/table';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../core/services/auth.service';
@@ -20,7 +14,7 @@ import { Company } from '../../../core/models/company.model';
 import { ModuleCatalogItem } from '../../../core/models/module-request.model';
 import { User } from '../../../core/models/user.model';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge.component';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 
 @Component({
   selector: 'app-company-detail',
@@ -28,14 +22,8 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
   imports: [
     CommonModule,
     RouterLink,
-    MatTabsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatTableModule,
-    MatTooltipModule,
     MatDialogModule,
-    StatusBadgeComponent,
+    AppIconComponent,
   ],
   templateUrl: './company-detail.component.html',
 })
@@ -59,8 +47,7 @@ export class CompanyDetailComponent implements OnInit {
   users          = signal<User[]>([]);
   loadingUsers   = signal(false);
 
-  moduleColumns = ['name', 'code', 'status'];
-  userColumns   = ['avatar', 'full_name', 'email', 'role', 'status', 'actions'];
+  activeTab = signal<'info'|'modules'|'users'>('info');
 
   get companyId(): number { return Number(this.route.snapshot.paramMap.get('id')); }
 
@@ -163,17 +150,6 @@ export class CompanyDetailComponent implements OnInit {
       });
   }
 
-  moduleStatusClass(status: string | null): string {
-    const map: Record<string, string> = {
-      APPROVED: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-      PENDING:  'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-      REJECTED: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-      REVOKED:  'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-      EXPIRED:  'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
-    };
-    return status ? (map[status] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-500') : 'bg-slate-100 dark:bg-slate-700 text-slate-400';
-  }
-
   moduleStatusLabel(status: string | null): string {
     const map: Record<string, string> = {
       APPROVED: 'Activo', PENDING: 'Pendiente', REJECTED: 'Rechazado', REVOKED: 'Revocado', EXPIRED: 'Expirado',
@@ -181,25 +157,13 @@ export class CompanyDetailComponent implements OnInit {
     return status ? (map[status] ?? status) : 'Sin solicitud';
   }
 
-  moduleStatusIcon(status: string | null): string {
-    const map: Record<string, string> = {
-      APPROVED: 'check_circle', PENDING: 'hourglass_empty', REJECTED: 'cancel', REVOKED: 'cancel', EXPIRED: 'event_busy',
-    };
-    return map[status ?? ''] ?? 'radio_button_unchecked';
-  }
-
-  companyStatusClass(s: string): string {
-    const m: Record<string, string> = {
-      ACTIVE:    'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-      SUSPENDED: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
-      PENDING:   'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-      INACTIVE:  'bg-slate-100 dark:bg-slate-700 text-slate-500',
-    };
-    return m[s] ?? 'bg-slate-100 text-slate-500';
-  }
-
   companyStatusLabel(s: string): string {
     const m: Record<string, string> = { ACTIVE: 'Activa', SUSPENDED: 'Suspendida', PENDING: 'Pendiente', INACTIVE: 'Inactiva' };
+    return m[s] ?? s;
+  }
+
+  statusLabel(s: string): string {
+    const m: Record<string, string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo', LOCKED: 'Bloqueado' };
     return m[s] ?? s;
   }
 

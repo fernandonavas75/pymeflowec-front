@@ -3,41 +3,17 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { debounceTime, distinctUntilChanged, finalize } from 'rxjs';
-import { MatTableModule } from '@angular/material/table';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTabsModule } from '@angular/material/tabs';
 import { AuditLogsService, ServerLog } from '../../../core/services/audit-logs.service';
 import { CompaniesService } from '../../../core/services/companies.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AuditLog } from '../../../core/models/audit-log.model';
 import { Company } from '../../../core/models/company.model';
+import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 
 @Component({
   selector: 'app-audit-logs',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatTableModule,
-    MatButtonModule,
-    MatIconModule,
-    MatInputModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatPaginatorModule,
-    MatTooltipModule,
-    MatProgressSpinnerModule,
-    MatTabsModule,
-  ],
+  imports: [CommonModule, ReactiveFormsModule, AppIconComponent],
   templateUrl: './audit-logs.component.html',
 })
 export class AuditLogsComponent implements OnInit {
@@ -55,15 +31,16 @@ export class AuditLogsComponent implements OnInit {
   apiError        = signal<{ status: number; message: string } | null>(null);
   endpointMissing = computed(() => this.apiError()?.status === 404);
 
-  displayedColumns = ['created_at', 'company', 'user', 'action', 'table_name', 'record_id', 'ip_address', 'expand'];
+  activeTab  = signal<'audit' | 'server'>('audit');
+  totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.limit())));
 
   filters = new FormGroup({
-    company_id:  new FormControl<number | null>(null),
-    action:      new FormControl<string>(''),
-    table_name:  new FormControl(''),
-    search:      new FormControl(''),
-    date_from:   new FormControl<Date | null>(null),
-    date_to:     new FormControl<Date | null>(null),
+    company_id: new FormControl<number | null>(null),
+    action:     new FormControl<string>(''),
+    table_name: new FormControl(''),
+    search:     new FormControl(''),
+    date_from:  new FormControl(''),
+    date_to:    new FormControl(''),
   });
 
   serverLogs        = signal<ServerLog[]>([]);
@@ -92,18 +69,16 @@ export class AuditLogsComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     const f = this.filters.value;
-
     const params: Record<string, string | number | boolean | undefined> = {
       page:  this.page(),
       limit: this.limit(),
     };
-
     if (f.company_id)  params['company_id']  = f.company_id;
     if (f.action)      params['action']      = f.action!;
     if (f.table_name)  params['table_name']  = f.table_name!;
     if (f.search)      params['search']      = f.search!;
-    if (f.date_from)   params['date_from']   = (f.date_from as Date).toISOString().slice(0, 10);
-    if (f.date_to)     params['date_to']     = (f.date_to   as Date).toISOString().slice(0, 10);
+    if (f.date_from)   params['date_from']   = f.date_from!;
+    if (f.date_to)     params['date_to']     = f.date_to!;
 
     this.auditSvc.list(params).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: res => {
@@ -118,27 +93,33 @@ export class AuditLogsComponent implements OnInit {
     });
   }
 
-  onPageChange(e: PageEvent): void {
-    this.page.set(e.pageIndex + 1);
-    this.limit.set(e.pageSize);
-    this.load();
+  prevPage(): void {
+    if (this.page() > 1) { this.page.update(p => p - 1); this.load(); }
+  }
+
+  nextPage(): void {
+    if (this.page() < this.totalPages()) { this.page.update(p => p + 1); this.load(); }
   }
 
   clearFilters(): void {
-    this.filters.reset({ company_id: null, action: '', table_name: '', search: '', date_from: null, date_to: null });
+    this.filters.reset({ company_id: null, action: '', table_name: '', search: '', date_from: '', date_to: '' });
+  }
+
+  setActionFilter(action: string): void {
+    this.filters.get('action')!.setValue(action);
   }
 
   toggleExpand(id: number): void {
     this.expandedRow.update(v => v === id ? null : id);
   }
 
-  actionClass(action: string): string {
+  actionBadge(action: string): string {
     const map: Record<string, string> = {
-      INSERT: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
-      UPDATE: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
-      DELETE: 'bg-red-50  dark:bg-red-900/30  text-red-700  dark:text-red-300',
+      INSERT: 'success',
+      UPDATE: 'accent',
+      DELETE: 'danger',
     };
-    return map[action?.toUpperCase()] ?? 'bg-slate-100 text-slate-600';
+    return map[action?.toUpperCase()] ?? 'neutral';
   }
 
   valuesJson(values: Record<string, unknown> | null | undefined): string {
@@ -147,6 +128,14 @@ export class AuditLogsComponent implements OnInit {
 
   hasValues(log: AuditLog): boolean {
     return !!(log.old_values || log.new_values);
+  }
+
+  formatDate(d: string): string {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('es-EC', {
+      day: '2-digit', month: '2-digit', year: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
   }
 
   loadServerLogs(): void {
@@ -161,20 +150,18 @@ export class AuditLogsComponent implements OnInit {
       });
   }
 
-  serverLogRowClass(level: string): string {
+  serverLogBadge(level: string): string {
     const map: Record<string, string> = {
-      error: 'bg-red-50/50 dark:bg-red-900/10',
-      warn:  'bg-amber-50/50 dark:bg-amber-900/10',
+      error: 'danger',
+      warn:  'warn',
+      info:  'accent',
     };
-    return map[level] ?? '';
+    return map[level] ?? 'neutral';
   }
 
-  serverLogBadgeClass(level: string): string {
-    const map: Record<string, string> = {
-      error: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
-      warn:  'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
-      info:  'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
-    };
-    return map[level] ?? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+  serverLogRowStyle(level: string): string {
+    if (level === 'error') return 'background:var(--danger-soft)';
+    if (level === 'warn')  return 'background:var(--warn-soft)';
+    return '';
   }
 }

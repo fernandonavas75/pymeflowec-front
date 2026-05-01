@@ -33,27 +33,32 @@
   </button>
 
   <!-- User menu trigger -->
-  <button class="user-btn" [matMenuTriggerFor]="userMenu">
-    <div class="ds-avatar user-btn-avatar">{{ userInitials }}</div>
-    <div class="user-btn-meta">
-      <span class="n">{{ authService.currentUser()?.full_name }}</span>
-      <span class="r">{{ authService.role() }}</span>
-    </div>
-    <app-icon name="expand_more" [size]="14" style="color:var(--text-subtle);flex-shrink:0" />
-  </button>
-
-  <mat-menu #userMenu="matMenu" xPosition="before">
-    @if (adminViewSvc.isClientViewMode()) {
-      <button mat-menu-item (click)="adminViewSvc.exitClientView()">
-        <mat-icon>exit_to_app</mat-icon>
-        <span>Salir del modo cliente</span>
-      </button>
-      <mat-divider />
-    }
-    <button mat-menu-item (click)="logout()">
-      <mat-icon>logout</mat-icon>
-      <span>Cerrar sesión</span>
+  <div class="user-menu-wrap">
+    <button class="user-btn" (click)="toggleMenu()">
+      <div class="ds-avatar user-btn-avatar">{{ userInitials }}</div>
+      <div class="user-btn-meta">
+        <span class="n">{{ authService.currentUser()?.full_name }}</span>
+        <span class="r">{{ authService.role() }}</span>
+      </div>
+      <app-icon name="expand_more" [size]="14" style="color:var(--text-subtle);flex-shrink:0" />
     </button>
-  </mat-menu>
+
+    @if (menuOpen()) {
+      <div class="user-menu-backdrop" (click)="closeMenu()"></div>
+      <div class="user-menu-panel">
+        @if (adminViewSvc.isClientViewMode()) {
+          <button class="user-menu-item" (click)="adminViewSvc.exitClientView(); closeMenu()">
+            <app-icon name="exit_to_app" [size]="14" />
+            <span>Salir del modo cliente</span>
+          </button>
+          <div class="user-menu-divider"></div>
+        }
+        <button class="user-menu-item danger" (click)="logout()">
+          <app-icon name="logout" [size]="14" />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    }
+  </div>
 
 </header>
