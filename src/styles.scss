@@ -105,27 +105,6 @@ a { color: inherit; }
   pointer-events: auto;
 }
 
-.mat-mdc-select-panel {
-  max-height: 200px !important;
-  overflow-y: auto !important;
-  border-radius: 10px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16) !important;
-  background: var(--bg-surface) !important;
-}
-
-.mat-mdc-option {
-  min-height: 40px !important;
-}
-
-.mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) {
-  background-color: rgb(99 102 241 / 0.10) !important;
-}
-
-.mat-mdc-select-value {
-  color: var(--text-primary) !important;
-}
-
 .mat-mdc-dialog-container {
   --mdc-dialog-container-shape: 12px;
   --mdc-dialog-container-color: var(--bg-surface) !important;
@@ -144,11 +123,6 @@ a { color: inherit; }
     --mdc-snackbar-container-color: #d97706;
     --mdc-snackbar-supporting-text-color: white;
   }
-}
-
-.mat-mdc-row {
-  transition: background-color 0.12s ease;
-  &:hover { background-color: var(--bg-hover) !important; }
 }
 
 // ── Scrollbar ─────────────────────────────────────────────────────

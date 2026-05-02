@@ -316,6 +316,9 @@
       </div>
 
       <div class="drawer-foot">
+        <a class="btn ghost" [routerLink]="['/invoices', selectedInvoice()!.id]" title="Abrir en página completa">
+          <app-icon name="external_link" [size]="14"/>
+        </a>
         <button class="btn ghost" type="button">
           <app-icon name="printer" [size]="14"/>Imprimir
         </button>
