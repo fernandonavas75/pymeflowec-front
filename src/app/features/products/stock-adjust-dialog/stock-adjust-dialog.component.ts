@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
@@ -78,10 +78,10 @@ import { Product } from '../../../core/models/product.model';
             {{ form.get('movement_type')?.value === 'ADJUSTMENT' ? 'Nuevo total de stock' : 'Cantidad' }}
             <span class="req">*</span>
           </label>
-          <input class="field-input" type="number" step="0.001" min="0" formControlName="quantity"
+          <input class="field-input" type="number" step="1" min="1" formControlName="quantity"
                  placeholder="0">
           @if (form.get('quantity')?.touched && form.get('quantity')?.invalid) {
-            <span class="field-hint" style="color:var(--danger)">Ingresa una cantidad válida (mayor a 0)</span>
+            <span class="field-hint" style="color:var(--danger)">Ingresa un número entero mayor a 0</span>
           }
         </div>
 
@@ -117,7 +117,7 @@ import { Product } from '../../../core/models/product.model';
 
           <div class="field">
             <label class="field-label">Stock mínimo para alertar</label>
-            <input class="field-input" type="number" step="0.001" min="0" formControlName="min_stock">
+            <input class="field-input" type="number" step="1" min="0" formControlName="min_stock">
             <span class="field-hint">Actual: {{ product.min_stock }}</span>
             @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
               <span class="field-hint" style="color:var(--danger)">Ingresa un valor válido (0 o mayor)</span>
@@ -150,6 +150,11 @@ export class StockAdjustDialogComponent implements OnInit {
   saving = false;
   isWarehouse = this.authService.isStoreWarehouse();
 
+  private static integerOnly(c: AbstractControl): ValidationErrors | null {
+    const v = c.value;
+    return v !== null && v !== '' && !Number.isInteger(Number(v)) ? { integer: true } : null;
+  }
+
   ngOnInit(): void {
     this.form.get('movement_type')!.valueChanges.subscribe(type => {
       const notesCtrl = this.form.get('notes')!;
@@ -164,9 +169,9 @@ export class StockAdjustDialogComponent implements OnInit {
 
   form = this.fb.group({
     movement_type: ['IN', Validators.required],
-    quantity: [null as number | null, [Validators.required, Validators.min(1)]],
+    quantity: [null as number | null, [Validators.required, Validators.min(1), StockAdjustDialogComponent.integerOnly]],
     notes: [''],
-    min_stock: [this.product.min_stock, [Validators.required, Validators.min(0)]],
+    min_stock: [this.product.min_stock, [Validators.required, Validators.min(0), StockAdjustDialogComponent.integerOnly]],
   });
 
   newStock(): number {

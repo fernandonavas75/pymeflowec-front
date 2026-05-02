@@ -96,13 +96,13 @@
             @if (!isEdit) {
               <div class="field">
                 <label class="field-label">Stock inicial</label>
-                <input class="field-input" type="number" min="0" formControlName="stock">
+                <input class="field-input" type="number" step="1" min="0" formControlName="stock">
                 <span class="field-hint">Cantidad disponible al crear</span>
               </div>
             }
             <div class="field">
               <label class="field-label">Stock mínimo (alerta)</label>
-              <input class="field-input" type="number" min="0" formControlName="min_stock">
+              <input class="field-input" type="number" step="1" min="0" formControlName="min_stock">
               <span class="field-hint">Alerta cuando el stock llegue a este nivel</span>
             </div>
           </div>

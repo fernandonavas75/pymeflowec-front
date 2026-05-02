@@ -368,7 +368,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
     const total = values.reduce((s, v) => s + v, 0);
     this.chartStats = {
       avg:  total / (values.length || 1),
-      vat:  total * 0.13,
+      vat:  data.taxByDay.reduce((s, d) => s + d.amount, 0),
       best: Math.max(...values, 0),
     };
   }

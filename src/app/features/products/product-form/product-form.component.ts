@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
@@ -39,9 +39,14 @@ export class ProductFormComponent implements OnInit {
     tax_rate_id:    [null as number | null],
     purchase_price: [0, [Validators.required, Validators.min(0)]],
     sale_price:     [0, [Validators.required, Validators.min(0.01)]],
-    stock:          [0, [Validators.required, Validators.min(0)]],
-    min_stock:      [5, [Validators.required, Validators.min(0)]],
+    stock:          [0, [Validators.required, Validators.min(0), ProductFormComponent.integerOnly]],
+    min_stock:      [5, [Validators.required, Validators.min(0), ProductFormComponent.integerOnly]],
   });
+
+  private static integerOnly(c: AbstractControl): ValidationErrors | null {
+    const v = c.value;
+    return v !== null && v !== '' && !Number.isInteger(Number(v)) ? { integer: true } : null;
+  }
 
   get isEdit(): boolean { return !!this.productId(); }
 

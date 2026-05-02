@@ -18,6 +18,7 @@ export interface DashboardData {
   netBalance: number;
   recentInvoices: Invoice[];
   revenueByDay: RevenueByDay[];
+  taxByDay: RevenueByDay[];
   expensesByDay: RevenueByDay[];
   totalProducts: number;
   lowStockProducts: number;
@@ -64,6 +65,13 @@ export class DashboardService {
             .reduce((sum: number, inv: any) => sum + Number(inv.total), 0),
         }));
 
+        const taxByDay: RevenueByDay[] = last7Days.map(day => ({
+          date: day.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric' }),
+          amount: issuedInvoices
+            .filter((inv: any) => new Date(inv.issue_date).toDateString() === day.toDateString())
+            .reduce((sum: number, inv: any) => sum + Number(inv.tax_amount ?? 0), 0),
+        }));
+
         // Gastos del día: productos creados ese día × costo × stock inicial
         const expensesByDay: RevenueByDay[] = last7Days.map(day => ({
           date: day.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric' }),
@@ -84,6 +92,7 @@ export class DashboardService {
           netBalance,
           recentInvoices,
           revenueByDay,
+          taxByDay,
           expensesByDay,
           totalProducts:    products.total,
           lowStockProducts: allProducts.filter((p: any) => (p.stock ?? 0) < (p.min_stock ?? 5)).length,
