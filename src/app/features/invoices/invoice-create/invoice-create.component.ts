@@ -40,9 +40,15 @@ export class InvoiceCreateComponent implements OnInit {
   cart               = signal<CartItem[]>([]);
   saving             = signal(false);
 
-  queryCtrl = new FormControl('');
+  queryCtrl         = new FormControl('');
+  customerQueryCtrl = new FormControl('');
+
   private queryVal = toSignal(
     this.queryCtrl.valueChanges.pipe(startWith('')),
+    { initialValue: '' }
+  );
+  private customerQueryVal = toSignal(
+    this.customerQueryCtrl.valueChanges.pipe(startWith('')),
     { initialValue: '' }
   );
 
@@ -52,6 +58,15 @@ export class InvoiceCreateComponent implements OnInit {
       ? this.allProducts().filter(p =>
           p.name.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q))
       : this.allProducts();
+  });
+
+  filteredCustomers = computed(() => {
+    const q = (this.customerQueryVal() ?? '').toLowerCase();
+    return q
+      ? this.customers().filter(c =>
+          c.full_name.toLowerCase().includes(q) ||
+          (c.document_number ?? '').toLowerCase().includes(q))
+      : this.customers();
   });
 
   cartCount = computed(() => this.cart().reduce((s, i) => s + i.qty, 0));
@@ -118,6 +133,12 @@ export class InvoiceCreateComponent implements OnInit {
   pickCustomer(c: Customer): void {
     this.selectedCustomer.set(c);
     this.showCustomerPicker.set(false);
+    this.customerQueryCtrl.setValue('');
+  }
+
+  closeCustomerPicker(): void {
+    this.showCustomerPicker.set(false);
+    this.customerQueryCtrl.setValue('');
   }
 
   isInCart(productId: number): boolean {

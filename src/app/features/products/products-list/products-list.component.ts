@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
@@ -35,11 +35,28 @@ export class ProductsListComponent implements OnInit {
   tabFilter      = signal<'all' | 'low' | 'out'>('all');
   searchCtrl     = new FormControl('');
   productPopup   = signal<Product | null>(null);
+  supplierFilter = signal<string | null>(null);
+  statusFilter   = signal<'ACTIVE' | 'INACTIVE' | null>(null);
+  openDropdown   = signal<'supplier' | 'status' | null>(null);
 
   private searchQuery = toSignal(
     this.searchCtrl.valueChanges.pipe(startWith('')),
     { initialValue: '' }
   );
+
+  uniqueSuppliers = computed(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const p of this.allProducts()) {
+      if (p.supplier?.name && !seen.has(p.supplier.name)) {
+        seen.add(p.supplier.name);
+        result.push(p.supplier.name);
+      }
+    }
+    return result.sort();
+  });
+
+  hasActiveFilters = computed(() => !!this.supplierFilter() || !!this.statusFilter());
 
   lowCount  = computed(() => this.allProducts().filter(p => p.stock > 0 && p.stock <= p.min_stock && p.status === 'ACTIVE').length);
   outCount  = computed(() => this.allProducts().filter(p => p.stock === 0 && p.status === 'ACTIVE').length);
@@ -55,6 +72,10 @@ export class ProductsListComponent implements OnInit {
     if (q) list = list.filter(p =>
       p.name.toLowerCase().includes(q) || (p.sku ?? '').toLowerCase().includes(q)
     );
+    const supplier = this.supplierFilter();
+    if (supplier) list = list.filter(p => p.supplier?.name === supplier);
+    const status = this.statusFilter();
+    if (status) list = list.filter(p => p.status === status);
     return list;
   });
 
@@ -131,6 +152,20 @@ export class ProductsListComponent implements OnInit {
         });
       }
     });
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void { this.openDropdown.set(null); }
+
+  toggleDropdown(name: 'supplier' | 'status', event: MouseEvent): void {
+    event.stopPropagation();
+    this.openDropdown.update(curr => curr === name ? null : name);
+  }
+
+  clearFilters(): void {
+    this.supplierFilter.set(null);
+    this.statusFilter.set(null);
+    this.searchCtrl.setValue('');
   }
 
   openProductPopup(product: Product, event: MouseEvent): void {

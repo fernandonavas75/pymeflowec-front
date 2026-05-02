@@ -10,6 +10,7 @@ interface NavItem {
   label: string;
   icon: string;
   route: string;
+  queryParams?: Record<string, string>;
   /**
    * Solo visible para STORE_ADMIN (NO para platform ni store_seller).
    * Nunca se muestra a usuarios de plataforma.
@@ -103,7 +104,7 @@ export class SidebarComponent implements OnInit {
         },
         { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',           adminOnly: true },
         { label: 'Módulos',   icon: 'extension',       route: '/module-requests', adminOnly: true },
-        { label: 'Actividad', icon: 'manage_search',   route: '/reports',         adminOnly: true },
+        { label: 'Actividad', icon: 'manage_search',   route: '/reports', queryParams: { view: 'activity' }, adminOnly: true },
       ],
     },
     // ── Plataforma: sólo usuarios sin empresa ────────────────────────

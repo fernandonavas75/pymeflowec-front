@@ -53,7 +53,10 @@
               <span class="pill">PEND</span>
             </div>
           } @else {
-            <a [routerLink]="item.route" routerLinkActive="active" class="nav-item"
+            <a [routerLink]="item.route"
+               [queryParams]="item.queryParams ?? null"
+               routerLinkActive="active"
+               class="nav-item"
                [title]="collapsed() ? item.label : ''">
               <app-icon [name]="item.icon" [size]="17" class="icon" />
               <span class="label">{{ item.label }}</span>

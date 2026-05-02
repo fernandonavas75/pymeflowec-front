@@ -136,16 +136,30 @@
 
   <!-- ── Customer picker drawer ──────────────────────────────────── -->
   @if (showCustomerPicker()) {
-    <div class="drawer-backdrop" (click)="showCustomerPicker.set(false)"></div>
+    <div class="drawer-backdrop" (click)="closeCustomerPicker()"></div>
     <div class="drawer">
       <div class="drawer-head">
         <div class="t">Seleccionar cliente</div>
-        <button class="btn ghost sm" (click)="showCustomerPicker.set(false)" type="button">
+        <button class="btn ghost sm" (click)="closeCustomerPicker()" type="button">
           <app-icon name="x" [size]="16"/>
         </button>
       </div>
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+        <div class="pos-search" style="margin:0">
+          <app-icon name="search" [size]="16" class="icon"/>
+          <input [formControl]="customerQueryCtrl"
+                 placeholder="Buscar por nombre o cédula…"
+                 autocomplete="off"/>
+          @if (customerQueryCtrl.value) {
+            <button type="button" style="background:none;border:none;cursor:pointer;padding:2px;display:flex;align-items:center;color:var(--text-muted)"
+                    (click)="customerQueryCtrl.setValue('')">
+              <app-icon name="x" [size]="13"/>
+            </button>
+          }
+        </div>
+      </div>
       <div class="drawer-body" style="padding:0">
-        @for (c of customers(); track c.id) {
+        @for (c of filteredCustomers(); track c.id) {
           <div class="cust-row" (click)="pickCustomer(c)">
             <div class="cart-avatar">{{ initials(c.full_name) }}</div>
             <div style="flex:1">
@@ -157,6 +171,11 @@
             @if (selectedCustomer()?.id === c.id) {
               <app-icon name="check" [size]="16"/>
             }
+          </div>
+        }
+        @if (filteredCustomers().length === 0) {
+          <div style="text-align:center;padding:32px 16px;color:var(--text-subtle);font-size:13px">
+            Sin resultados para "{{ customerQueryCtrl.value }}"
           </div>
         }
       </div>

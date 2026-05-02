@@ -29,6 +29,21 @@ export class AuditLogsService {
       );
   }
 
+  /** Actividad de la empresa propia — para STORE_ADMIN. company_id lo inyecta el backend desde el JWT. */
+  listMyCompany(params?: PaginationParams): Observable<PaginatedResponse<AuditLog>> {
+    return this.api
+      .get<ApiListResponse<AuditLog>>('/audit-logs/my-company', params as Record<string, string | number | boolean | undefined>)
+      .pipe(
+        map(res => ({
+          data: res.data ?? [],
+          total: res.pagination?.total ?? 0,
+          page: res.pagination?.current_page ?? 1,
+          limit: res.pagination?.per_page ?? 50,
+          totalPages: res.pagination?.total_pages ?? 0,
+        })),
+      );
+  }
+
   serverLogs(params?: { level?: string; limit?: number }): Observable<ServerLog[]> {
     return this.api
       .get<{ success: boolean; data: ServerLog[] }>('/platform/server-logs', params as Record<string, string | number | boolean | undefined>)

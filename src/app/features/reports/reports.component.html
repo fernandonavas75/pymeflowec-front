@@ -4,14 +4,14 @@
   <div class="page-head">
     <div>
       <div class="page-title">
-        {{ activeTab() === 'activity' ? 'Actividad del equipo' : 'Reportes' }}
+        {{ view() === 'activity' ? 'Actividad del equipo' : 'Reportes' }}
       </div>
       <div class="page-sub-en">
-        {{ activeTab() === 'activity' ? 'Registro de acciones de tu empresa' : todayDate }}
+        {{ view() === 'activity' ? 'Registro de acciones de tu empresa' : todayDate }}
       </div>
     </div>
     <div class="page-actions">
-      @if (activeTab() === 'analytics') {
+      @if (view() !== 'activity') {
         <button class="btn secondary" type="button" (click)="refresh()">
           <app-icon name="refresh" [size]="16"/>Actualizar
         </button>
@@ -26,24 +26,10 @@
     </div>
   </div>
 
-  <!-- ── Tabs (solo STORE_ADMIN) ─────────────────────────────────── -->
-  @if (authService.isStoreAdmin()) {
-    <div class="ds-tabs" style="margin-bottom:var(--density-gap)">
-      <button class="ds-tab" [class.active]="activeTab() === 'analytics'"
-              (click)="switchTab('analytics')" type="button">
-        <app-icon name="bar_chart" [size]="14"/>Analíticas
-      </button>
-      <button class="ds-tab" [class.active]="activeTab() === 'activity'"
-              (click)="switchTab('activity')" type="button">
-        <app-icon name="manage_search" [size]="14"/>Actividad del equipo
-      </button>
-    </div>
-  }
-
   <!-- ═══════════════════════════════════════════════════════════════
-       TAB: ANALÍTICAS
+       VISTA: ANALÍTICAS
   ════════════════════════════════════════════════════════════════ -->
-  @if (!authService.isStoreAdmin() || activeTab() === 'analytics') {
+  @if (view() !== 'activity') {
 
   <!-- ── Loading skeleton ────────────────────────────────────────── -->
   @if (loading) {
@@ -299,12 +285,12 @@
 
   }
 
-  } <!-- /tab analytics -->
+  } <!-- /vista analytics -->
 
   <!-- ═══════════════════════════════════════════════════════════════
-       TAB: ACTIVIDAD DEL EQUIPO
+       VISTA: ACTIVIDAD DEL EQUIPO
   ════════════════════════════════════════════════════════════════ -->
-  @if (authService.isStoreAdmin() && activeTab() === 'activity') {
+  @if (authService.isStoreAdmin() && view() === 'activity') {
 
     <!-- Filtro de rango -->
     <div class="act-range">
@@ -341,13 +327,18 @@
       @if (activityByUser().length > 0) {
         <div class="user-cards">
           @for (s of activityByUser(); track s.user.id) {
-            <div class="user-card">
+            <div class="user-card" [class.active]="selectedUserId() === s.user.id"
+                 (click)="selectUser(s.user.id)" role="button" tabindex="0"
+                 (keydown.enter)="selectUser(s.user.id)" (keydown.space)="selectUser(s.user.id)">
               <div class="uc-top">
                 <div class="uc-av">{{ s.initials }}</div>
-                <div>
+                <div style="flex:1;min-width:0">
                   <div class="uc-name">{{ s.user.full_name }}</div>
                   <div class="uc-total">{{ s.total }} acción{{ s.total !== 1 ? 'es' : '' }}</div>
                 </div>
+                @if (selectedUserId() === s.user.id) {
+                  <app-icon name="check_circle" [size]="14" style="color:var(--accent);flex-shrink:0"/>
+                }
               </div>
               <div class="uc-chips">
                 @if (s.sales > 0) {
@@ -355,14 +346,19 @@
                     <app-icon name="receipt_long" [size]="10"/> {{ s.sales }} venta{{ s.sales !== 1 ? 's' : '' }}
                   </span>
                 }
-                @if (s.stockOut > 0) {
-                  <span class="uc-chip warn">
-                    <app-icon name="alert_triangle" [size]="10"/> {{ s.stockOut }} merma{{ s.stockOut !== 1 ? 's' : '' }}
+                @if (s.stockIn > 0) {
+                  <span class="uc-chip success">
+                    <app-icon name="trending_up" [size]="10"/> +{{ s.stockIn }} ingreso{{ s.stockIn !== 1 ? 's' : '' }}
                   </span>
                 }
-                @if (s.total - s.sales - s.stockOut > 0) {
+                @if (s.stockOut > 0) {
+                  <span class="uc-chip warn">
+                    <app-icon name="trending_down" [size]="10"/> {{ s.stockOut }} salida{{ s.stockOut !== 1 ? 's' : '' }}
+                  </span>
+                }
+                @if (s.total - s.sales - s.stockIn - s.stockOut > 0) {
                   <span class="uc-chip accent">
-                    {{ s.total - s.sales - s.stockOut }} otro{{ (s.total - s.sales - s.stockOut) !== 1 ? 's' : '' }}
+                    {{ s.total - s.sales - s.stockIn - s.stockOut }} otro{{ (s.total - s.sales - s.stockIn - s.stockOut) !== 1 ? 's' : '' }}
                   </span>
                 }
               </div>
@@ -371,12 +367,27 @@
         </div>
       }
 
+      <!-- Banner de filtro activo -->
+      @if (selectedUserId()) {
+        <div class="act-filter-bar">
+          <app-icon name="user" [size]="14"/>
+          <span>Mostrando acciones de <strong>{{ selectedUserName() }}</strong></span>
+          <button class="btn ghost sm" type="button" (click)="selectedUserId.set(null)" style="margin-left:auto">
+            <app-icon name="x" [size]="12"/>Limpiar filtro
+          </button>
+        </div>
+      }
+
       <!-- Feed de actividad -->
       <div class="card">
         <div class="card-head">
           <div class="card-title">
-            Registro de acciones
-            <span class="en">{{ activityTotal() }} en total</span>
+            @if (selectedUserId()) {
+              Acciones de {{ selectedUserName() }}
+            } @else {
+              Registro de acciones
+            }
+            <span class="en">{{ activityEvents().length }} mostradas</span>
           </div>
         </div>
         <div class="card-body p0">
@@ -402,8 +413,13 @@
                       @if (item.ev.amount) {
                         <span class="fa">· ${{ item.ev.amount | number:'1.2-2' }}</span>
                       }
-                      @if (item.ev.quantity !== undefined) {
-                        <span class="fq">· {{ item.ev.quantity }} u.</span>
+                      @if (item.ev.delta !== undefined) {
+                        <span class="fdelta"
+                              [class.pos]="item.ev.delta > 0"
+                              [class.neg]="item.ev.delta < 0"
+                              [class.neu]="item.ev.delta === 0">
+                          {{ item.ev.delta > 0 ? '+' : '' }}{{ item.ev.delta }} u.
+                        </span>
                       }
                     </div>
 
@@ -458,6 +474,6 @@
 
     } <!-- /!loading && !error -->
 
-  } <!-- /tab activity -->
+  } <!-- /vista activity -->
 
 </div>

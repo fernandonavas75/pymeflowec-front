@@ -47,15 +47,78 @@
       <app-icon name="search" [size]="13"/>
       <input placeholder="Buscar por nombre o SKU…" [formControl]="searchCtrl"/>
     </div>
-    <button class="filter-chip" type="button">
-      <app-icon name="filter" [size]="13"/>Proveedor
-    </button>
-    <button class="filter-chip" type="button">
-      <app-icon name="percent" [size]="13"/>IVA
-    </button>
-    <button class="filter-chip" type="button">
-      <app-icon name="filter" [size]="13"/>Estado
-    </button>
+
+    <!-- Proveedor -->
+    <div style="position:relative">
+      <button class="filter-chip" [class.active]="!!supplierFilter()" type="button"
+              (click)="toggleDropdown('supplier', $event)">
+        <app-icon name="truck" [size]="13"/>
+        {{ supplierFilter() ?? 'Proveedor' }}
+        @if (supplierFilter()) {
+          <app-icon name="x" [size]="11" (click)="supplierFilter.set(null); $event.stopPropagation()"/>
+        } @else {
+          <app-icon name="chevron_down" [size]="11"/>
+        }
+      </button>
+      @if (openDropdown() === 'supplier') {
+        <div class="filter-dropdown" (click)="$event.stopPropagation()">
+          <button class="filter-dropdown-item" [class.selected]="!supplierFilter()" type="button"
+                  (click)="supplierFilter.set(null); openDropdown.set(null)">
+            Todos los proveedores
+          </button>
+          @if (uniqueSuppliers().length > 0) {
+            <div class="filter-dropdown-sep"></div>
+            @for (s of uniqueSuppliers(); track s) {
+              <button class="filter-dropdown-item" [class.selected]="supplierFilter() === s" type="button"
+                      (click)="supplierFilter.set(s); openDropdown.set(null)">
+                {{ s }}
+              </button>
+            }
+          } @else {
+            <div style="padding:8px 10px;font-size:12px;color:var(--text-subtle)">Sin proveedores registrados</div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Estado -->
+    <div style="position:relative">
+      <button class="filter-chip" [class.active]="!!statusFilter()" type="button"
+              (click)="toggleDropdown('status', $event)">
+        <app-icon name="power" [size]="13"/>
+        @if (!statusFilter()) { Estado }
+        @else if (statusFilter() === 'ACTIVE') { Activos }
+        @else { Inactivos }
+        @if (statusFilter()) {
+          <app-icon name="x" [size]="11" (click)="statusFilter.set(null); $event.stopPropagation()"/>
+        } @else {
+          <app-icon name="chevron_down" [size]="11"/>
+        }
+      </button>
+      @if (openDropdown() === 'status') {
+        <div class="filter-dropdown" (click)="$event.stopPropagation()">
+          <button class="filter-dropdown-item" [class.selected]="!statusFilter()" type="button"
+                  (click)="statusFilter.set(null); openDropdown.set(null)">
+            Todos los estados
+          </button>
+          <div class="filter-dropdown-sep"></div>
+          <button class="filter-dropdown-item" [class.selected]="statusFilter() === 'ACTIVE'" type="button"
+                  (click)="statusFilter.set('ACTIVE'); openDropdown.set(null)">
+            <span class="badge success" style="font-size:11px">Activo</span>
+          </button>
+          <button class="filter-dropdown-item" [class.selected]="statusFilter() === 'INACTIVE'" type="button"
+                  (click)="statusFilter.set('INACTIVE'); openDropdown.set(null)">
+            <span class="badge neutral" style="font-size:11px">Inactivo</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (hasActiveFilters()) {
+      <button class="btn ghost sm" type="button" (click)="clearFilters()">
+        <app-icon name="x" [size]="12"/>Limpiar filtros
+      </button>
+    }
   </div>
 
   <!-- ── Table card ──────────────────────────────────────────────── -->

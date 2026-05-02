@@ -6,6 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { forkJoin, of } from 'rxjs';
 import { ProductsService } from '../../../core/services/products.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { Product } from '../../../core/models/product.model';
 
 @Component({
@@ -66,7 +67,9 @@ import { Product } from '../../../core/models/product.model';
           <select class="field-select" formControlName="movement_type">
             <option value="IN">Entrada — compra / recepción</option>
             <option value="OUT">Salida — merma / pérdida</option>
-            <option value="ADJUSTMENT">Ajuste manual (valor exacto)</option>
+            @if (!isWarehouse) {
+              <option value="ADJUSTMENT">Ajuste manual (valor exacto)</option>
+            }
           </select>
         </div>
 
@@ -102,23 +105,25 @@ import { Product } from '../../../core/models/product.model';
           }
         </div>
 
-        <hr style="border:none;border-top:1px solid var(--border-ds);margin:16px 0 18px">
+        @if (!isWarehouse) {
+          <hr style="border:none;border-top:1px solid var(--border-ds);margin:16px 0 18px">
 
-        <p style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:4px">
-          Alerta de reabastecimiento
-        </p>
-        <p style="font-size:12px;color:var(--text-subtle);margin-bottom:12px">
-          Se muestra una alerta cuando el stock llegue a este nivel.
-        </p>
+          <p style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:4px">
+            Alerta de reabastecimiento
+          </p>
+          <p style="font-size:12px;color:var(--text-subtle);margin-bottom:12px">
+            Se muestra una alerta cuando el stock llegue a este nivel.
+          </p>
 
-        <div class="field">
-          <label class="field-label">Stock mínimo para alertar</label>
-          <input class="field-input" type="number" step="0.001" min="0" formControlName="min_stock">
-          <span class="field-hint">Actual: {{ product.min_stock }}</span>
-          @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
-            <span class="field-hint" style="color:var(--danger)">Ingresa un valor válido (0 o mayor)</span>
-          }
-        </div>
+          <div class="field">
+            <label class="field-label">Stock mínimo para alertar</label>
+            <input class="field-input" type="number" step="0.001" min="0" formControlName="min_stock">
+            <span class="field-hint">Actual: {{ product.min_stock }}</span>
+            @if (form.get('min_stock')?.touched && form.get('min_stock')?.invalid) {
+              <span class="field-hint" style="color:var(--danger)">Ingresa un valor válido (0 o mayor)</span>
+            }
+          </div>
+        }
 
       </form>
     </div>
@@ -138,10 +143,12 @@ export class StockAdjustDialogComponent implements OnInit {
   product: Product = inject(MAT_DIALOG_DATA);
   ref = inject(MatDialogRef<StockAdjustDialogComponent>);
   private svc = inject(ProductsService);
+  private authService = inject(AuthService);
   private snackBar = inject(MatSnackBar);
   private fb = inject(FormBuilder);
 
   saving = false;
+  isWarehouse = this.authService.isStoreWarehouse();
 
   ngOnInit(): void {
     this.form.get('movement_type')!.valueChanges.subscribe(type => {
@@ -183,7 +190,7 @@ export class StockAdjustDialogComponent implements OnInit {
       notes: v.notes || undefined,
     });
 
-    const minStockChanged = v.min_stock !== this.product.min_stock;
+    const minStockChanged = !this.isWarehouse && v.min_stock !== this.product.min_stock;
     const updateCall$ = minStockChanged
       ? this.svc.update(this.product.id, { min_stock: v.min_stock! })
       : of(null);

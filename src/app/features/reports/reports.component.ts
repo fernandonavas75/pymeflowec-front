@@ -1,8 +1,9 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Subscription, forkJoin, of, finalize, catchError } from 'rxjs';
+import { Subscription, forkJoin, of, finalize, catchError, map } from 'rxjs';
 import { DashboardService, DashboardData, RevenueByDay } from '../../core/services/dashboard.service';
 import { ProductsService } from '../../core/services/products.service';
 import { AuditLogsService } from '../../core/services/audit-logs.service';
@@ -23,7 +24,8 @@ interface ActivityEvent {
   verb: string;
   detail: string;
   amount?: number;
-  quantity?: number;
+  /** Signed stock change: +N = ingresó, -N = retiró. undefined = no aplica. */
+  delta?: number;
   notes?: string;
   isOut?: boolean;
 }
@@ -32,6 +34,7 @@ interface UserSummary {
   user: NonNullable<AuditLog['user']>;
   total: number;
   sales: number;
+  stockIn: number;
   stockOut: number;
   initials: string;
 }
@@ -47,9 +50,15 @@ export class ReportsComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   private productsService  = inject(ProductsService);
   private auditLogsSvc     = inject(AuditLogsService);
+  private route            = inject(ActivatedRoute);
   authService              = inject(AuthService);
   adminViewSvc             = inject(AdminViewService);
   private modulesSvc       = inject(CompanyModulesService);
+
+  view = toSignal(
+    this.route.queryParamMap.pipe(map(p => p.get('view') ?? 'analytics')),
+    { initialValue: 'analytics' },
+  );
 
   data: DashboardData | null = null;
   loading    = true;
@@ -68,22 +77,43 @@ export class ReportsComponent implements OnInit, OnDestroy {
   range        = signal<'7d'|'30d'>('7d');
 
   // ── Actividad del equipo ──────────────────────────────────────────
-  activeTab        = signal<'analytics' | 'activity'>('analytics');
   activityLogs     = signal<AuditLog[]>([]);
   activityLoading  = signal(false);
   activityError    = signal<string | null>(null);
   activityRange    = signal<'today' | 'week' | 'month'>('today');
   activityPage     = signal(1);
   activityTotal    = signal(0);
+  selectedUserId   = signal<number | null>(null);
   readonly activityPageSize = 40;
 
-  activityEvents = computed(() =>
-    this.activityLogs().map(log => ({ log, ev: this.eventOf(log) }))
-  );
+  private readonly INTERNAL_TABLES = new Set([
+    'invoices', 'customers', 'products', 'stock_movements',
+    'suppliers', 'users', 'tax_rates',
+  ]);
+
+  private isInternalLog(log: AuditLog): boolean {
+    const t  = (log.table_name ?? '').toLowerCase();
+    const nv = (log.new_values ?? {}) as Record<string, unknown>;
+    if (this.INTERNAL_TABLES.has(t)) return true;
+    // Solo mostrar aprobaciones de módulos del platform admin
+    if (t === 'module_requests' && log.action === 'UPDATE') {
+      return nv['status'] === 'APPROVED' || nv['status'] === 'ACTIVE';
+    }
+    return false;
+  }
+
+  activityEvents = computed(() => {
+    const uid = this.selectedUserId();
+    return this.activityLogs()
+      .filter(log => this.isInternalLog(log))
+      .filter(log => !uid || log.user?.id === uid)
+      .map(log => ({ log, ev: this.eventOf(log) }));
+  });
 
   activityByUser = computed((): UserSummary[] => {
     const map = new Map<number, UserSummary>();
     for (const log of this.activityLogs()) {
+      if (!this.INTERNAL_TABLES.has((log.table_name ?? '').toLowerCase())) continue;
       if (!log.user) continue;
       const uid = log.user.id;
       if (!map.has(uid)) {
@@ -92,6 +122,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
           user: log.user,
           total: 0,
           sales: 0,
+          stockIn: 0,
           stockOut: 0,
           initials: (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '') || '?',
         });
@@ -99,10 +130,21 @@ export class ReportsComponent implements OnInit, OnDestroy {
       const s = map.get(uid)!;
       s.total++;
       if (log.table_name === 'invoices'        && log.action === 'INSERT') s.sales++;
-      if (log.table_name === 'stock_movements' && (log.new_values as any)?.movement_type === 'OUT') s.stockOut++;
+      if (log.table_name === 'stock_movements' && (log.new_values as any)?.movement_type?.toUpperCase() === 'IN')  s.stockIn++;
+      if (log.table_name === 'stock_movements' && (log.new_values as any)?.movement_type?.toUpperCase() === 'OUT') s.stockOut++;
     }
     return Array.from(map.values()).sort((a, b) => b.total - a.total);
   });
+
+  selectedUserName = computed(() => {
+    const uid = this.selectedUserId();
+    if (!uid) return null;
+    return this.activityByUser().find(s => s.user.id === uid)?.user.full_name ?? null;
+  });
+
+  selectUser(id: number): void {
+    this.selectedUserId.update(curr => curr === id ? null : id);
+  }
 
   activityPages = computed(() => Math.max(1, Math.ceil(this.activityTotal() / this.activityPageSize)));
 
@@ -135,6 +177,13 @@ export class ReportsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const isCV = this.adminViewSvc.isClientViewMode();
     if (!isCV && !this.authService.isStoreUser()) { this.loading = false; return; }
+
+    if (this.view() === 'activity') {
+      this.loading = false;
+      this.loadActivity();
+      return;
+    }
+
     if (isCV) {
       this.afterCatalogReady();
     } else {
@@ -177,13 +226,6 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   // ── Activity tab ─────────────────────────────────────────────────
 
-  switchTab(tab: 'analytics' | 'activity'): void {
-    this.activeTab.set(tab);
-    if (tab === 'activity' && !this.activityLogs().length && !this.activityLoading()) {
-      this.loadActivity();
-    }
-  }
-
   setActivityRange(r: 'today' | 'week' | 'month'): void {
     this.activityRange.set(r);
     this.activityPage.set(1);
@@ -193,7 +235,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
   loadActivity(): void {
     this.activityLoading.set(true);
     this.activityError.set(null);
-    this.auditLogsSvc.list({
+    this.auditLogsSvc.listMyCompany({
       page:      this.activityPage(),
       limit:     this.activityPageSize,
       date_from: this.activityDateFrom(),
@@ -260,10 +302,32 @@ export class ReportsComponent implements OnInit, OnDestroy {
       const mv    = String(nv['movement_type'] ?? '').toUpperCase();
       const prod  = String(nv['product_name'] ?? nv['name'] ?? '');
       const qty   = nv['quantity'] !== undefined ? Number(nv['quantity']) : undefined;
-      const notes = String(nv['notes'] ?? nv['reason'] ?? '');
-      if (mv === 'OUT') return { icon: 'alert_triangle', color: 'warn', verb: 'registró una merma / pérdida', detail: prod, quantity: qty, notes: notes || undefined, isOut: true };
-      if (mv === 'IN')  return { icon: 'package', color: 'success', verb: 'recibió stock', detail: prod, quantity: qty, notes: notes || undefined };
-      return { icon: 'settings', color: 'neutral', verb: 'ajustó el stock', detail: prod, quantity: qty, notes: notes || undefined };
+      const notes = String(nv['notes'] ?? nv['reason'] ?? '').trim();
+      if (mv === 'OUT') return {
+        icon: 'trending_down', color: 'warn',
+        verb: 'retiró del inventario', detail: prod,
+        delta: qty !== undefined ? -qty : undefined,
+        notes: notes || undefined, isOut: true,
+      };
+      if (mv === 'IN') return {
+        icon: 'trending_up', color: 'success',
+        verb: 'ingresó al inventario', detail: prod,
+        delta: qty !== undefined ? +qty : undefined,
+        notes: notes || undefined,
+      };
+      // ADJUSTMENT: derive direction from product stock delta when available
+      const oldStk = ov['stock'] !== undefined ? Number(ov['stock']) : undefined;
+      const newStk = nv['stock'] !== undefined ? Number(nv['stock']) : undefined;
+      const adjDelta = (oldStk !== undefined && newStk !== undefined)
+        ? newStk - oldStk
+        : undefined;
+      return {
+        icon: 'settings', color: 'neutral',
+        verb: 'realizó un ajuste de inventario', detail: prod,
+        delta: adjDelta ?? qty,
+        notes: notes || undefined,
+        isOut: adjDelta !== undefined && adjDelta < 0,
+      };
     }
     if (t === 'suppliers') {
       if (a === 'INSERT') return { icon: 'truck', color: 'success', verb: 'agregó un proveedor', detail: String(nv['name'] ?? '') };
@@ -277,6 +341,10 @@ export class ReportsComponent implements OnInit, OnDestroy {
     if (t === 'tax_rates') {
       if (a === 'INSERT') return { icon: 'percent', color: 'accent', verb: 'agregó una tasa de impuesto', detail: String(nv['name'] ?? '') };
       return { icon: 'percent', color: 'neutral', verb: 'actualizó una tasa de impuesto', detail: String(nv['name'] ?? ov['name'] ?? '') };
+    }
+    if (t === 'module_requests') {
+      const mod = String(nv['module_name'] ?? nv['module_id'] ?? '');
+      return { icon: 'puzzle', color: 'success', verb: 'aprobó el módulo', detail: mod };
     }
     const actionLabel: Record<string, string> = { INSERT: 'agregó', UPDATE: 'modificó', DELETE: 'eliminó' };
     return { icon: 'list', color: 'neutral', verb: `${actionLabel[a] ?? 'modificó'} en ${t}`, detail: '' };
