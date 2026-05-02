@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Subscription, forkJoin, of, finalize, catchError } from 'rxjs';
 import { DashboardService, DashboardData, RevenueByDay } from '../../core/services/dashboard.service';
 import { ProductsService } from '../../core/services/products.service';
@@ -33,6 +34,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   adminViewSvc             = inject(AdminViewService);
   private modulesSvc       = inject(CompanyModulesService);
 
+  private snackBar = inject(MatSnackBar);
+
   data: DashboardData | null = null;
   loading    = true;
   lastUpdated = new Date();
@@ -59,6 +62,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     { icon: 'percent',          label: 'Impuestos',       description: 'Configura tasas de impuesto',     route: '/tax-rates',       color: 'amber',  moduleCode: 'MOD_TAX', adminOnly: true },
     { icon: 'manage_accounts',  label: 'Usuarios',        description: 'Gestiona los usuarios',           route: '/users',           color: 'indigo', adminOnly: true },
     { icon: 'extension',        label: 'Módulos ERP',     description: 'Solicita módulos del ERP',        route: '/module-requests', color: 'rose',   adminOnly: true },
+    { icon: 'bar_chart',        label: 'Reportes',        description: 'Ventas, productos y proyecciones', route: '/reports',         color: 'indigo', moduleCode: 'MOD_INVOICING' },
   ];
 
   private readonly PLATFORM_CARDS: ModCard[] = [
@@ -211,6 +215,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.chartLabels = days
       .map((d, i) => ({ x: PL + i * step + step / 2, text: d.date.split(',')[0] }))
       .filter((_, i) => i === 0 || i % every === 0 || i === days.length - 1);
+  }
+
+  comingSoon(): void {
+    this.snackBar.open('🚧 Funcionalidad en desarrollo', 'Cerrar', { duration: 3000 });
   }
 
   // ── Formatters ────────────────────────────────────────────────────

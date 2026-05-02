@@ -1,0 +1,463 @@
+<div class="page">
+
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">
+        {{ activeTab() === 'activity' ? 'Actividad del equipo' : 'Reportes' }}
+      </div>
+      <div class="page-sub-en">
+        {{ activeTab() === 'activity' ? 'Registro de acciones de tu empresa' : todayDate }}
+      </div>
+    </div>
+    <div class="page-actions">
+      @if (activeTab() === 'analytics') {
+        <button class="btn secondary" type="button" (click)="refresh()">
+          <app-icon name="refresh" [size]="16"/>Actualizar
+        </button>
+        <a routerLink="/invoices/new" class="btn primary">
+          <app-icon name="plus" [size]="16"/>Nueva factura
+        </a>
+      } @else {
+        <button class="btn secondary" type="button" (click)="loadActivity()" [disabled]="activityLoading()">
+          <app-icon name="refresh" [size]="16"/>Actualizar
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ── Tabs (solo STORE_ADMIN) ─────────────────────────────────── -->
+  @if (authService.isStoreAdmin()) {
+    <div class="ds-tabs" style="margin-bottom:var(--density-gap)">
+      <button class="ds-tab" [class.active]="activeTab() === 'analytics'"
+              (click)="switchTab('analytics')" type="button">
+        <app-icon name="bar_chart" [size]="14"/>Analíticas
+      </button>
+      <button class="ds-tab" [class.active]="activeTab() === 'activity'"
+              (click)="switchTab('activity')" type="button">
+        <app-icon name="manage_search" [size]="14"/>Actividad del equipo
+      </button>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TAB: ANALÍTICAS
+  ════════════════════════════════════════════════════════════════ -->
+  @if (!authService.isStoreAdmin() || activeTab() === 'analytics') {
+
+  <!-- ── Loading skeleton ────────────────────────────────────────── -->
+  @if (loading) {
+    <div class="kpi-grid">
+      <div class="skel" style="height:120px"></div>
+      <div class="skel" style="height:120px"></div>
+      <div class="skel" style="height:120px"></div>
+      <div class="skel" style="height:120px"></div>
+    </div>
+    <div class="skel" style="height:300px;margin-bottom:var(--density-gap)"></div>
+  }
+
+  <!-- ── Sin acceso a analíticas ────────────────────────────────── -->
+  @if (!loading && !hasAnalytics()) {
+    <div class="ds-alert accent" style="margin-top:8px">
+      <app-icon name="bar_chart" [size]="20" class="alert-icon"/>
+      <div style="flex:1">
+        <div class="t">Módulo de Facturación requerido</div>
+        <div class="d">Activa el módulo de Facturación para acceder a los reportes de ventas, productos más vendidos y proyecciones.</div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <a routerLink="/module-requests" class="btn primary sm">Ver módulos</a>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Contenido de reportes ───────────────────────────────────── -->
+  @if (!loading && hasAnalytics() && data) {
+
+    <!-- KPI row -->
+    <div class="kpi-grid">
+
+      <div class="kpi">
+        <div class="kpi-label">Ventas de hoy <span class="en">/ Today</span></div>
+        <div class="kpi-value"><span class="cur">$</span>{{ todaySales | number:'1.2-2' }}</div>
+        <div class="kpi-sub">
+          <span class="kpi-delta up"><app-icon name="trending_up" [size]="11"/>Hoy</span>
+          <span>{{ todayInvoiceCount }} facturas emitidas</span>
+        </div>
+        <div class="kpi-spark">
+          <svg viewBox="0 0 200 32" preserveAspectRatio="none"
+               style="width:100%;height:32px;display:block">
+            <path [attr.d]="sparkArea" fill="var(--accent)" opacity="0.12"/>
+            <path [attr.d]="sparkPath" fill="none" stroke="var(--accent)" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi-label">Facturas emitidas <span class="en">/ Invoices</span></div>
+        <div class="kpi-value">
+          {{ todayInvoiceCount }}<span
+            style="font-size:16px;color:var(--text-muted-ds);font-weight:500;margin-left:6px"
+          >/ día</span>
+        </div>
+        <div class="kpi-sub">
+          <span class="kpi-delta up">
+            <app-icon name="trending_up" [size]="11"/>+{{ todayInvoiceCount }}
+          </span>
+          <span>{{ todayInvoiceCount }} emitidas · 0 canceladas</span>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi-label">Ventas 30 días <span class="en">/ 30-day</span></div>
+        <div class="kpi-value"><span class="cur">$</span>{{ data.totalRevenue | number:'1.2-2' }}</div>
+        <div class="kpi-sub">
+          <span class="kpi-delta up"><app-icon name="trending_up" [size]="11"/>Este mes</span>
+          <span>vs. mes anterior</span>
+        </div>
+        <div class="kpi-spark">
+          <svg viewBox="0 0 200 32" preserveAspectRatio="none"
+               style="width:100%;height:32px;display:block">
+            <path [attr.d]="sparkArea" fill="var(--accent)" opacity="0.12"/>
+            <path [attr.d]="sparkPath" fill="none" stroke="var(--accent)" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="kpi">
+        <div class="kpi-label">Stock bajo <span class="en">/ Low stock</span></div>
+        <div class="kpi-value"
+             [style.color]="data.lowStockProducts > 0 ? 'var(--warn)' : null">
+          {{ data.lowStockProducts }}
+        </div>
+        <div class="kpi-sub">
+          <span class="kpi-delta"
+                [class.down]="data.lowStockProducts > 0"
+                [class.flat]="data.lowStockProducts === 0">
+            <app-icon name="alert_circle" [size]="11"/>Acción
+          </span>
+          <span>productos por debajo del mínimo</span>
+        </div>
+      </div>
+
+    </div><!-- /kpi-grid -->
+
+    <!-- Chart + right panel -->
+    <div class="grid-2" style="align-items:start">
+
+      <!-- Bar chart card -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Ventas <span class="en">Sales over time</span></div>
+          <div class="chart-tabs">
+            <button class="chart-tab" [class.active]="range() === '7d'"
+                    (click)="range.set('7d')" type="button">7 días</button>
+            <button class="chart-tab" [class.active]="range() === '30d'"
+                    (click)="range.set('30d')" type="button">30 días</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <svg viewBox="0 0 760 220" style="width:100%;height:auto">
+            @for (line of chartGridLines; track $index) {
+              <line [attr.x1]="44" [attr.y1]="line.y"
+                    [attr.x2]="748" [attr.y2]="line.y"
+                    stroke="var(--border-ds)"
+                    [attr.stroke-dasharray]="line.isZero ? '0' : '3 3'"/>
+              <text [attr.x]="36" [attr.y]="line.y + 3"
+                    font-size="10" fill="var(--text-subtle)"
+                    text-anchor="end"
+                    font-family="var(--font-mono)">${{ line.value }}</text>
+            }
+            @for (bar of chartBars; track bar.x) {
+              <rect [attr.x]="bar.x" [attr.y]="bar.y"
+                    [attr.width]="bar.w" [attr.height]="bar.h"
+                    rx="2"
+                    [attr.fill]="bar.isLast ? 'var(--accent)' : 'var(--accent-soft-strong)'"
+                    [attr.opacity]="bar.isLast ? 1 : 0.85"/>
+            }
+            @for (lbl of chartLabels; track lbl.x) {
+              <text [attr.x]="lbl.x" y="212"
+                    font-size="10" fill="var(--text-subtle)"
+                    text-anchor="middle"
+                    font-family="var(--font-mono)">{{ lbl.text }}</text>
+            }
+          </svg>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-ds)">
+            <div>
+              <div style="font-size:11px;color:var(--text-subtle);font-weight:600;letter-spacing:0.04em;text-transform:uppercase">Promedio diario</div>
+              <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:2px">${{ chartStats.avg | number:'1.0-0' }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-subtle);font-weight:600;letter-spacing:0.04em;text-transform:uppercase">IVA 15% recaudado</div>
+              <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:2px">${{ chartStats.vat | number:'1.0-0' }}</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-subtle);font-weight:600;letter-spacing:0.04em;text-transform:uppercase">Mejor día</div>
+              <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:2px">${{ chartStats.best | number:'1.0-0' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right panel -->
+      <div class="ds-stack">
+
+        <!-- Low stock card -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-title">Stock bajo <span class="en">Low stock</span></div>
+            <a routerLink="/products" class="btn ghost sm">
+              Ver todo <app-icon name="chevron_right" [size]="12"/>
+            </a>
+          </div>
+          <div class="card-body p0">
+            @for (p of lowStockList(); track p.id) {
+              <div style="padding:12px 16px;border-bottom:1px solid var(--border-ds);display:flex;align-items:center;gap:12px">
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600;font-size:13px">{{ p.name }}</div>
+                  <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-subtle);margin-top:2px">{{ p.sku }}</div>
+                </div>
+                <div class="stock-bar"
+                     [class.low]="stockState(p) === 'low'"
+                     [class.out]="stockState(p) === 'out'">
+                  <span>{{ p.stock }}/{{ p.min_stock }}</span>
+                  <div class="bar"><div class="fill" [style.width.%]="stockPct(p)"></div></div>
+                </div>
+              </div>
+            } @empty {
+              <div style="padding:24px;text-align:center;color:var(--text-subtle);font-size:13px">
+                Sin productos en alerta
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (hasPendingModules()) {
+          <div class="ds-alert accent">
+            <app-icon name="puzzle" [size]="20" class="alert-icon"/>
+            <div style="flex:1">
+              <div class="t">{{ pendingModulesCount() }} módulo{{ pendingModulesCount() !== 1 ? 's' : '' }} en revisión</div>
+              <div class="d">Tu solicitud está siendo procesada. Te notificaremos por email cuando esté lista.</div>
+              <div style="display:flex;gap:6px;margin-top:10px">
+                <a routerLink="/module-requests" class="btn ghost sm">Ver solicitudes</a>
+              </div>
+            </div>
+          </div>
+        }
+
+      </div><!-- /ds-stack -->
+    </div><!-- /grid-2 -->
+
+    <!-- Recent invoices table -->
+    <div class="card" style="margin-top:var(--density-gap)">
+      <div class="card-head">
+        <div class="card-title">Actividad reciente <span class="en">Recent invoices</span></div>
+        <a routerLink="/invoices" class="btn ghost sm">
+          Ver todas <app-icon name="chevron_right" [size]="12"/>
+        </a>
+      </div>
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Factura</th>
+              <th>Cliente</th>
+              <th class="num">Items</th>
+              <th class="num">Total</th>
+              <th>Estado</th>
+              <th>Emitida</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of (data.recentInvoices | slice:0:6); track inv.id) {
+              <tr class="row-link" [routerLink]="['/invoices', inv.id]">
+                <td><span class="inv-num">{{ inv.invoice_number }}</span></td>
+                <td>{{ customerName(inv) }}</td>
+                <td class="num mono">{{ inv.details?.length ?? '—' }}</td>
+                <td class="num mono"><strong>{{ formatCurrency(inv.total) }}</strong></td>
+                <td>
+                  @switch (inv.status) {
+                    @case ('ISSUED') {
+                      <span class="badge success"><span class="dot"></span>Emitida</span>
+                    }
+                    @case ('CANCELLED') {
+                      <span class="badge danger"><span class="dot"></span>Cancelada</span>
+                    }
+                    @default {
+                      <span class="badge neutral"><span class="dot"></span>{{ inv.status }}</span>
+                    }
+                  }
+                </td>
+                <td class="date-cell">{{ inv.issue_date | date:'dd/MM/yy' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  }
+
+  } <!-- /tab analytics -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TAB: ACTIVIDAD DEL EQUIPO
+  ════════════════════════════════════════════════════════════════ -->
+  @if (authService.isStoreAdmin() && activeTab() === 'activity') {
+
+    <!-- Filtro de rango -->
+    <div class="act-range">
+      <button class="act-range-btn" [class.active]="activityRange() === 'today'"
+              (click)="setActivityRange('today')" type="button">Hoy</button>
+      <button class="act-range-btn" [class.active]="activityRange() === 'week'"
+              (click)="setActivityRange('week')" type="button">Última semana</button>
+      <button class="act-range-btn" [class.active]="activityRange() === 'month'"
+              (click)="setActivityRange('month')" type="button">Último mes</button>
+    </div>
+
+    <!-- Error -->
+    @if (activityError()) {
+      <div class="ds-alert" style="margin-bottom:var(--density-gap)">
+        <app-icon name="alert_circle" [size]="20" class="alert-icon"/>
+        <div style="flex:1">
+          <div class="t">No se pudo cargar la actividad</div>
+          <div class="d">{{ activityError() }}</div>
+        </div>
+      </div>
+    }
+
+    <!-- Loading skeleton -->
+    @if (activityLoading()) {
+      <div class="ds-stack">
+        <div class="skel" style="height:80px"></div>
+        <div class="skel" style="height:300px"></div>
+      </div>
+    }
+
+    @if (!activityLoading() && !activityError()) {
+
+      <!-- Resumen por usuario -->
+      @if (activityByUser().length > 0) {
+        <div class="user-cards">
+          @for (s of activityByUser(); track s.user.id) {
+            <div class="user-card">
+              <div class="uc-top">
+                <div class="uc-av">{{ s.initials }}</div>
+                <div>
+                  <div class="uc-name">{{ s.user.full_name }}</div>
+                  <div class="uc-total">{{ s.total }} acción{{ s.total !== 1 ? 'es' : '' }}</div>
+                </div>
+              </div>
+              <div class="uc-chips">
+                @if (s.sales > 0) {
+                  <span class="uc-chip success">
+                    <app-icon name="receipt_long" [size]="10"/> {{ s.sales }} venta{{ s.sales !== 1 ? 's' : '' }}
+                  </span>
+                }
+                @if (s.stockOut > 0) {
+                  <span class="uc-chip warn">
+                    <app-icon name="alert_triangle" [size]="10"/> {{ s.stockOut }} merma{{ s.stockOut !== 1 ? 's' : '' }}
+                  </span>
+                }
+                @if (s.total - s.sales - s.stockOut > 0) {
+                  <span class="uc-chip accent">
+                    {{ s.total - s.sales - s.stockOut }} otro{{ (s.total - s.sales - s.stockOut) !== 1 ? 's' : '' }}
+                  </span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Feed de actividad -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">
+            Registro de acciones
+            <span class="en">{{ activityTotal() }} en total</span>
+          </div>
+        </div>
+        <div class="card-body p0">
+          @if (activityLogs().length === 0) {
+            <div class="act-empty">
+              <div class="ae-icon"><app-icon name="manage_search" [size]="40"/></div>
+              Sin actividad registrada en este período.
+            </div>
+          } @else {
+            <div class="feed">
+              @for (item of activityEvents(); track item.log.id) {
+                <div class="feed-item" [class.item-out]="item.ev.isOut">
+                  <div class="fdot" [class]="item.ev.color">
+                    <app-icon [name]="item.ev.icon" [size]="13"/>
+                  </div>
+                  <div class="fbody">
+                    <div class="fline">
+                      <span class="fn">{{ item.log.user?.full_name ?? 'Usuario desconocido' }}</span>
+                      <span class="fv">{{ item.ev.verb }}</span>
+                      @if (item.ev.detail) {
+                        <span class="fd">· {{ item.ev.detail }}</span>
+                      }
+                      @if (item.ev.amount) {
+                        <span class="fa">· ${{ item.ev.amount | number:'1.2-2' }}</span>
+                      }
+                      @if (item.ev.quantity !== undefined) {
+                        <span class="fq">· {{ item.ev.quantity }} u.</span>
+                      }
+                    </div>
+
+                    <!-- Notas del movimiento (entradas, ajustes) -->
+                    @if (item.ev.notes && !item.ev.isOut) {
+                      <div class="fnotes">
+                        <app-icon name="info" [size]="12" style="flex-shrink:0;margin-top:1px"/>
+                        "{{ item.ev.notes }}"
+                      </div>
+                    }
+
+                    <!-- Merma/pérdida: mostrar motivo con énfasis -->
+                    @if (item.ev.isOut) {
+                      @if (item.ev.notes) {
+                        <div class="fnotes out">
+                          <app-icon name="alert_triangle" [size]="12" style="flex-shrink:0;margin-top:1px"/>
+                          Motivo: "{{ item.ev.notes }}"
+                        </div>
+                      } @else {
+                        <div class="fnotes miss">
+                          <app-icon name="alert_triangle" [size]="12" style="flex-shrink:0;margin-top:1px"/>
+                          Sin motivo registrado — el bodeguero debe justificar esta salida.
+                        </div>
+                      }
+                    }
+
+                    <div class="ftime">{{ relativeTime(item.log.created_at) }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Paginación -->
+            @if (activityPages() > 1) {
+              <div class="act-foot">
+                <span>Página {{ activityPage() }} de {{ activityPages() }}</span>
+                <div style="display:flex;gap:6px">
+                  <button class="btn ghost sm" (click)="activityPrev()"
+                          [disabled]="activityPage() === 1">
+                    <app-icon name="chevron_left" [size]="14"/>Anterior
+                  </button>
+                  <button class="btn ghost sm" (click)="activityNext()"
+                          [disabled]="activityPage() === activityPages()">
+                    Siguiente<app-icon name="chevron_right" [size]="14"/>
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+    } <!-- /!loading && !error -->
+
+  } <!-- /tab activity -->
+
+</div>

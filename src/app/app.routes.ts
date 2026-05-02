@@ -162,6 +162,12 @@ export const routes: Routes = [
         data: { platform: true },
       },
 
+      // Reportes
+      {
+        path: 'reports',
+        loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
+      },
+
       // Módulos de plataforma
       {
         path: 'platform/modules',

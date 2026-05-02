@@ -77,8 +77,9 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Facturación',
       items: [
-        { label: 'Clientes', icon: 'people',      route: '/customers', moduleCode: 'MOD_INVOICING', warehouseHidden: true },
-        { label: 'Facturas', icon: 'receipt_long', route: '/invoices',  moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Clientes',  icon: 'people',      route: '/customers', moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Facturas',  icon: 'receipt_long', route: '/invoices',  moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Reportes',  icon: 'bar_chart',   route: '/reports',   moduleCode: 'MOD_INVOICING', warehouseHidden: true },
       ],
     },
     // ── Catálogo (productos requiere MOD_PRODUCTS, prov. MOD_SUPPLIERS) ─
@@ -100,8 +101,9 @@ export class SidebarComponent implements OnInit {
           adminOnly: true,
           moduleCode: 'MOD_TAX',
         },
-        { label: 'Usuarios', icon: 'manage_accounts', route: '/users',           adminOnly: true },
-        { label: 'Módulos',  icon: 'extension',       route: '/module-requests', adminOnly: true },
+        { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',           adminOnly: true },
+        { label: 'Módulos',   icon: 'extension',       route: '/module-requests', adminOnly: true },
+        { label: 'Actividad', icon: 'manage_search',   route: '/reports',         adminOnly: true },
       ],
     },
     // ── Plataforma: sólo usuarios sin empresa ────────────────────────

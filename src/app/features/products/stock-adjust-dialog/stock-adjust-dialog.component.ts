@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
@@ -83,8 +83,23 @@ import { Product } from '../../../core/models/product.model';
         </div>
 
         <div class="field">
-          <label class="field-label">Notas (opcional)</label>
-          <input class="field-input" formControlName="notes" placeholder="Ej: Compra proveedor, conteo físico…">
+          <label class="field-label">
+            {{ form.get('movement_type')?.value === 'OUT' ? 'Motivo de la merma / pérdida' : 'Notas' }}
+            @if (form.get('movement_type')?.value === 'OUT') { <span class="req">*</span> }
+            @else { <span style="font-weight:400;color:var(--text-subtle)">(opcional)</span> }
+          </label>
+          <textarea class="field-input" formControlName="notes" rows="2"
+                    [placeholder]="form.get('movement_type')?.value === 'OUT'
+                      ? 'Ej: Productos vencidos, daño en bodega, robo reportado…'
+                      : 'Ej: Compra proveedor, conteo físico…'"></textarea>
+          @if (form.get('movement_type')?.value === 'OUT') {
+            <span class="field-hint" style="color:var(--warn)">
+              Obligatorio: el motivo queda registrado en la auditoría de la empresa.
+            </span>
+          }
+          @if (form.get('notes')?.touched && form.get('notes')?.errors?.['required']) {
+            <span class="field-hint" style="color:var(--danger)">Debes explicar el motivo de la pérdida.</span>
+          }
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border-ds);margin:16px 0 18px">
@@ -119,7 +134,7 @@ import { Product } from '../../../core/models/product.model';
     </div>
   `,
 })
-export class StockAdjustDialogComponent {
+export class StockAdjustDialogComponent implements OnInit {
   product: Product = inject(MAT_DIALOG_DATA);
   ref = inject(MatDialogRef<StockAdjustDialogComponent>);
   private svc = inject(ProductsService);
@@ -127,6 +142,18 @@ export class StockAdjustDialogComponent {
   private fb = inject(FormBuilder);
 
   saving = false;
+
+  ngOnInit(): void {
+    this.form.get('movement_type')!.valueChanges.subscribe(type => {
+      const notesCtrl = this.form.get('notes')!;
+      if (type === 'OUT') {
+        notesCtrl.addValidators(Validators.required);
+      } else {
+        notesCtrl.removeValidators(Validators.required);
+      }
+      notesCtrl.updateValueAndValidity();
+    });
+  }
 
   form = this.fb.group({
     movement_type: ['IN', Validators.required],
