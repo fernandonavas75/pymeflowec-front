@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Encuesta de Usuario — PymeFlowEc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f1f5f9;
+      --surface:     #ffffff;
+      --surface-2:   #f8fafc;
+      --border:      #e2e8f0;
+      --border-str:  #cbd5e1;
+      --text:        #0f172a;
+      --text-muted:  #64748b;
+      --accent:      #6366f1;
+      --accent-hov:  #4f46e5;
+      --accent-soft: #eef2ff;
+      --success:     #10b981;
+      --success-soft:#ecfdf5;
+      --warn:        #f59e0b;
+      --warn-soft:   #fffbeb;
+      --danger:      #ef4444;
+      --radius:      10px;
+      --radius-sm:   6px;
+      --radius-lg:   14px;
+      --shadow:      0 1px 3px 0 rgb(0 0 0/.08), 0 1px 2px -1px rgb(0 0 0/.08);
+      --shadow-lg:   0 10px 40px -8px rgb(99 102 241/.18);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .survey-header {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #7c3aed 100%);
+      color: #fff;
+      padding: 56px 24px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .survey-header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .logo-mark .icon-wrap {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.2);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-mark span {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -.02em;
+    }
+    .survey-header h1 {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .survey-header p {
+      font-size: .975rem;
+      opacity: .88;
+      max-width: 540px;
+      margin: 0 auto 24px;
+      position: relative;
+    }
+    .badge-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .hbadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: .82rem;
+      font-weight: 500;
+    }
+
+    /* ── Progress ── */
+    .progress-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .progress-track {
+      flex: 1;
+      height: 5px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #7c3aed);
+      border-radius: 999px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+    .progress-label {
+      font-size: .8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    /* ── Container ── */
+    .survey-body {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 32px 16px 80px;
+    }
+
+    /* ── Section card ── */
+    .section-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px 28px 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      display: none;
+    }
+    .section-card.active { display: block; }
+    .section-card.animated { animation: slideIn .3s ease; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .section-num {
+      width: 22px; height: 22px;
+      background: var(--accent-soft);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .section-title {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 1.22rem;
+      font-weight: 700;
+      letter-spacing: -.025em;
+      margin-bottom: 4px;
+    }
+    .section-desc {
+      font-size: .875rem;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Question ── */
+    .q { margin-bottom: 20px; }
+    .q:last-child { margin-bottom: 0; }
+    .q-label {
+      display: block;
+      font-size: .9rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .q-label .req { color: var(--danger); margin-left: 2px; }
+    .q-hint {
+      font-size: .8rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-left: 4px;
+    }
+
+    /* ── Inputs ── */
+    select, input[type="text"], input[type="email"], input[type="tel"], textarea {
+      width: 100%;
+      border: 1px solid var(--border-str);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-size: .9rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--surface-2);
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+      background: #fff;
+    }
+    textarea { resize: vertical; min-height: 88px; }
+    select { cursor: pointer; }
+
+    /* ── Radio / Checkbox pills ── */
+    .options { display: flex; flex-direction: column; gap: 8px; }
+    .options.inline { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+
+    .opt {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+      font-size: .875rem;
+      user-select: none;
+    }
+    .opt:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .opt input[type="radio"],
+    .opt input[type="checkbox"] {
+      width: auto; padding: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .opt.checked {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* ── Scale ── */
+    .scale {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .scale-btn {
+      flex: 1;
+      min-width: 40px;
+      padding: 10px 8px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+      cursor: pointer;
+      text-align: center;
+      font-size: .9rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-muted);
+      transition: all .15s;
+    }
+    .scale-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .scale-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: .75rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    /* ── Range highlight ── */
+    .highlight-box {
+      background: var(--accent-soft);
+      border: 1px solid rgba(99,102,241,.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: .85rem;
+      color: #4338ca;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .highlight-box svg { flex-shrink: 0; margin-top: 1px; }
+
+    .warn-box {
+      background: var(--warn-soft);
+      border: 1px solid rgba(245,158,11,.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: .85rem;
+      color: #92400e;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    /* ── Buttons ── */
+    .btn-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 28px;
+      gap: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      font-size: .9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: all .15s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hov); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1.5px solid var(--border-str);
+    }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+    .btn-success:hover { background: #059669; }
+
+    /* ── Thank you screen ── */
+    #screen-thanks {
+      display: none;
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .thanks-icon {
+      width: 72px; height: 72px;
+      background: var(--success-soft);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    #screen-thanks h2 {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: -.03em;
+      margin-bottom: 10px;
+    }
+    #screen-thanks p {
+      color: var(--text-muted);
+      max-width: 420px;
+      margin: 0 auto 24px;
+    }
+    .summary-pill {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 14px;
+      font-size: .82rem;
+      color: var(--text-muted);
+      margin: 4px;
+    }
+
+    /* ── Validation ── */
+    .q.error .q-label { color: var(--danger); }
+    .q.error select,
+    .q.error input,
+    .q.error textarea {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239,68,68,.1);
+    }
+    .err-msg {
+      font-size: .78rem;
+      color: var(--danger);
+      margin-top: 5px;
+      display: none;
+    }
+    .q.error .err-msg { display: block; }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .section-card { padding: 20px 16px; }
+      .btn-row { flex-direction: column-reverse; }
+      .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="survey-header">
+  <div class="logo-mark">
+    <div class="icon-wrap">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        <polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+    </div>
+    <span>PymeFlowEc</span>
+  </div>
+  <h1>Ayúdanos a construir el ERP<br>que tu PYME necesita</h1>
+  <p>Esta encuesta es anónima y toma menos de 5 minutos. Tus respuestas guían el desarrollo de las próximas funcionalidades.</p>
+  <div class="badge-row">
+    <span class="hbadge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      ~5 minutos
+    </span>
+    <span class="hbadge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      100% anónima
+    </span>
+    <span class="hbadge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Para PYMEs ecuatorianas
+    </span>
+  </div>
+</header>
+
+<!-- ── Progress bar ── -->
+<div class="progress-bar">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <span class="progress-label" id="progressLabel">Sección 1 de 5</span>
+</div>
+
+<!-- ── Survey body ── -->
+<div class="survey-body">
+
+  <!-- ══════════════════════════════════
+       SECCIÓN 1 — Tu negocio
+  ══════════════════════════════════ -->
+  <div class="section-card active animated" id="sec-1">
+    <div class="section-eyebrow"><div class="section-num">1</div> Perfil de tu empresa</div>
+    <h2 class="section-title">Cuéntanos sobre tu negocio</h2>
+    <p class="section-desc">Queremos entender el contexto de tu empresa para ofrecerte las herramientas más útiles.</p>
+    <div class="divider"></div>
+
+    <div class="q" id="q-sector">
+      <label class="q-label">¿En qué sector opera tu empresa? <span class="req">*</span></label>
+      <select id="sector">
+        <option value="">— Selecciona una opción —</option>
+        <option>Comercio / Retail</option>
+        <option>Manufactura / Producción</option>
+        <option>Servicios profesionales</option>
+        <option>Restaurante / Alimentos y bebidas</option>
+        <option>Construcción</option>
+        <option>Tecnología</option>
+        <option>Salud / Farmacia</option>
+        <option>Educación</option>
+        <option>Transporte / Logística</option>
+        <option>Otro</option>
+      </select>
+      <div class="err-msg">Este campo es obligatorio.</div>
+    </div>
+
+    <div class="q" id="q-empleados">
+      <label class="q-label">¿Cuántos empleados tiene tu empresa? <span class="req">*</span></label>
+      <div class="options inline">
+        <label class="opt"><input type="radio" name="empleados" value="1-5"> 1 – 5</label>
+        <label class="opt"><input type="radio" name="empleados" value="6-15"> 6 – 15</label>
+        <label class="opt"><input type="radio" name="empleados" value="16-50"> 16 – 50</label>
+        <label class="opt"><input type="radio" name="empleados" value="50+"> Más de 50</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q" id="q-ruc">
+      <label class="q-label">¿Tu empresa emite facturas electrónicas con RUC? <span class="req">*</span></label>
+      <div class="options inline">
+        <label class="opt"><input type="radio" name="ruc" value="si"> Sí</label>
+        <label class="opt"><input type="radio" name="ruc" value="no"> No aún</label>
+        <label class="opt"><input type="radio" name="ruc" value="proceso"> En proceso</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q" id="q-erp-actual">
+      <label class="q-label">¿Actualmente usas algún software de gestión o ERP? <span class="req">*</span></label>
+      <select id="erp-actual">
+        <option value="">— Selecciona una opción —</option>
+        <option>No, gestiono todo manualmente (Excel, cuadernos)</option>
+        <option>Uso una hoja de cálculo compartida</option>
+        <option>Uso software local (no en la nube)</option>
+        <option>Uso un ERP o sistema contable en la nube</option>
+        <option>Tengo sistema propio/a medida</option>
+      </select>
+      <div class="err-msg">Este campo es obligatorio.</div>
+    </div>
+
+    <div class="btn-row">
+      <span></span>
+      <button class="btn btn-primary" onclick="goTo(2)">
+        Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SECCIÓN 2 — Dolores actuales
+  ══════════════════════════════════ -->
+  <div class="section-card" id="sec-2">
+    <div class="section-eyebrow"><div class="section-num">2</div> Retos y necesidades</div>
+    <h2 class="section-title">¿Qué te cuesta más gestionar hoy?</h2>
+    <p class="section-desc">Identificar los puntos de dolor nos ayuda a priorizar el desarrollo correcto.</p>
+    <div class="divider"></div>
+
+    <div class="q" id="q-dolores">
+      <label class="q-label">¿Cuáles son tus mayores dolores en la gestión del negocio? <span class="req">*</span> <span class="q-hint">(elige todos los que apliquen)</span></label>
+      <div class="options" id="dolores-list">
+        <label class="opt"><input type="checkbox" name="dolores" value="inventario"> Control de inventario y stock</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="facturacion"> Facturación y cobros</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="impuestos"> Declaraciones de impuestos (SRI)</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="clientes"> Seguimiento de clientes y ventas</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="proveedores"> Gestión de proveedores y compras</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="reportes"> Reportes y toma de decisiones</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="empleados"> Gestión de empleados / nómina</label>
+        <label class="opt"><input type="checkbox" name="dolores" value="flujo-caja"> Flujo de caja y finanzas</label>
+      </div>
+      <div class="err-msg">Selecciona al menos una opción.</div>
+    </div>
+
+    <div class="q" id="q-tiempo-impuestos">
+      <label class="q-label">¿Cuánto tiempo dedicas mensualmente a preparar tus declaraciones de impuestos? <span class="req">*</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="tiempo-imp" value="menos-1h"> Menos de 1 hora</label>
+        <label class="opt"><input type="radio" name="tiempo-imp" value="1-3h"> 1 a 3 horas</label>
+        <label class="opt"><input type="radio" name="tiempo-imp" value="3-8h"> 3 a 8 horas</label>
+        <label class="opt"><input type="radio" name="tiempo-imp" value="mas-8h"> Más de 8 horas (o lo delego a un contador)</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q" id="q-como-declara">
+      <label class="q-label">¿Cómo realizas actualmente tus declaraciones al SRI? <span class="req">*</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="como-declara" value="contador-externo"> Un contador externo lo hace por mí</label>
+        <label class="opt"><input type="radio" name="como-declara" value="contador-interno"> Un contador interno de mi empresa</label>
+        <label class="opt"><input type="radio" name="como-declara" value="yo-mismo"> Yo mismo, usando el portal del SRI</label>
+        <label class="opt"><input type="radio" name="como-declara" value="software"> Con un software contable especializado</label>
+        <label class="opt"><input type="radio" name="como-declara" value="no-declaro"> No declaro actualmente</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goTo(1)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Atrás
+      </button>
+      <button class="btn btn-primary" onclick="goTo(3)">
+        Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SECCIÓN 3 — Módulo SRI
+  ══════════════════════════════════ -->
+  <div class="section-card" id="sec-3">
+    <div class="section-eyebrow"><div class="section-num">3</div> Módulo de Declaraciones SRI</div>
+    <h2 class="section-title">¿Automatizarías tus impuestos?</h2>
+    <p class="section-desc">Evaluamos si tiene sentido desarrollar un módulo que genere los reportes para el SRI directamente desde tus facturas y movimientos en PymeFlowEc.</p>
+    <div class="divider"></div>
+
+    <div class="highlight-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>El módulo generaría automáticamente los formularios 104 (IVA mensual), 101/102 (IR anual) y el Anexo Transaccional, con los datos ya registrados en el sistema.</span>
+    </div>
+
+    <div class="q" id="q-sri-valor">
+      <label class="q-label">¿Qué tan valioso sería para ti un módulo de declaraciones SRI automatizado? <span class="req">*</span></label>
+      <div class="scale" id="scale-sri">
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',1)">1</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',2)">2</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',3)">3</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',4)">4</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',5)">5</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',6)">6</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',7)">7</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',8)">8</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',9)">9</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-sri','sri-val',10)">10</button>
+      </div>
+      <div class="scale-labels"><span>Nada valioso</span><span>Imprescindible</span></div>
+      <input type="hidden" id="sri-val" />
+      <div class="err-msg" id="err-sri-val" style="display:none">Selecciona un valor.</div>
+    </div>
+
+    <div class="q" id="q-sri-funciones">
+      <label class="q-label">¿Qué funciones esperarías en este módulo? <span class="req">*</span> <span class="q-hint">(selecciona todas las que aplicarían)</span></label>
+      <div class="options" id="sri-func-list">
+        <label class="opt"><input type="checkbox" name="sri-func" value="formulario-104"> Generación automática del formulario 104 (IVA mensual)</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="formulario-101"> Generación del formulario 101/102 (Impuesto a la Renta anual)</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="anexo-transaccional"> Anexo Transaccional Simplificado (ATS)</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="recordatorios"> Alertas y recordatorios de fechas de declaración</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="historial"> Historial de declaraciones presentadas</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="validacion"> Validación previa de errores antes de enviar al SRI</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="exportar-xml"> Exportar en formato XML para subir al SRI directamente</label>
+        <label class="opt"><input type="checkbox" name="sri-func" value="conciliacion"> Conciliación bancaria básica</label>
+      </div>
+      <div class="err-msg">Selecciona al menos una opción.</div>
+    </div>
+
+    <div class="q" id="q-sri-obstaculos">
+      <label class="q-label">¿Qué obstáculos te preocuparían para usar este módulo? <span class="q-hint">(opcional)</span></label>
+      <div class="options" id="sri-obs-list">
+        <label class="opt"><input type="checkbox" name="sri-obs" value="confianza"> No confiar en que los cálculos sean correctos</label>
+        <label class="opt"><input type="checkbox" name="sri-obs" value="responsabilidad"> No querer asumir responsabilidad legal sin contador</label>
+        <label class="opt"><input type="checkbox" name="sri-obs" value="capacitacion"> No saber cómo usarlo sin capacitación</label>
+        <label class="opt"><input type="checkbox" name="sri-obs" value="actualizacion"> Miedo a que no esté actualizado con los cambios del SRI</label>
+        <label class="opt"><input type="checkbox" name="sri-obs" value="ninguno"> Ninguno, lo usaría sin problema</label>
+      </div>
+    </div>
+
+    <div class="q">
+      <label class="q-label">¿Algo más que quisieras que haga este módulo? <span class="q-hint">(opcional)</span></label>
+      <textarea id="sri-extra" placeholder="Ej: que envíe directamente al SRI, que calcule retenciones, que genere comprobantes de retención..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goTo(2)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Atrás
+      </button>
+      <button class="btn btn-primary" onclick="goTo(4)">
+        Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SECCIÓN 4 — Precio y valor
+  ══════════════════════════════════ -->
+  <div class="section-card" id="sec-4">
+    <div class="section-eyebrow"><div class="section-num">4</div> Disposición de pago</div>
+    <h2 class="section-title">Hablemos de precios</h2>
+    <p class="section-desc">Queremos establecer precios justos. Tu opinión es fundamental para no sobrevalorar ni subvalorar el producto.</p>
+    <div class="divider"></div>
+
+    <div class="warn-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>No hay respuestas incorrectas. Si el precio te parece caro o barato, ¡dinos! Eso es exactamente lo que necesitamos saber.</span>
+    </div>
+
+    <div class="q" id="q-gasto-actual">
+      <label class="q-label">¿Cuánto pagas actualmente por software de gestión o contabilidad? <span class="req">*</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="gasto-actual" value="nada"> Nada (uso herramientas gratuitas)</label>
+        <label class="opt"><input type="radio" name="gasto-actual" value="menos-20"> Menos de $20 / mes</label>
+        <label class="opt"><input type="radio" name="gasto-actual" value="20-50"> $20 – $50 / mes</label>
+        <label class="opt"><input type="radio" name="gasto-actual" value="50-100"> $50 – $100 / mes</label>
+        <label class="opt"><input type="radio" name="gasto-actual" value="mas-100"> Más de $100 / mes</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q" id="q-precio-base">
+      <label class="q-label">¿Cuánto estarías dispuesto/a a pagar por el plan base de PymeFlowEc? <span class="req">*</span> <span class="q-hint">(facturación, clientes, productos, reportes básicos)</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="precio-base" value="0-10"> $0 – $10 / mes</label>
+        <label class="opt"><input type="radio" name="precio-base" value="10-20"> $10 – $20 / mes</label>
+        <label class="opt"><input type="radio" name="precio-base" value="20-35"> $20 – $35 / mes</label>
+        <label class="opt"><input type="radio" name="precio-base" value="35-50"> $35 – $50 / mes</label>
+        <label class="opt"><input type="radio" name="precio-base" value="mas-50"> Más de $50 / mes</label>
+        <label class="opt"><input type="radio" name="precio-base" value="no-pagaria"> No pagaría por este tipo de software</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q" id="q-precio-sri">
+      <label class="q-label">Si el módulo SRI estuviera disponible como add-on, ¿cuánto pagarías adicional? <span class="req">*</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="precio-sri" value="incluido"> Nada extra, debería estar incluido en el plan base</label>
+        <label class="opt"><input type="radio" name="precio-sri" value="5-10"> $5 – $10 / mes adicionales</label>
+        <label class="opt"><input type="radio" name="precio-sri" value="10-20"> $10 – $20 / mes adicionales</label>
+        <label class="opt"><input type="radio" name="precio-sri" value="20-40"> $20 – $40 / mes adicionales</label>
+        <label class="opt"><input type="radio" name="precio-sri" value="no-usaria"> No usaría ese módulo</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q" id="q-modelo-pago">
+      <label class="q-label">¿Qué modelo de pago prefieres? <span class="req">*</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="modelo-pago" value="mensual"> Mensual (flexibilidad, puedo cancelar cuando quiera)</label>
+        <label class="opt"><input type="radio" name="modelo-pago" value="anual-desc"> Anual con descuento (2 meses gratis aprox.)</label>
+        <label class="opt"><input type="radio" name="modelo-pago" value="uso"> Por uso / transacciones procesadas</label>
+        <label class="opt"><input type="radio" name="modelo-pago" value="freemium"> Freemium (gratis con límites, pago por más)</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goTo(3)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Atrás
+      </button>
+      <button class="btn btn-primary" onclick="goTo(5)">
+        Continuar
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SECCIÓN 5 — Cierre + contacto
+  ══════════════════════════════════ -->
+  <div class="section-card" id="sec-5">
+    <div class="section-eyebrow"><div class="section-num">5</div> Evaluación general</div>
+    <h2 class="section-title">Últimas preguntas</h2>
+    <p class="section-desc">Tu evaluación global del sistema y, si quieres, tus datos para recibir novedades o ser parte del piloto.</p>
+    <div class="divider"></div>
+
+    <div class="q" id="q-nps">
+      <label class="q-label">¿Qué tan probable es que recomiendes PymeFlowEc a otro dueño de negocio? <span class="req">*</span></label>
+      <div class="scale" id="scale-nps">
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',0)">0</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',1)">1</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',2)">2</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',3)">3</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',4)">4</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',5)">5</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',6)">6</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',7)">7</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',8)">8</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',9)">9</button>
+        <button type="button" class="scale-btn" onclick="selectScale('scale-nps','nps-val',10)">10</button>
+      </div>
+      <div class="scale-labels"><span>No lo recomendaría</span><span>Definitivamente sí</span></div>
+      <input type="hidden" id="nps-val" />
+      <div class="err-msg" id="err-nps-val" style="display:none">Selecciona un valor.</div>
+    </div>
+
+    <div class="q" id="q-prioridad">
+      <label class="q-label">¿Qué módulo debería desarrollarse primero? <span class="req">*</span></label>
+      <div class="options">
+        <label class="opt"><input type="radio" name="prioridad" value="sri"> Declaraciones SRI automatizadas</label>
+        <label class="opt"><input type="radio" name="prioridad" value="finanzas"> Panel de finanzas / flujo de caja</label>
+        <label class="opt"><input type="radio" name="prioridad" value="nomina"> Nómina y gestión de empleados</label>
+        <label class="opt"><input type="radio" name="prioridad" value="compras"> Módulo de compras y proveedores avanzado</label>
+        <label class="opt"><input type="radio" name="prioridad" value="pos"> Punto de venta (POS) táctil para tienda física</label>
+        <label class="opt"><input type="radio" name="prioridad" value="app-movil"> App móvil</label>
+      </div>
+      <div class="err-msg">Selecciona una opción.</div>
+    </div>
+
+    <div class="q">
+      <label class="q-label">¿Algún comentario, sugerencia o función que te gustaría ver? <span class="q-hint">(opcional)</span></label>
+      <textarea id="comentario" placeholder="Cuéntanos todo lo que quieras. Cada comentario cuenta para mejorar el producto."></textarea>
+    </div>
+
+    <div class="divider"></div>
+    <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:16px;">
+      <strong>¿Quieres recibir noticias del producto o participar en el piloto?</strong> Déjanos tus datos (completamente opcional).
+    </p>
+
+    <div class="q">
+      <label class="q-label">Nombre completo <span class="q-hint">(opcional)</span></label>
+      <input type="text" id="nombre" placeholder="Tu nombre" />
+    </div>
+    <div class="q">
+      <label class="q-label">Correo electrónico <span class="q-hint">(opcional)</span></label>
+      <input type="email" id="email" placeholder="tucorreo@empresa.com" />
+    </div>
+    <div class="q">
+      <label class="q-label">Teléfono / WhatsApp <span class="q-hint">(opcional)</span></label>
+      <input type="tel" id="telefono" placeholder="09XXXXXXXX" />
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="goTo(4)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        Atrás
+      </button>
+      <button class="btn btn-success" onclick="submitSurvey()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Enviar encuesta
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Pantalla de gracias ── -->
+  <div id="screen-thanks">
+    <div class="thanks-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2>¡Gracias por tu tiempo!</h2>
+    <p>Tus respuestas son muy valiosas para construir el ERP que las PYMEs ecuatorianas realmente necesitan.</p>
+    <div id="summary-line" style="margin-bottom:24px;"></div>
+    <p style="font-size:.85rem;color:var(--text-muted);">Si dejaste tu contacto, te avisaremos cuando el producto esté disponible o si necesitamos tu feedback para el piloto.</p>
+  </div>
+
+</div><!-- /survey-body -->
+
+<script>
+  let currentSection = 1;
+  const totalSections = 5;
+  const answers = {};
+
+  // ── Escucha cambios en radios y checkboxes para animar el pill ──
+  document.addEventListener('change', e => {
+    const input = e.target;
+    if (input.type === 'radio') {
+      const group = input.name;
+      document.querySelectorAll(`input[name="${group}"]`).forEach(r => r.closest('.opt')?.classList.remove('checked'));
+      input.closest('.opt')?.classList.add('checked');
+    }
+    if (input.type === 'checkbox') {
+      input.closest('.opt')?.classList.toggle('checked', input.checked);
+    }
+  });
+
+  // ── Scale buttons ──
+  function selectScale(scaleId, hiddenId, value) {
+    const scale = document.getElementById(scaleId);
+    scale.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+    scale.querySelectorAll('.scale-btn')[value === 0 ? 0 : value - (scaleId === 'scale-nps' ? 0 : 1)].classList.add('selected');
+    document.getElementById(hiddenId).value = value;
+    const errEl = document.getElementById('err-' + hiddenId);
+    if (errEl) errEl.style.display = 'none';
+  }
+
+  // ── Validation per section ──
+  function validateSection(n) {
+    let valid = true;
+    const clearError = qId => { const q = document.getElementById(qId); if(q) q.classList.remove('error'); };
+    const setError   = qId => { const q = document.getElementById(qId); if(q) q.classList.add('error'); valid = false; };
+
+    if (n === 1) {
+      document.getElementById('sector').value ? clearError('q-sector') : setError('q-sector');
+      document.querySelector('input[name="empleados"]:checked') ? clearError('q-empleados') : setError('q-empleados');
+      document.querySelector('input[name="ruc"]:checked') ? clearError('q-ruc') : setError('q-ruc');
+      document.getElementById('erp-actual').value ? clearError('q-erp-actual') : setError('q-erp-actual');
+    }
+
+    if (n === 2) {
+      document.querySelectorAll('input[name="dolores"]:checked').length > 0 ? clearError('q-dolores') : setError('q-dolores');
+      document.querySelector('input[name="tiempo-imp"]:checked') ? clearError('q-tiempo-impuestos') : setError('q-tiempo-impuestos');
+      document.querySelector('input[name="como-declara"]:checked') ? clearError('q-como-declara') : setError('q-como-declara');
+    }
+
+    if (n === 3) {
+      const sriVal = document.getElementById('sri-val').value;
+      if (!sriVal) {
+        document.getElementById('err-sri-val').style.display = 'block';
+        valid = false;
+      } else {
+        document.getElementById('err-sri-val').style.display = 'none';
+      }
+      document.querySelectorAll('input[name="sri-func"]:checked').length > 0 ? clearError('q-sri-funciones') : setError('q-sri-funciones');
+    }
+
+    if (n === 4) {
+      document.querySelector('input[name="gasto-actual"]:checked') ? clearError('q-gasto-actual') : setError('q-gasto-actual');
+      document.querySelector('input[name="precio-base"]:checked') ? clearError('q-precio-base') : setError('q-precio-base');
+      document.querySelector('input[name="precio-sri"]:checked') ? clearError('q-precio-sri') : setError('q-precio-sri');
+      document.querySelector('input[name="modelo-pago"]:checked') ? clearError('q-modelo-pago') : setError('q-modelo-pago');
+    }
+
+    if (n === 5) {
+      const npsVal = document.getElementById('nps-val').value;
+      if (npsVal === '') {
+        document.getElementById('err-nps-val').style.display = 'block';
+        valid = false;
+      } else {
+        document.getElementById('err-nps-val').style.display = 'none';
+      }
+      document.querySelector('input[name="prioridad"]:checked') ? clearError('q-prioridad') : setError('q-prioridad');
+    }
+
+    return valid;
+  }
+
+  // ── Navigate ──
+  function goTo(n) {
+    if (n > currentSection && !validateSection(currentSection)) {
+      document.querySelector('#sec-' + currentSection + ' .error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    document.getElementById('sec-' + currentSection).classList.remove('active');
+    currentSection = n;
+    const nextSec = document.getElementById('sec-' + currentSection);
+    nextSec.classList.add('active');
+    nextSec.classList.remove('animated');
+    void nextSec.offsetWidth;
+    nextSec.classList.add('animated');
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateProgress() {
+    const pct = ((currentSection - 1) / totalSections) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = 'Sección ' + currentSection + ' de ' + totalSections;
+  }
+
+  // ── Collect answers ──
+  function collectAnswers() {
+    const get = id => document.getElementById(id)?.value ?? '';
+    const radio = name => document.querySelector(`input[name="${name}"]:checked`)?.value ?? '';
+    const checks = name => Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(c => c.value);
+
+    return {
+      sector: get('sector'),
+      empleados: radio('empleados'),
+      ruc: radio('ruc'),
+      erp_actual: get('erp-actual'),
+      dolores: checks('dolores'),
+      tiempo_impuestos: radio('tiempo-imp'),
+      como_declara: radio('como-declara'),
+      sri_valoracion: get('sri-val'),
+      sri_funciones: checks('sri-func'),
+      sri_obstaculos: checks('sri-obs'),
+      sri_extra: get('sri-extra'),
+      gasto_actual: radio('gasto-actual'),
+      precio_base: radio('precio-base'),
+      precio_sri_addon: radio('precio-sri'),
+      modelo_pago: radio('modelo-pago'),
+      nps: get('nps-val'),
+      prioridad_modulo: radio('prioridad'),
+      comentario: get('comentario'),
+      nombre: get('nombre'),
+      email: get('email'),
+      telefono: get('telefono'),
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ── Submit ──
+  function submitSurvey() {
+    if (!validateSection(5)) {
+      document.querySelector('#sec-5 .error')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const data = collectAnswers();
+
+    // Guardar en localStorage (para demo / sin backend)
+    const prev = JSON.parse(localStorage.getItem('pymeflowec_survey_responses') || '[]');
+    prev.push(data);
+    localStorage.setItem('pymeflowec_survey_responses', JSON.stringify(prev));
+
+    // También imprimir en consola para recolección manual
+    console.log('📋 PymeFlowEc — Respuesta encuesta:', JSON.stringify(data, null, 2));
+
+    // Ocultar secciones
+    document.getElementById('sec-5').classList.remove('active');
+    document.querySelector('.progress-bar').style.display = 'none';
+
+    // Mostrar pantalla de gracias
+    document.getElementById('progressFill').style.width = '100%';
+    const thanks = document.getElementById('screen-thanks');
+    thanks.style.display = 'block';
+
+    // Mini resumen
+    const sri = data.sri_valoracion ? `Valoración módulo SRI: ${data.sri_valoracion}/10` : '';
+    const nps = data.nps !== '' ? `NPS: ${data.nps}/10` : '';
+    const summary = document.getElementById('summary-line');
+    if (sri || nps) {
+      summary.innerHTML = [sri, nps].filter(Boolean).map(t =>
+        `<span class="summary-pill">${t}</span>`
+      ).join('');
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

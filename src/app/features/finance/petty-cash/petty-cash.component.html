@@ -1,0 +1,380 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Caja Chica</div>
+      <div class="page-sub-en">Petty cash · movimientos de la sesión activa</div>
+    </div>
+    <div class="page-actions">
+      @if (session()) {
+        @if (!showMoveForm()) {
+          <button class="btn secondary" type="button" (click)="openMoveForm('REPLENISH')">
+            <app-icon name="arrow_up_circle" [size]="14"/>Reposición
+          </button>
+          <button class="btn primary" type="button" (click)="openMoveForm('EXPENSE')">
+            <app-icon name="arrow_dn_circle" [size]="14"/>Nuevo egreso
+          </button>
+        }
+        @if (authService.isStoreAdmin() && !showCloseForm()) {
+          <button class="btn ghost" type="button" (click)="showCloseForm.set(true)">
+            <app-icon name="lock" [size]="14"/>Cerrar caja
+          </button>
+        }
+      } @else if (!sessionLoading() && authService.isStoreAdmin()) {
+        <button class="btn primary" type="button" (click)="showOpenForm.set(true)">
+          <app-icon name="plus" [size]="14"/>Abrir caja chica
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ── Estado de sesión ────────────────────────────────────────── -->
+  @if (sessionLoading()) {
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+      @for (i of [1,2]; track i) {
+        <div class="skel" style="height:80px;border-radius:var(--radius-ds)"></div>
+      }
+    </div>
+
+  } @else if (session()) {
+    @if (session(); as s) {
+
+    <!-- Sesión activa -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-body" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:24px;align-items:center">
+
+        <!-- Nombre y apertura -->
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-subtle);margin-bottom:4px">Sesión activa</div>
+          <div style="font-size:16px;font-weight:700">{{ s.name }}</div>
+          <div style="font-size:11.5px;color:var(--text-subtle);margin-top:2px">
+            Abierta {{ formatDT(s.opened_at) }} · por {{ s.openedBy?.full_name ?? '—' }}
+          </div>
+        </div>
+
+        <!-- Saldo actual -->
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-subtle);margin-bottom:4px">Saldo actual</div>
+          <div style="font-family:var(--font-display);font-size:28px;font-weight:700;letter-spacing:-0.02em"
+               [style.color]="s.current_balance < s.opening_amount * 0.2 ? 'var(--danger)' : s.current_balance < s.opening_amount * 0.5 ? 'var(--warn)' : 'var(--success)'">
+            ${{ s.current_balance | number:'1.2-2' }}
+          </div>
+        </div>
+
+        <!-- Apertura + barra -->
+        <div>
+          <div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-subtle);margin-bottom:6px">
+            Apertura: ${{ s.opening_amount | number:'1.2-2' }}
+          </div>
+          <div style="height:8px;background:var(--surface-3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;border-radius:4px;transition:width .4s ease"
+                 [style.width.%]="balancePct(s)"
+                 [style.background]="balancePct(s) < 20 ? 'var(--danger)' : balancePct(s) < 50 ? 'var(--warn)' : 'var(--success)'">
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">
+            {{ balancePct(s) }}% disponible
+          </div>
+        </div>
+
+        <!-- Badge estado -->
+        <div>
+          <span class="badge success" style="font-size:12px;padding:5px 12px">
+            <span class="dot"></span>Abierta
+          </span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Formulario cerrar caja -->
+    @if (showCloseForm()) {
+      <div class="card" style="margin-bottom:20px;border-color:var(--warn)">
+        <div class="card-body" [formGroup]="closeForm">
+          <div style="font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+            <app-icon name="lock" [size]="15" style="color:var(--warn)"/>Cerrar caja chica
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div class="mfield">
+              <label>Monto en caja al cerrar (conteo físico)</label>
+              <input class="m-input" type="number" step="0.01" min="0" formControlName="closing_amount_reported" placeholder="0.00"/>
+            </div>
+            <div class="mfield">
+              <label>Notas de cierre</label>
+              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn ghost" type="button" (click)="showCloseForm.set(false)">Cancelar</button>
+            <button class="btn" style="background:var(--warn);color:#fff" type="button"
+                    (click)="submitClose()" [disabled]="closeFormLoading()">
+              @if (closeFormLoading()) { <span class="btn-spinner"></span> } @else { <app-icon name="lock" [size]="13"/> }
+              Cerrar caja
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Formulario nuevo movimiento -->
+    @if (showMoveForm()) {
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-body" [formGroup]="moveForm">
+          <div style="font-size:13px;font-weight:600;margin-bottom:14px">Nuevo movimiento</div>
+
+          <!-- Selector de tipo -->
+          <div class="seg" style="margin-bottom:14px">
+            <button class="seg-btn" [class.active]="moveForm.value.movement_type === 'EXPENSE'"
+                    type="button" (click)="moveForm.patchValue({movement_type:'EXPENSE'})">
+              <app-icon name="arrow_dn_circle" [size]="13"/>Egreso
+            </button>
+            <button class="seg-btn" [class.active]="moveForm.value.movement_type === 'REPLENISH'"
+                    type="button" (click)="moveForm.patchValue({movement_type:'REPLENISH'})">
+              <app-icon name="arrow_up_circle" [size]="13"/>Reposición
+            </button>
+            <button class="seg-btn" [class.active]="moveForm.value.movement_type === 'ADJUSTMENT'"
+                    type="button" (click)="moveForm.patchValue({movement_type:'ADJUSTMENT'})">
+              <app-icon name="refresh" [size]="13"/>Ajuste
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+            <div class="mfield" style="grid-column:1/2">
+              <label>Monto *</label>
+              <input class="m-input" type="number" step="0.01" min="0.01" formControlName="amount" placeholder="0.00"/>
+            </div>
+            <div class="mfield" style="grid-column:2/4">
+              <label>Descripción *</label>
+              <input class="m-input" type="text" formControlName="description" placeholder="Ej: Pago de taxi, compra de materiales…"/>
+            </div>
+            <div class="mfield" style="grid-column:1/2">
+              <label>N° comprobante</label>
+              <input class="m-input" type="text" formControlName="voucher_number" placeholder="Opcional"/>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn ghost" type="button" (click)="showMoveForm.set(false)">Cancelar</button>
+            <button class="btn primary" type="button" (click)="submitMovement()"
+                    [disabled]="moveForm.invalid || moveFormLoading()">
+              @if (moveFormLoading()) { <span class="btn-spinner"></span> } @else { <app-icon name="check" [size]="13"/> }
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Movimientos -->
+    <div class="card">
+      <div class="card-body" style="border-bottom:1px solid var(--border-ds);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
+          <app-icon name="list" [size]="14"/>
+          Movimientos
+          @if (movementsTotal() > 0) {
+            <span style="font-size:11px;color:var(--text-subtle);font-weight:400">({{ movementsTotal() }})</span>
+          }
+        </div>
+      </div>
+
+      @if (movementsLoading() && movements().length === 0) {
+        <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+          @for (i of [1,2,3,4]; track i) {
+            <div class="skel" style="height:44px;border-radius:var(--radius-sm-ds)"></div>
+          }
+        </div>
+
+      } @else if (movements().length === 0) {
+        <div class="empty" style="padding:60px 24px">
+          <app-icon name="wallet" [size]="36" style="opacity:.2"/>
+          <p>Sin movimientos en esta sesión</p>
+          <button class="btn primary" type="button" (click)="openMoveForm()">
+            Registrar primer movimiento
+          </button>
+        </div>
+
+      } @else {
+        <div class="card-body p0">
+          <table class="ds-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Comprobante</th>
+                <th>Registrado por</th>
+                <th class="num">Monto</th>
+                <th class="num">Saldo tras</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of movements(); track m.id) {
+                <tr>
+                  <td>
+                    @if (m.movement_type === 'EXPENSE') {
+                      <span class="badge danger" style="display:inline-flex;align-items:center;gap:4px">
+                        <app-icon name="arrow_dn_circle" [size]="11"/>Egreso
+                      </span>
+                    } @else if (m.movement_type === 'REPLENISH') {
+                      <span class="badge success" style="display:inline-flex;align-items:center;gap:4px">
+                        <app-icon name="arrow_up_circle" [size]="11"/>Reposición
+                      </span>
+                    } @else {
+                      <span class="badge neutral" style="display:inline-flex;align-items:center;gap:4px">
+                        <app-icon name="refresh" [size]="11"/>Ajuste
+                      </span>
+                    }
+                  </td>
+                  <td>
+                    <div style="font-size:13px">{{ m.description }}</div>
+                    @if (m.category) {
+                      <div style="font-size:11px;color:var(--text-subtle)">{{ m.category.name }}</div>
+                    }
+                  </td>
+                  <td class="mono" style="font-size:12px;color:var(--text-muted-ds)">{{ m.voucher_number ?? '—' }}</td>
+                  <td style="font-size:12.5px;color:var(--text-muted-ds)">{{ m.creator?.full_name ?? '—' }}</td>
+                  <td class="num mono" style="font-weight:700"
+                      [style.color]="m.movement_type === 'EXPENSE' ? 'var(--danger)' : 'var(--success)'">
+                    {{ m.movement_type === 'EXPENSE' ? '−' : '+' }}${{ m.amount | number:'1.2-2' }}
+                  </td>
+                  <td class="num mono" style="font-size:12px;color:var(--text-subtle)">${{ m.balance_after | number:'1.2-2' }}</td>
+                  <td class="mono" style="font-size:11.5px;color:var(--text-subtle)">{{ formatDT(m.created_at) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (hasMore()) {
+          <div style="padding:14px 20px;text-align:center">
+            <button class="btn ghost" type="button" (click)="loadMore()" [disabled]="movementsLoading()">
+              @if (movementsLoading()) { <span class="btn-spinner"></span> } @else { <app-icon name="chevron_down" [size]="14"/> }
+              Cargar más
+            </button>
+          </div>
+        }
+      }
+    </div>
+
+    } <!-- end @if session as s -->
+
+  } @else {
+
+    <!-- Sin sesión activa -->
+    <div class="card">
+      <div class="empty" style="padding:80px 24px">
+        <app-icon name="wallet" [size]="44" style="opacity:.2"/>
+        <p style="font-size:15px;font-weight:600">No hay caja chica abierta</p>
+        <p style="font-size:13px;color:var(--text-subtle);margin-top:-8px">
+          Abre una nueva sesión para registrar movimientos.
+        </p>
+        @if (authService.isStoreAdmin()) {
+          <button class="btn primary" type="button" (click)="showOpenForm.set(true)">
+            <app-icon name="plus" [size]="14"/>Abrir caja chica
+          </button>
+        } @else {
+          <p style="font-size:12.5px;color:var(--text-subtle)">Solicita al administrador que abra la caja.</p>
+        }
+      </div>
+    </div>
+
+  }
+
+  <!-- Formulario abrir caja (modal inline) -->
+  @if (showOpenForm()) {
+    <div class="modal-backdrop" (click)="showOpenForm.set(false)">
+      <div class="modal-box" style="width:440px" (click)="$event.stopPropagation()" [formGroup]="openForm">
+        <div class="ds-modal-head">
+          <div>
+            <div class="t">Abrir caja chica</div>
+            <div class="d">Inicia una nueva sesión de caja</div>
+          </div>
+          <button class="topbar-btn" type="button" (click)="showOpenForm.set(false)">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+        <div class="ds-modal-body">
+          <div class="mfield" style="margin-bottom:14px">
+            <label>Nombre de la sesión</label>
+            <input class="m-input" type="text" formControlName="name" placeholder="Caja Chica"/>
+          </div>
+          <div class="mfield" style="margin-bottom:14px">
+            <label>Monto de apertura *</label>
+            <input class="m-input" type="number" step="0.01" min="0.01" formControlName="opening_amount" placeholder="0.00"/>
+          </div>
+          <div class="mfield">
+            <label>Notas</label>
+            <input class="m-input" type="text" formControlName="notes" placeholder="Opcional"/>
+          </div>
+        </div>
+        <div class="ds-modal-foot">
+          <button class="btn ghost" type="button" (click)="showOpenForm.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="submitOpen()"
+                  [disabled]="openForm.invalid || openFormLoading()">
+            @if (openFormLoading()) { <span class="btn-spinner"></span> }
+            Abrir caja
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Historial de sesiones cerradas -->
+  <div style="margin-top:28px">
+    <button class="btn ghost" type="button" (click)="loadHistory()" style="font-size:12.5px">
+      <app-icon name="clock" [size]="13"/>
+      {{ showHistory() ? 'Ocultar historial' : 'Ver sesiones anteriores' }}
+    </button>
+
+    @if (showHistory()) {
+      <div class="card" style="margin-top:12px">
+        @if (historyLoading()) {
+          <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+            @for (i of [1,2,3]; track i) {
+              <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+            }
+          </div>
+        } @else if (pastSessions().length === 0) {
+          <div class="empty" style="padding:40px">
+            <p>Sin sesiones anteriores</p>
+          </div>
+        } @else {
+          <div class="card-body p0">
+            <table class="ds-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th class="num">Apertura</th>
+                  <th class="num">Cierre reportado</th>
+                  <th>Abierta</th>
+                  <th>Cerrada</th>
+                  <th>Por</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of pastSessions(); track s.id) {
+                  <tr>
+                    <td>{{ s.name }}</td>
+                    <td class="num mono">${{ s.opening_amount | number:'1.2-2' }}</td>
+                    <td class="num mono">
+                      @if (s.closing_amount_reported != null) {
+                        ${{ s.closing_amount_reported | number:'1.2-2' }}
+                      } @else { <span style="color:var(--text-subtle)">—</span> }
+                    </td>
+                    <td class="mono" style="font-size:11.5px;color:var(--text-subtle)">{{ formatDT(s.opened_at) }}</td>
+                    <td class="mono" style="font-size:11.5px;color:var(--text-subtle)">
+                      {{ s.closed_at ? formatDT(s.closed_at) : '—' }}
+                    </td>
+                    <td style="font-size:12.5px;color:var(--text-muted-ds)">{{ s.openedBy?.full_name ?? '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+</div>

@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <!-- ── Tabs estado de factura ──────────────────────────────────── -->
   <div class="ds-tabs">
     <button class="ds-tab" [class.active]="tabFilter() === 'all'" (click)="tabFilter.set('all')" type="button">
       Todas <span class="count">{{ totalCount() }}</span>
@@ -30,6 +30,21 @@
     </button>
     <button class="ds-tab" [class.active]="tabFilter() === 'cancelled'" (click)="tabFilter.set('cancelled')" type="button">
       Canceladas <span class="count">{{ cancelledCount() }}</span>
+    </button>
+
+    <div class="ds-tabs-sep"></div>
+
+    <button class="ds-tab" [class.active]="payFilter() === 'all'" (click)="payFilter.set('all')" type="button">
+      <app-icon name="banknote" [size]="13"/>Todos los cobros
+    </button>
+    <button class="ds-tab" [class.active]="payFilter() === 'PENDIENTE'" (click)="payFilter.set('PENDIENTE')" type="button">
+      Pendientes <span class="count">{{ pendingPayCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="payFilter() === 'PARCIAL'" (click)="payFilter.set('PARCIAL')" type="button">
+      Parciales <span class="count">{{ parcialPayCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="payFilter() === 'COBRADO'" (click)="payFilter.set('COBRADO')" type="button">
+      Cobradas <span class="count">{{ cobradoPayCount() }}</span>
     </button>
   </div>
 
@@ -175,6 +190,7 @@
               <th class="num">IVA</th>
               <th class="num">Total</th>
               <th>Estado</th>
+              <th>Cobro</th>
               <th>Emitida</th>
             </tr>
           </thead>
@@ -194,6 +210,17 @@
                     <span class="badge danger"><span class="dot"></span>Cancelada</span>
                   }
                 </td>
+                <td>
+                  @if (inv.payment_status === 'COBRADO') {
+                    <span class="badge success"><span class="dot"></span>Cobrada</span>
+                  } @else if (inv.payment_status === 'PARCIAL') {
+                    <span class="badge" style="background:var(--accent-soft);color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Parcial</span>
+                  } @else if (inv.payment_status === 'PENDIENTE') {
+                    <span class="badge warn"><span class="dot"></span>Pendiente</span>
+                  } @else {
+                    <span style="color:var(--text-subtle);font-size:12px">—</span>
+                  }
+                </td>
                 <td class="mono" style="color:var(--text-subtle);font-size:12px">{{ formatDateTime(inv.issue_date) }}</td>
               </tr>
             }
@@ -207,7 +234,7 @@
   <!-- ── Invoice Drawer ─────────────────────────────────────────── -->
   @if (selectedInvoice()) {
     <div class="drawer-backdrop" (click)="closeDrawer()"></div>
-    <div class="drawer" style="width:580px">
+    <div class="drawer" style="width:600px">
 
       <div class="drawer-head">
         <div>
@@ -217,6 +244,13 @@
               <span class="badge success"><span class="dot"></span>Emitida</span>
             } @else {
               <span class="badge danger"><span class="dot"></span>Cancelada</span>
+            }
+            @if (selectedInvoice()!.payment_status === 'COBRADO') {
+              <span class="badge success"><span class="dot"></span>Cobrada</span>
+            } @else if (selectedInvoice()!.payment_status === 'PARCIAL') {
+              <span class="badge" style="background:var(--accent-soft);color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Parcial</span>
+            } @else if (selectedInvoice()!.payment_status === 'PENDIENTE') {
+              <span class="badge warn"><span class="dot"></span>Pendiente cobro</span>
             }
             <span class="mono">{{ formatDateLong(selectedInvoice()!.issue_date) }}</span>
           </div>
@@ -299,7 +333,7 @@
           </div>
 
           <!-- Totals -->
-          <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px">
+          <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px;margin-bottom:20px">
             <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted-ds);margin-bottom:4px">
               <span>Subtotal</span><span class="mono">${{ selectedInvoice()!.subtotal | number:'1.2-2' }}</span>
             </div>
@@ -310,7 +344,182 @@
               <span style="font-weight:700;font-size:14px">Total</span>
               <span class="mono" style="font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-0.02em">${{ selectedInvoice()!.total | number:'1.2-2' }}</span>
             </div>
+            @if (selectedInvoice()!.amount_paid != null) {
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-ds)">
+                <span style="color:var(--success)">Cobrado</span>
+                <span class="mono" style="color:var(--success)">${{ selectedInvoice()!.amount_paid | number:'1.2-2' }}</span>
+              </div>
+              @if ((selectedInvoice()!.amount_pending ?? 0) > 0) {
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:4px">
+                  <span style="color:var(--warn)">Pendiente</span>
+                  <span class="mono" style="color:var(--warn)">${{ selectedInvoice()!.amount_pending | number:'1.2-2' }}</span>
+                </div>
+              }
+            }
           </div>
+
+          <!-- ── Cobros ─────────────────────────────────────────── -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:11px;font-weight:600;color:var(--text-subtle);letter-spacing:0.04em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
+              <app-icon name="banknote" [size]="13"/>Cobros
+            </div>
+            @if (selectedInvoice()!.status === 'ISSUED' && selectedInvoice()!.payment_status !== 'COBRADO' && !showPayForm()) {
+              <div style="display:flex;gap:6px">
+                <button class="btn ghost sm" type="button" (click)="openInstallmentModal()">
+                  <app-icon name="layers" [size]="12"/>Cuotas
+                </button>
+                <button class="btn primary sm" type="button" (click)="openPayForm()">
+                  <app-icon name="plus" [size]="12"/>Registrar cobro
+                </button>
+              </div>
+            }
+          </div>
+
+          <!-- Formulario de cobro inline -->
+          @if (showPayForm()) {
+            <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:14px;margin-bottom:14px" [formGroup]="payForm">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text-ds)">Nuevo cobro</div>
+
+              <!-- Desglose de cobros -->
+              <div style="background:var(--surface-3);border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);padding:10px 12px;margin-bottom:12px;display:flex;flex-direction:column;gap:4px;font-size:12px">
+                <div style="display:flex;justify-content:space-between;color:var(--text-muted-ds)">
+                  <span>Total factura</span>
+                  <span class="mono">${{ selectedInvoice()!.total | number:'1.2-2' }}</span>
+                </div>
+                @if (alreadyPaid() > 0) {
+                  <div style="display:flex;justify-content:space-between;color:var(--success)">
+                    <span>Ya cobrado</span>
+                    <span class="mono">− ${{ alreadyPaid() | number:'1.2-2' }}</span>
+                  </div>
+                }
+                @if (pendingAmount() < (+selectedInvoice()!.total - alreadyPaid())) {
+                  <div style="display:flex;justify-content:space-between;color:var(--warn)">
+                    <span>En cuotas programadas</span>
+                    <span class="mono">− ${{ (+selectedInvoice()!.total - alreadyPaid() - pendingAmount()) | number:'1.2-2' }}</span>
+                  </div>
+                }
+                <div style="display:flex;justify-content:space-between;font-weight:700;padding-top:6px;border-top:1px solid var(--border-ds)"
+                     [style.color]="pendingAmount() > 0 ? 'var(--warn)' : 'var(--success)'">
+                  <span>Pendiente a cobrar</span>
+                  <span class="mono">${{ pendingAmount() | number:'1.2-2' }}</span>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                <div class="mfield">
+                  <label>Monto *</label>
+                  <input class="m-input" type="number" step="0.01" min="0.01" [attr.max]="pendingAmount()" formControlName="amount" placeholder="0.00"/>
+                  <span style="font-size:10.5px;color:var(--text-subtle);margin-top:3px;display:block">Máximo ${{ pendingAmount() | number:'1.2-2' }} · puede ser parcial</span>
+                </div>
+                <div class="mfield">
+                  <label>Método de pago *</label>
+                  <select class="m-input" formControlName="payment_method"
+                          (change)="onPayMethodChange($any($event.target).value)">
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                    <option value="TARJETA_CREDITO">Tarjeta crédito</option>
+                    <option value="CHEQUE">Cheque</option>
+                    <option value="OTRO">Otro</option>
+                  </select>
+                </div>
+                @if (payMethodSig() === 'TRANSFERENCIA') {
+                  <div class="mfield" style="grid-column:1/-1">
+                    <label>Referencia de transferencia *</label>
+                    <input class="m-input" type="text" formControlName="transfer_reference" placeholder="Nro. comprobante / referencia"/>
+                  </div>
+                }
+                @if (payMethodSig() === 'TARJETA_DEBITO' || payMethodSig() === 'TARJETA_CREDITO') {
+                  <div class="mfield" style="grid-column:1/-1">
+                    <label>Contrapartida / últimos 4 dígitos *</label>
+                    <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="Últimos 4 dígitos o referencia"/>
+                  </div>
+                }
+                <div class="mfield">
+                  <label>Fecha de cobro</label>
+                  <input class="m-input" type="date" formControlName="payment_date"/>
+                </div>
+                <div class="mfield">
+                  <label>Notas</label>
+                  <input class="m-input" type="text" formControlName="notes" placeholder="Opcional"/>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button class="btn ghost sm" type="button" (click)="showPayForm.set(false)">Cancelar</button>
+                <button class="btn primary sm" type="button" (click)="submitPayment()"
+                        [disabled]="payForm.invalid || payFormLoading()">
+                  @if (payFormLoading()) { <span class="btn-spinner"></span> } @else { <app-icon name="check" [size]="12"/> }
+                  Guardar cobro
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Lista de cobros -->
+          @if (paymentsLoading()) {
+            <div style="display:flex;flex-direction:column;gap:6px">
+              @for (i of [1,2]; track i) {
+                <div class="skel" style="height:44px;border-radius:var(--radius-sm-ds)"></div>
+              }
+            </div>
+          } @else if (payments().length === 0) {
+            <div style="text-align:center;padding:20px 0;color:var(--text-subtle);font-size:12.5px">
+              Sin cobros registrados
+            </div>
+          } @else {
+            <div style="display:flex;flex-direction:column;gap:6px">
+              @for (pay of payments(); track pay.id) {
+                <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);transition:border-color .15s"
+                     [style.opacity]="pay.status === 'ANULADO' ? '0.5' : '1'"
+                     [style.cursor]="(pay.status === 'PENDIENTE' || pay.status === 'VENCIDO') && selectedInvoice()!.status === 'ISSUED' ? 'pointer' : 'default'"
+                     [style.border-color]="(pay.status === 'PENDIENTE' || pay.status === 'VENCIDO') && selectedInvoice()!.status === 'ISSUED' ? 'var(--warn)' : 'var(--border-ds)'"
+                     (click)="(pay.status === 'PENDIENTE' || pay.status === 'VENCIDO') && selectedInvoice()!.status === 'ISSUED' ? openInstallmentPayModal(pay) : null">
+                  <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0"
+                       [style.background]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO' ? 'var(--warn-soft)' : 'var(--accent-soft)'">
+                    @if (pay.status === 'PENDIENTE' || pay.status === 'VENCIDO') {
+                      <app-icon name="clock" [size]="14" style="color:var(--warn)"/>
+                    } @else {
+                      <app-icon name="banknote" [size]="14" style="color:var(--accent)"/>
+                    }
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;flex-wrap:wrap">
+                      <span class="mono">${{ pay.amount | number:'1.2-2' }}</span>
+                      <span style="font-size:11px;font-weight:400;color:var(--text-muted-ds)">· {{ PAYMENT_METHOD_LABELS[pay.payment_method] }}</span>
+                      @if (pay.installment_number && pay.installment_total) {
+                        <span class="badge neutral" style="font-size:10px">Cuota {{ pay.installment_number }}/{{ pay.installment_total }}</span>
+                      }
+                      @if (pay.status === 'PENDIENTE') {
+                        <span class="badge warn" style="font-size:10px">Programado</span>
+                      } @else if (pay.status === 'VENCIDO') {
+                        <span class="badge danger" style="font-size:10px">Vencido</span>
+                      } @else if (pay.status === 'ANULADO') {
+                        <span class="badge danger" style="font-size:10px">Anulado</span>
+                      }
+                    </div>
+                    <div style="font-size:11px;color:var(--text-subtle)">
+                      @if (pay.status === 'PENDIENTE' && pay.due_date) {
+                        Vence {{ formatDate(pay.due_date) }}
+                      } @else {
+                        {{ formatDate(pay.payment_date) }}
+                      }
+                      @if (pay.notes) { · {{ pay.notes }} }
+                      @if (pay.creator) { · {{ pay.creator.full_name }} }
+                    </div>
+                    @if ((pay.status === 'PENDIENTE' || pay.status === 'VENCIDO') && selectedInvoice()!.status === 'ISSUED') {
+                      <div style="font-size:10.5px;color:var(--warn);margin-top:2px;font-weight:500">Toca para registrar el pago</div>
+                    }
+                  </div>
+                  @if (pay.status !== 'ANULADO' && authService.isStoreAdmin()) {
+                    <button class="btn ghost sm" type="button" title="Anular cobro"
+                            (click)="$event.stopPropagation(); annulPayment(pay)">
+                      <app-icon name="x" [size]="13"/>
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+          }
 
         }
       </div>
@@ -342,6 +551,214 @@
         }
       </div>
 
+    </div>
+  }
+
+  <!-- ── Installment pay modal ─────────────────────────────────── -->
+  @if (showInstallmentPayModal() && selectedInstallment(); as inst) {
+    <div class="modal-backdrop" (click)="closeInstallmentPayModal()">
+      <div class="modal-box" style="width:440px" (click)="$event.stopPropagation()" [formGroup]="installPayForm">
+
+        <div class="ds-modal-head">
+          <div>
+            <div class="t">Registrar pago de cuota</div>
+            <div class="d">
+              @if (inst.installment_number && inst.installment_total) {
+                Cuota {{ inst.installment_number }}/{{ inst.installment_total }} ·
+              }
+              ${{ inst.amount | number:'1.2-2' }}
+              @if (inst.due_date) { · Vence {{ formatDate(inst.due_date) }} }
+            </div>
+          </div>
+          <button class="topbar-btn" type="button" (click)="closeInstallmentPayModal()">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+
+        <div class="ds-modal-body">
+
+          <!-- Tipo de pago -->
+          <div class="mfield" style="margin-bottom:16px">
+            <label>Tipo de pago</label>
+            <div class="seg" style="margin-top:6px">
+              <button class="seg-btn" type="button" [class.active]="installPayType() === 'full'"
+                      (click)="setInstallPayType('full')">
+                <app-icon name="check_circle" [size]="13"/>Pago total
+              </button>
+              <button class="seg-btn" type="button" [class.active]="installPayType() === 'partial'"
+                      (click)="setInstallPayType('partial')">
+                <app-icon name="minus_circle" [size]="13"/>Abono parcial
+              </button>
+            </div>
+          </div>
+
+          @if (installPayType() === 'full') {
+            <div style="background:var(--accent-soft);border:1px solid var(--accent-soft-strong);border-radius:var(--radius-sm-ds);padding:10px 14px;margin-bottom:16px;font-size:13px">
+              Se registrará el pago completo de
+              <strong class="mono"> ${{ inst.amount | number:'1.2-2' }}</strong>
+            </div>
+          } @else {
+            <div class="mfield" style="margin-bottom:12px">
+              <label>Monto abonado *</label>
+              <input class="m-input" type="number" step="0.01" min="0.01"
+                     [attr.max]="inst.amount - 0.01"
+                     formControlName="amount" placeholder="0.00"/>
+              <span style="font-size:10.5px;color:var(--text-subtle);margin-top:3px;display:block">
+                Máximo ${{ (inst.amount - 0.01) | number:'1.2-2' }} · el saldo quedará como nueva cuota pendiente
+              </span>
+            </div>
+          }
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="mfield">
+              <label>Método de pago *</label>
+              <select class="m-input" formControlName="payment_method"
+                      (change)="onInstallPayMethodChange($any($event.target).value)">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                <option value="TARJETA_CREDITO">Tarjeta crédito</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
+            <div class="mfield">
+              <label>Fecha de cobro</label>
+              <input class="m-input" type="date" formControlName="payment_date"/>
+            </div>
+            @if (installPayMethodSig() === 'TRANSFERENCIA') {
+              <div class="mfield" style="grid-column:1/-1">
+                <label>Referencia de transferencia *</label>
+                <input class="m-input" type="text" formControlName="transfer_reference" placeholder="Nro. comprobante / referencia"/>
+              </div>
+            }
+            @if (installPayMethodSig() === 'TARJETA_DEBITO' || installPayMethodSig() === 'TARJETA_CREDITO') {
+              <div class="mfield" style="grid-column:1/-1">
+                <label>Contrapartida / últimos 4 dígitos *</label>
+                <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="Últimos 4 dígitos o referencia"/>
+              </div>
+            }
+            <div class="mfield" style="grid-column:1/-1">
+              <label>Notas</label>
+              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional"/>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="ds-modal-foot">
+          <button class="btn ghost" type="button" (click)="closeInstallmentPayModal()">Cancelar</button>
+          <button class="btn primary" type="button" (click)="submitInstallmentPay()"
+                  [disabled]="installPayForm.invalid || installPayLoading()">
+            @if (installPayLoading()) { <span class="btn-spinner"></span> } @else { <app-icon name="check" [size]="14"/> }
+            {{ installPayType() === 'full' ? 'Confirmar pago' : 'Registrar abono' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── Installment plan modal ────────────────────────────────── -->
+  @if (showInstallmentModal()) {
+    <div class="modal-backdrop" (click)="showInstallmentModal.set(false)">
+      <div class="modal-box" style="width:520px" (click)="$event.stopPropagation()" [formGroup]="installmentForm">
+
+        <div class="ds-modal-head">
+          <div>
+            <div class="t">Plan de cuotas</div>
+            <div class="d">{{ selectedInvoice()!.invoice_number }} · Pendiente: ${{ pendingAmount() | number:'1.2-2' }}</div>
+          </div>
+          <button class="topbar-btn" type="button" (click)="showInstallmentModal.set(false)">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+
+        <div class="ds-modal-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+            <div class="mfield">
+              <label>N.º de cuotas *</label>
+              <input class="m-input" type="number" min="2" max="24" step="1"
+                     formControlName="num_installments" (change)="recalcAmountPer()"/>
+            </div>
+            <div class="mfield">
+              <label>Monto por cuota *</label>
+              <input class="m-input" type="number" step="0.01" min="0.01" formControlName="amount_per"/>
+              <span style="font-size:10.5px;color:var(--text-subtle);margin-top:3px;display:block">
+                Total: ${{ ((installmentForm.value.num_installments ?? 0) * (installmentForm.value.amount_per ?? 0)) | number:'1.2-2' }}
+                @if ((installmentForm.value.num_installments ?? 0) * (installmentForm.value.amount_per ?? 0) !== pendingAmount()) {
+                  <span style="color:var(--warn)"> ≠ pendiente</span>
+                }
+              </span>
+            </div>
+            <div class="mfield">
+              <label>Fecha 1.ª cuota *</label>
+              <input class="m-input" type="date" formControlName="start_date"/>
+            </div>
+            <div class="mfield">
+              <label>Frecuencia *</label>
+              <select class="m-input" formControlName="frequency">
+                <option value="MONTHLY">Mensual</option>
+                <option value="BIWEEKLY">Quincenal</option>
+                <option value="WEEKLY">Semanal</option>
+              </select>
+            </div>
+            <div class="mfield">
+              <label>Método de pago</label>
+              <select class="m-input" formControlName="payment_method">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="TARJETA_DEBITO">Tarjeta débito</option>
+                <option value="TARJETA_CREDITO">Tarjeta crédito</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="OTRO">Otro</option>
+              </select>
+            </div>
+            <div class="mfield">
+              <label>Notas</label>
+              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional"/>
+            </div>
+          </div>
+
+          @if (installmentPreview().length > 0) {
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Vista previa</div>
+            <div style="border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);overflow:hidden;max-height:200px;overflow-y:auto">
+              <table class="ds-table" style="font-size:12.5px">
+                <thead>
+                  <tr>
+                    <th>Cuota</th>
+                    <th>Vence</th>
+                    <th class="num">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of installmentPreview(); track row.num) {
+                    <tr>
+                      <td style="color:var(--text-muted-ds)">{{ row.num }}/{{ installmentPreview().length }}</td>
+                      <td class="mono">{{ formatDate(row.date + 'T12:00:00') }}</td>
+                      <td class="num mono">${{ row.amount | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <div style="text-align:center;padding:16px;color:var(--text-subtle);font-size:12.5px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+              Completa los campos para ver la vista previa
+            </div>
+          }
+        </div>
+
+        <div class="ds-modal-foot">
+          <button class="btn ghost" type="button" (click)="showInstallmentModal.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="submitInstallments()"
+                  [disabled]="installmentForm.invalid || installmentPreview().length === 0 || installmentLoading()">
+            @if (installmentLoading()) { <span class="btn-spinner"></span> } @else { <app-icon name="check" [size]="14"/> }
+            Programar {{ installmentPreview().length > 0 ? installmentPreview().length : '' }} cuotas
+          </button>
+        </div>
+
+      </div>
     </div>
   }
 

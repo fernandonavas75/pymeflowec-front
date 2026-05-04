@@ -78,9 +78,10 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Facturación',
       items: [
-        { label: 'Clientes',  icon: 'people',      route: '/customers', moduleCode: 'MOD_INVOICING', warehouseHidden: true },
-        { label: 'Facturas',  icon: 'receipt_long', route: '/invoices',  moduleCode: 'MOD_INVOICING', warehouseHidden: true },
-        { label: 'Reportes',  icon: 'bar_chart',   route: '/reports',   moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Clientes',    icon: 'people',        route: '/customers',          moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Facturas',    icon: 'receipt_long',  route: '/invoices',           moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Caja chica',  icon: 'wallet',        route: '/finance/petty-cash', moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
+        { label: 'Reportes',    icon: 'bar_chart',     route: '/reports',            moduleCode: 'MOD_INVOICING', warehouseHidden: true },
       ],
     },
     // ── Catálogo (productos requiere MOD_PRODUCTS, prov. MOD_SUPPLIERS) ─

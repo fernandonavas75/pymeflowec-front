@@ -20,7 +20,7 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-/** Wrapper de respuesta paginada del backend */
+/** Wrapper de respuesta paginada del backend — endpoints estándar */
 export interface ApiListResponse<T> {
   success: boolean;
   data: T[];
@@ -30,4 +30,13 @@ export interface ApiListResponse<T> {
     current_page: number;
     per_page: number;
   };
+}
+
+/** Wrapper de respuesta paginada — endpoints del módulo financiero */
+export interface FinanceListResponse<T> {
+  success: boolean;
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
 }

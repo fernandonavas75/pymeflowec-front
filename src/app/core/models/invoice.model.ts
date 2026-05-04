@@ -1,5 +1,6 @@
 import { Customer } from './customer.model';
 import { Product } from './product.model';
+import { InvoicePayStatusAgg } from './invoice-payment.model';
 
 export type InvoiceStatus = 'ISSUED' | 'CANCELLED';
 
@@ -32,6 +33,9 @@ export interface Invoice {
   tax_amount: number;
   total: number;
   status: InvoiceStatus;
+  payment_status?: InvoicePayStatusAgg;
+  amount_paid?: number;
+  amount_pending?: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;

@@ -168,6 +168,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
       },
 
+      // Finanzas — Caja Chica
+      {
+        path: 'finance/petty-cash',
+        loadComponent: () => import('./features/finance/petty-cash/petty-cash.component').then(m => m.PettyCashComponent),
+      },
+
       // Módulos de plataforma
       {
         path: 'platform/modules',

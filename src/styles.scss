@@ -1045,6 +1045,12 @@ a { color: inherit; }
     border-radius: 99px;
   }
 }
+.ds-tabs-sep {
+  width: 1px;
+  background: var(--border-ds);
+  margin: 4px 6px;
+  align-self: stretch;
+}
 
 // ── Alertas ───────────────────────────────────────────────────────
 .ds-alert {
