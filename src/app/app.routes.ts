@@ -174,6 +174,28 @@ export const routes: Routes = [
         loadComponent: () => import('./features/finance/petty-cash/petty-cash.component').then(m => m.PettyCashComponent),
       },
 
+      // Finanzas — Egresos operacionales
+      {
+        path: 'finance/expenses',
+        loadComponent: () => import('./features/finance/expenses/expenses-list/expenses-list.component').then(m => m.ExpensesListComponent),
+      },
+
+      // Finanzas — Categorías de egreso (solo admin)
+      {
+        path: 'finance/expense-categories',
+        loadComponent: () => import('./features/finance/expense-categories/expense-categories.component').then(m => m.ExpenseCategoriesComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
+      },
+
+      // Finanzas — Presupuestos por categoría (solo admin)
+      {
+        path: 'finance/expense-budgets',
+        loadComponent: () => import('./features/finance/expense-budgets/expense-budgets.component').then(m => m.ExpenseBudgetsComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
+      },
+
       // Módulos de plataforma
       {
         path: 'platform/modules',

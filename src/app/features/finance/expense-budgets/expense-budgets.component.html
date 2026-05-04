@@ -1,0 +1,261 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Presupuestos por categoría</div>
+      <div class="page-sub-en">Expense budgets · {{ totalCount() }} presupuestos</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn primary" type="button" (click)="openNew()">
+        <app-icon name="plus" [size]="14"/>Nuevo presupuesto
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Year selector + Tabs ────────────────────────────────────── -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+
+    <div class="ds-tabs" style="margin-bottom:0">
+      <button class="ds-tab" [class.active]="periodTab() === 'all'" (click)="periodTab.set('all')" type="button">
+        Todos <span class="count">{{ totalCount() }}</span>
+      </button>
+      <button class="ds-tab" [class.active]="periodTab() === 'MONTHLY'" (click)="periodTab.set('MONTHLY')" type="button">
+        Mensual <span class="count">{{ monthlyCount() }}</span>
+      </button>
+      <button class="ds-tab" [class.active]="periodTab() === 'ANNUAL'" (click)="periodTab.set('ANNUAL')" type="button">
+        Anual <span class="count">{{ annualCount() }}</span>
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:6px">
+      <button class="btn ghost sm" type="button" (click)="changeYear(-1)">
+        <app-icon name="chevron_left" [size]="14"/>
+      </button>
+      <span style="font-family:var(--font-display);font-weight:700;font-size:15px;min-width:48px;text-align:center">
+        {{ year() }}
+      </span>
+      <button class="btn ghost sm" type="button" (click)="changeYear(1)">
+        <app-icon name="chevron_right" [size]="14"/>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <select class="m-input" style="width:220px;height:34px;font-size:13px"
+            [value]="catFilter()" (change)="catFilter.set(+$any($event.target).value || '')">
+      <option value="">Todas las categorías</option>
+      @for (cat of categories(); track cat.id) {
+        <option [value]="cat.id">{{ cat.name }}</option>
+      }
+    </select>
+
+    @if (catFilter()) {
+      <button class="btn ghost sm" type="button" (click)="catFilter.set('')">
+        <app-icon name="x" [size]="12"/>Limpiar
+      </button>
+    }
+  </div>
+
+  <!-- ── Total presupuestado ──────────────────────────────────────── -->
+  @if (filtered().length > 0) {
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;margin-top:-4px">
+      <div style="font-size:12px;color:var(--text-muted-ds)">
+        Total presupuestado:
+        <strong style="color:var(--text-ds);font-family:var(--font-display);font-size:14px;margin-left:4px">
+          ${{ formatCurrency(totalBudgeted()) }}
+        </strong>
+      </div>
+    </div>
+  }
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+    @if (loading()) {
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+        }
+      </div>
+
+    } @else if (filtered().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="target" [size]="40" style="opacity:.25"/>
+        <p>No hay presupuestos para {{ year() }}</p>
+        <button class="btn primary sm" type="button" (click)="openNew()">
+          <app-icon name="plus" [size]="12"/>Crear presupuesto
+        </button>
+      </div>
+
+    } @else {
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th>Tipo</th>
+              <th>Período</th>
+              <th class="num">Monto presupuestado</th>
+              <th>Notas</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of filtered(); track b.id) {
+              <tr>
+                <td>
+                  <strong>{{ b.category?.name ?? '—' }}</strong>
+                  @if (b.category) {
+                    <div style="font-size:11px;color:var(--text-subtle)">
+                      {{ CATEGORY_TYPE_LABELS[b.category.category_type] }}
+                    </div>
+                  }
+                </td>
+                <td>
+                  <span class="badge" [class.accent]="b.period_type === 'ANNUAL'"
+                        [class.success]="b.period_type === 'MONTHLY'"
+                        style="font-size:11px">
+                    {{ BUDGET_PERIOD_TYPE_LABELS[b.period_type] }}
+                  </span>
+                </td>
+                <td style="font-size:13.5px;font-weight:600">{{ periodLabel(b) }}</td>
+                <td class="num">
+                  <span style="font-family:var(--font-display);font-weight:700;font-size:14px">
+                    ${{ formatCurrency(b.budgeted_amount) }}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted-ds);font-size:12.5px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  {{ b.notes || '—' }}
+                </td>
+                <td style="text-align:right;display:flex;gap:4px;justify-content:flex-end;padding:8px 12px">
+                  <button class="btn ghost sm" title="Editar" type="button" (click)="openEdit(b)">
+                    <app-icon name="edit" [size]="13"/>
+                  </button>
+                  <button class="btn ghost sm" title="Eliminar" type="button" (click)="deleteBudget(b)">
+                    <app-icon name="trash" [size]="13"/>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── Modal crear / editar ─────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="closeModal()">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nuevo presupuesto' : 'Editar presupuesto' }}</div>
+            <div class="d">
+              @if (isNew) { Define un tope presupuestal por categoría y período. }
+              @else { Actualiza el monto o notas del presupuesto. }
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="closeModal()" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Categoría <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="category_id">
+                <option [value]="null">— Selecciona una categoría —</option>
+                @for (cat of categories(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.name }}</option>
+                }
+              </select>
+              @if (form.get('category_id')?.touched && form.get('category_id')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Selecciona una categoría</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Tipo de período <span style="color:var(--danger)">*</span></label>
+              <div class="seg">
+                <button class="seg-btn" type="button"
+                        [class.active]="form.get('period_type')?.value === 'MONTHLY'"
+                        [disabled]="!isNew"
+                        (click)="onPeriodTypeChange('MONTHLY')">
+                  Mensual
+                </button>
+                <button class="seg-btn" type="button"
+                        [class.active]="form.get('period_type')?.value === 'ANNUAL'"
+                        [disabled]="!isNew"
+                        (click)="onPeriodTypeChange('ANNUAL')">
+                  Anual
+                </button>
+              </div>
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Año <span style="color:var(--danger)">*</span></label>
+                <input class="m-input" type="number" min="2020" max="2099" placeholder="2026"
+                       formControlName="period_year" [attr.readonly]="!isNew ? true : null"/>
+                @if (form.get('period_year')?.touched && form.get('period_year')?.invalid) {
+                  <div class="hint" style="color:var(--danger)">Año inválido (2020–2099)</div>
+                }
+              </div>
+
+              @if (isMonthly) {
+                <div class="mfield">
+                  <label>Mes <span style="color:var(--danger)">*</span></label>
+                  <select class="m-input" formControlName="period_month">
+                    <option [value]="null">— Selecciona —</option>
+                    @for (m of MONTHS; track m.value) {
+                      <option [value]="m.value">{{ m.label }}</option>
+                    }
+                  </select>
+                  @if (form.get('period_month')?.touched && form.get('period_month')?.invalid) {
+                    <div class="hint" style="color:var(--danger)">Selecciona un mes</div>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Monto presupuestado <span style="color:var(--danger)">*</span></label>
+              <input class="m-input mono" type="number" min="0.01" step="0.01" placeholder="0.00"
+                     formControlName="budgeted_amount"/>
+              @if (form.get('budgeted_amount')?.touched && form.get('budgeted_amount')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa un monto válido</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Notas <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+              <input class="m-input" placeholder="Observaciones del presupuesto" formControlName="notes"/>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          @if (!isNew) {
+            <button class="btn danger" style="margin-right:auto" type="button"
+                    (click)="deleteBudget(editing()!)">
+              <app-icon name="trash" [size]="13"/>Eliminar
+            </button>
+          }
+          <button class="btn secondary" type="button" (click)="closeModal()">Cancelar</button>
+          <button class="btn primary" type="button" (click)="save()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear presupuesto' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

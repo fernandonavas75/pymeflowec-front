@@ -1,0 +1,173 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Categorías de egreso</div>
+      <div class="page-sub-en">Expense categories · {{ activeCount() }} activas</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn primary" type="button" (click)="openNew()">
+        <app-icon name="plus" [size]="14"/>Nueva categoría
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'active'" (click)="tab.set('active')" type="button">
+      Activas <span class="count">{{ activeCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'inactive'" (click)="tab.set('inactive')" type="button">
+      Inactivas <span class="count">{{ inactiveCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todas <span class="count">{{ totalCount() }}</span>
+    </button>
+  </div>
+
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar por nombre o tipo…"/>
+    </div>
+  </div>
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+    @if (loading()) {
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+        }
+      </div>
+
+    } @else if (filtered().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="tag" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron categorías</p>
+        @if (searchCtrl.value) {
+          <button class="btn ghost sm" (click)="searchCtrl.setValue('')" type="button">Limpiar búsqueda</button>
+        }
+      </div>
+
+    } @else {
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              <th>Creada</th>
+              <th style="width:96px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of filtered(); track c.id) {
+              <tr>
+                <td><strong>{{ c.name }}</strong></td>
+                <td>
+                  <span class="badge accent" style="font-size:11px">
+                    {{ CATEGORY_TYPE_LABELS[c.category_type] }}
+                  </span>
+                </td>
+                <td style="color:var(--text-muted-ds);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                  {{ c.description || '—' }}
+                </td>
+                <td>
+                  @if (c.is_active) {
+                    <span class="badge success">Activa</span>
+                  } @else {
+                    <span class="badge" style="background:var(--surface-3);color:var(--text-muted-ds)">Inactiva</span>
+                  }
+                </td>
+                <td style="color:var(--text-muted-ds);font-size:12px">{{ formatDate(c.created_at) }}</td>
+                <td style="text-align:right;display:flex;gap:4px;justify-content:flex-end;padding:8px 12px">
+                  <button class="btn ghost sm" title="Editar" type="button" (click)="openEdit(c)">
+                    <app-icon name="edit" [size]="13"/>
+                  </button>
+                  <button class="btn ghost sm" [title]="c.is_active ? 'Desactivar' : 'Activar'" type="button"
+                          (click)="toggleActive(c)">
+                    <app-icon [name]="c.is_active ? 'eye_off' : 'eye'" [size]="13"/>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── Modal crear / editar ─────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nueva categoría' : 'Editar categoría' }}</div>
+            <div class="d">
+              {{ isNew ? 'Registra un nuevo tipo de egreso.' : 'Actualiza los datos de "' + editing()?.name + '".' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Nombre <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Ej: Servicios básicos" formControlName="name"/>
+              @if (form.get('name')?.touched && form.get('name')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 2 caracteres</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Tipo <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="category_type">
+                <option value="">— Selecciona un tipo —</option>
+                @for (type of CATEGORY_TYPES; track type) {
+                  <option [value]="type">{{ CATEGORY_TYPE_LABELS[type] }}</option>
+                }
+              </select>
+              @if (form.get('category_type')?.touched && form.get('category_type')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Selecciona un tipo</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Descripción <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+              <input class="m-input" placeholder="Detalle opcional de la categoría" formControlName="description"/>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          @if (!isNew) {
+            <button class="btn danger" style="margin-right:auto" type="button"
+                    (click)="deleteCategory(editing()!)">
+              <app-icon name="trash" [size]="13"/>Eliminar
+            </button>
+          }
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="save()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear categoría' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

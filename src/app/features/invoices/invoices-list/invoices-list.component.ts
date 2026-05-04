@@ -6,6 +6,7 @@ import { startWith, finalize, from, concatMap, toArray, switchMap, of } from 'rx
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { CompanyModulesService } from '../../../core/services/company-modules.service';
 import { InvoicesService } from '../../../core/services/invoices.service';
 import { InvoicePaymentsService } from '../../../core/services/invoice-payments.service';
 import { InvoicePdfService } from '../../../core/services/invoice-pdf.service';
@@ -24,6 +25,7 @@ import { AuthService } from '../../../core/services/auth.service';
   templateUrl: './invoices-list.component.html',
 })
 export class InvoicesListComponent implements OnInit {
+  private modulesSvc             = inject(CompanyModulesService);
   private invoicesService        = inject(InvoicesService);
   private invoicePaymentsService = inject(InvoicePaymentsService);
   private productsService        = inject(ProductsService);
@@ -33,6 +35,8 @@ export class InvoicesListComponent implements OnInit {
   authService                    = inject(AuthService);
 
   readonly PAYMENT_METHOD_LABELS = PAYMENT_METHOD_LABELS;
+
+  hasPaymentsModule = computed(() => this.modulesSvc.approvedCodes().has('MOD_PAYMENTS'));
 
   private allInvoices = signal<Invoice[]>([]);
   loading         = signal(true);

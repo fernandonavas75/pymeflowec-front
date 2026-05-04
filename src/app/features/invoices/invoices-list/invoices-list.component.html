@@ -31,22 +31,29 @@
     <button class="ds-tab" [class.active]="tabFilter() === 'cancelled'" (click)="tabFilter.set('cancelled')" type="button">
       Canceladas <span class="count">{{ cancelledCount() }}</span>
     </button>
-
-    <div class="ds-tabs-sep"></div>
-
-    <button class="ds-tab" [class.active]="payFilter() === 'all'" (click)="payFilter.set('all')" type="button">
-      <app-icon name="banknote" [size]="13"/>Todos los cobros
-    </button>
-    <button class="ds-tab" [class.active]="payFilter() === 'PENDIENTE'" (click)="payFilter.set('PENDIENTE')" type="button">
-      Pendientes <span class="count">{{ pendingPayCount() }}</span>
-    </button>
-    <button class="ds-tab" [class.active]="payFilter() === 'PARCIAL'" (click)="payFilter.set('PARCIAL')" type="button">
-      Parciales <span class="count">{{ parcialPayCount() }}</span>
-    </button>
-    <button class="ds-tab" [class.active]="payFilter() === 'COBRADO'" (click)="payFilter.set('COBRADO')" type="button">
-      Cobradas <span class="count">{{ cobradoPayCount() }}</span>
-    </button>
   </div>
+
+  <!-- ── Tabs estado de cobro — solo si MOD_PAYMENTS activo ─────── -->
+  @if (hasPaymentsModule()) {
+    <div class="ds-tabs" style="margin-top:2px;border-top:1px solid var(--border-ds);padding-top:2px">
+      <span style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:0.05em;text-transform:uppercase;display:flex;align-items:center;gap:5px;padding:0 4px 0 2px">
+        <app-icon name="banknote" [size]="12"/>Cobros
+      </span>
+      <div class="ds-tabs-sep"></div>
+      <button class="ds-tab" [class.active]="payFilter() === 'all'" (click)="payFilter.set('all')" type="button">
+        Todos
+      </button>
+      <button class="ds-tab" [class.active]="payFilter() === 'PENDIENTE'" (click)="payFilter.set('PENDIENTE')" type="button">
+        Pendientes <span class="count">{{ pendingPayCount() }}</span>
+      </button>
+      <button class="ds-tab" [class.active]="payFilter() === 'PARCIAL'" (click)="payFilter.set('PARCIAL')" type="button">
+        Parciales <span class="count">{{ parcialPayCount() }}</span>
+      </button>
+      <button class="ds-tab" [class.active]="payFilter() === 'COBRADO'" (click)="payFilter.set('COBRADO')" type="button">
+        Cobradas <span class="count">{{ cobradoPayCount() }}</span>
+      </button>
+    </div>
+  }
 
   <!-- ── Filters ─────────────────────────────────────────────────── -->
   <div class="filters">
@@ -190,7 +197,7 @@
               <th class="num">IVA</th>
               <th class="num">Total</th>
               <th>Estado</th>
-              <th>Cobro</th>
+              @if (hasPaymentsModule()) { <th>Cobro</th> }
               <th>Emitida</th>
             </tr>
           </thead>
@@ -210,17 +217,19 @@
                     <span class="badge danger"><span class="dot"></span>Cancelada</span>
                   }
                 </td>
-                <td>
-                  @if (inv.payment_status === 'COBRADO') {
-                    <span class="badge success"><span class="dot"></span>Cobrada</span>
-                  } @else if (inv.payment_status === 'PARCIAL') {
-                    <span class="badge" style="background:var(--accent-soft);color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Parcial</span>
-                  } @else if (inv.payment_status === 'PENDIENTE') {
-                    <span class="badge warn"><span class="dot"></span>Pendiente</span>
-                  } @else {
-                    <span style="color:var(--text-subtle);font-size:12px">—</span>
-                  }
-                </td>
+                @if (hasPaymentsModule()) {
+                  <td>
+                    @if (inv.payment_status === 'COBRADO') {
+                      <span class="badge success"><span class="dot"></span>Cobrada</span>
+                    } @else if (inv.payment_status === 'PARCIAL') {
+                      <span class="badge" style="background:var(--accent-soft);color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Parcial</span>
+                    } @else if (inv.payment_status === 'PENDIENTE') {
+                      <span class="badge warn"><span class="dot"></span>Pendiente</span>
+                    } @else {
+                      <span style="color:var(--text-subtle);font-size:12px">—</span>
+                    }
+                  </td>
+                }
                 <td class="mono" style="color:var(--text-subtle);font-size:12px">{{ formatDateTime(inv.issue_date) }}</td>
               </tr>
             }
@@ -245,12 +254,14 @@
             } @else {
               <span class="badge danger"><span class="dot"></span>Cancelada</span>
             }
-            @if (selectedInvoice()!.payment_status === 'COBRADO') {
-              <span class="badge success"><span class="dot"></span>Cobrada</span>
-            } @else if (selectedInvoice()!.payment_status === 'PARCIAL') {
-              <span class="badge" style="background:var(--accent-soft);color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Parcial</span>
-            } @else if (selectedInvoice()!.payment_status === 'PENDIENTE') {
-              <span class="badge warn"><span class="dot"></span>Pendiente cobro</span>
+            @if (hasPaymentsModule()) {
+              @if (selectedInvoice()!.payment_status === 'COBRADO') {
+                <span class="badge success"><span class="dot"></span>Cobrada</span>
+              } @else if (selectedInvoice()!.payment_status === 'PARCIAL') {
+                <span class="badge" style="background:var(--accent-soft);color:var(--accent)"><span class="dot" style="background:var(--accent)"></span>Parcial</span>
+              } @else if (selectedInvoice()!.payment_status === 'PENDIENTE') {
+                <span class="badge warn"><span class="dot"></span>Pendiente cobro</span>
+              }
             }
             <span class="mono">{{ formatDateLong(selectedInvoice()!.issue_date) }}</span>
           </div>
@@ -344,7 +355,7 @@
               <span style="font-weight:700;font-size:14px">Total</span>
               <span class="mono" style="font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:-0.02em">${{ selectedInvoice()!.total | number:'1.2-2' }}</span>
             </div>
-            @if (selectedInvoice()!.amount_paid != null) {
+            @if (hasPaymentsModule() && selectedInvoice()!.amount_paid != null) {
               <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border-ds)">
                 <span style="color:var(--success)">Cobrado</span>
                 <span class="mono" style="color:var(--success)">${{ selectedInvoice()!.amount_paid | number:'1.2-2' }}</span>
@@ -358,7 +369,8 @@
             }
           </div>
 
-          <!-- ── Cobros ─────────────────────────────────────────── -->
+          <!-- ── Cobros (solo MOD_PAYMENTS) ───────────────────────── -->
+          @if (hasPaymentsModule()) {
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div style="font-size:11px;font-weight:600;color:var(--text-subtle);letter-spacing:0.04em;text-transform:uppercase;display:flex;align-items:center;gap:6px">
               <app-icon name="banknote" [size]="13"/>Cobros
@@ -519,6 +531,8 @@
                 </div>
               }
             </div>
+          }
+
           }
 
         }

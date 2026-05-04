@@ -1,0 +1,562 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Egresos operacionales</div>
+      <div class="page-sub-en">Expenses · {{ totalCount() }} registrados</div>
+    </div>
+    @if (authService.isStoreAdmin()) {
+      <div class="page-actions">
+        <button class="btn primary" type="button" (click)="openNew()">
+          <app-icon name="plus" [size]="14"/>Nuevo egreso
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    <button class="ds-tab" [class.active]="tab() === 'all'" (click)="tab.set('all')" type="button">
+      Todos <span class="count">{{ totalCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'PENDIENTE'" (click)="tab.set('PENDIENTE')" type="button">
+      Pendiente <span class="count">{{ pendienteCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'PARCIAL'" (click)="tab.set('PARCIAL')" type="button">
+      Parcial <span class="count">{{ parcialCount() }}</span>
+    </button>
+    <button class="ds-tab" [class.active]="tab() === 'PAGADO'" (click)="tab.set('PAGADO')" type="button">
+      Pagado <span class="count">{{ pagadoCount() }}</span>
+    </button>
+    <div class="ds-tabs-sep"></div>
+    <button class="ds-tab" [class.active]="tab() === 'ANULADO'" (click)="tab.set('ANULADO')" type="button">
+      Anulado <span class="count">{{ anulCount() }}</span>
+    </button>
+  </div>
+
+  <!-- ── Filters ─────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="filter-search">
+      <app-icon name="search" [size]="13"/>
+      <input [formControl]="searchCtrl" placeholder="Buscar descripción, proveedor, comprobante…"/>
+    </div>
+
+    <select class="m-input" style="width:200px;height:34px;font-size:13px" [formControl]="categoryCtrl">
+      <option value="">Todas las categorías</option>
+      @for (cat of categories(); track cat.id) {
+        <option [value]="cat.id">{{ cat.name }}</option>
+      }
+    </select>
+
+    <div style="display:flex;align-items:center;gap:6px">
+      <input class="m-input" style="width:130px;height:34px;font-size:13px" type="date" [formControl]="dateFromCtrl" title="Desde"/>
+      <span style="color:var(--text-subtle);font-size:12px">—</span>
+      <input class="m-input" style="width:130px;height:34px;font-size:13px" type="date" [formControl]="dateToCtrl" title="Hasta"/>
+    </div>
+
+    @if (hasFilters()) {
+      <button class="btn ghost sm" type="button" (click)="clearFilters()">
+        <app-icon name="x" [size]="12"/>Limpiar
+      </button>
+    }
+  </div>
+
+  <!-- ── Resumen monto ────────────────────────────────────────────── -->
+  @if (filtered().length > 0 && tab() !== 'ANULADO') {
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;margin-top:-4px">
+      <div style="font-size:12px;color:var(--text-muted-ds)">
+        Total visible (excl. anulados):
+        <strong style="color:var(--text-ds);font-family:var(--font-display);font-size:14px;margin-left:4px">
+          ${{ formatCurrency(totalFiltered()) }}
+        </strong>
+      </div>
+    </div>
+  }
+
+  <!-- ── Table card ──────────────────────────────────────────────── -->
+  <div class="card">
+    @if (loading()) {
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3,4,5]; track i) {
+          <div class="skel" style="height:40px;border-radius:var(--radius-sm-ds)"></div>
+        }
+      </div>
+
+    } @else if (filtered().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="receipt" [size]="40" style="opacity:.25"/>
+        <p>No se encontraron egresos</p>
+        @if (hasFilters()) {
+          <button class="btn ghost sm" (click)="clearFilters()" type="button">Limpiar filtros</button>
+        }
+      </div>
+
+    } @else {
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Descripción</th>
+              <th>Categoría</th>
+              <th>Proveedor</th>
+              <th>Comprobante</th>
+              <th class="num">Monto</th>
+              <th>Estado pago</th>
+              <th style="width:60px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of filtered(); track e.id) {
+              <tr style="cursor:pointer" [style.opacity]="e.payment_status === 'ANULADO' ? '0.55' : '1'"
+                  (click)="openDrawer(e)">
+                <td style="color:var(--text-muted-ds);font-size:12px;white-space:nowrap">
+                  {{ formatDate(e.expense_date ?? e.created_at) }}
+                </td>
+                <td>
+                  <strong>{{ e.description }}</strong>
+                  @if (e.notes) {
+                    <div style="font-size:11px;color:var(--text-subtle);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">
+                      {{ e.notes }}
+                    </div>
+                  }
+                </td>
+                <td>
+                  @if (e.category) {
+                    <span style="font-size:12.5px">{{ e.category.name }}</span>
+                  } @else {
+                    <span style="color:var(--text-subtle)">—</span>
+                  }
+                </td>
+                <td style="color:var(--text-muted-ds);font-size:12.5px">{{ supplierName(e) }}</td>
+                <td style="font-size:12px">
+                  @if (e.voucher_number) {
+                    <span class="mono" style="color:var(--text-muted-ds)">{{ e.voucher_number }}</span>
+                    @if (e.voucher_type) {
+                      <div style="font-size:10.5px;color:var(--text-subtle)">{{ VOUCHER_TYPE_LABELS[e.voucher_type] }}</div>
+                    }
+                  } @else {
+                    <span style="color:var(--text-subtle)">—</span>
+                  }
+                </td>
+                <td class="num">
+                  <span style="font-family:var(--font-display);font-weight:700;font-size:13.5px">
+                    ${{ formatCurrency(e.amount) }}
+                  </span>
+                  @if ((e.amount_paid ?? 0) > 0 && e.payment_status !== 'PAGADO') {
+                    <div style="font-size:10.5px;color:var(--text-subtle)">
+                      Pagado ${{ formatCurrency(e.amount_paid ?? 0) }}
+                    </div>
+                  }
+                </td>
+                <td>
+                  <span class="badge {{ statusClass(e.payment_status) }}">
+                    {{ EXPENSE_PAYMENT_STATUS_LABELS[e.payment_status] }}
+                  </span>
+                </td>
+                <td style="text-align:right">
+                  @if (authService.isStoreAdmin() && e.payment_status !== 'ANULADO') {
+                    <button class="btn ghost sm" title="Editar" type="button"
+                            (click)="$event.stopPropagation(); openEdit(e)">
+                      <app-icon name="edit" [size]="13"/>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── Drawer detalle ──────────────────────────────────────────── -->
+  @if (selected()) {
+    <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+    <div class="drawer" style="width:500px">
+
+      <div class="drawer-head">
+        <div>
+          <div class="t">{{ selected()!.description }}</div>
+          <div style="font-size:12px;color:var(--text-subtle);margin-top:4px;display:flex;align-items:center;gap:8px">
+            <span class="badge {{ statusClass(selected()!.payment_status) }}">
+              {{ EXPENSE_PAYMENT_STATUS_LABELS[selected()!.payment_status] }}
+            </span>
+            @if (selected()!.category) {
+              <span>{{ selected()!.category!.name }}</span>
+            }
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          @if (authService.isStoreAdmin() && selected()!.payment_status !== 'ANULADO') {
+            <button class="btn ghost sm" title="Editar" type="button" (click)="openEdit(selected()!)">
+              <app-icon name="edit" [size]="14"/>
+            </button>
+          }
+          <button class="btn ghost sm" (click)="closeDrawer()" type="button">
+            <app-icon name="x" [size]="16"/>
+          </button>
+        </div>
+      </div>
+
+      <div class="drawer-body">
+
+        <!-- KPIs monto -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px">
+          <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+            <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Total</div>
+            <div style="font-family:var(--font-display);font-size:20px;font-weight:700">${{ formatCurrency(selected()!.amount) }}</div>
+          </div>
+          <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+            <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Pagado</div>
+            <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--success)">
+              ${{ formatCurrency(selected()!.amount_paid ?? 0) }}
+            </div>
+          </div>
+          <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+            <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Pendiente</div>
+            <div style="font-family:var(--font-display);font-size:20px;font-weight:700"
+                 [style.color]="(selected()!.amount_pending ?? 0) > 0 ? 'var(--warn)' : 'var(--text-muted-ds)'">
+              ${{ formatCurrency(selected()!.amount_pending ?? selected()!.amount) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Campos de detalle -->
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Fecha</div>
+              <div style="font-size:13.5px">{{ formatDate(selected()!.expense_date ?? selected()!.created_at) }}</div>
+            </div>
+            <div>
+              <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Categoría</div>
+              <div style="font-size:13.5px">{{ selected()!.category?.name ?? '—' }}</div>
+              @if (selected()!.category) {
+                <div style="font-size:11px;color:var(--text-subtle)">{{ CATEGORY_TYPE_LABELS[selected()!.category!.category_type] }}</div>
+              }
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Proveedor</div>
+            <div style="font-size:13.5px">{{ supplierName(selected()!) }}</div>
+          </div>
+
+          @if (selected()!.voucher_number || selected()!.voucher_type) {
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">N° Comprobante</div>
+                <div class="mono" style="font-size:13px">{{ selected()!.voucher_number || '—' }}</div>
+              </div>
+              <div>
+                <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Tipo</div>
+                <div style="font-size:13.5px">
+                  {{ selected()!.voucher_type ? VOUCHER_TYPE_LABELS[selected()!.voucher_type!] : '—' }}
+                </div>
+              </div>
+            </div>
+          }
+
+          @if (selected()!.notes) {
+            <div>
+              <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Notas</div>
+              <div style="font-size:13px;color:var(--text-muted-ds);line-height:1.5">{{ selected()!.notes }}</div>
+            </div>
+          }
+
+          <div>
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Registrado</div>
+            <div style="font-size:12px;color:var(--text-muted-ds)">{{ formatDate(selected()!.created_at) }}</div>
+          </div>
+
+        </div>
+
+        <!-- ── Sección Pagos ──────────────────────────────────────── -->
+        @if (selected()!.payment_status !== 'ANULADO') {
+          <div style="border-top:1px solid var(--border-ds);padding-top:20px">
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div style="font-size:12px;font-weight:700;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center;gap:6px">
+                Pagos
+                @if (payments().length > 0) {
+                  <span class="count" style="background:var(--surface-3);color:var(--text-muted-ds);font-size:11px;padding:1px 7px;border-radius:20px">
+                    {{ payments().length }}
+                  </span>
+                }
+              </div>
+              @if (authService.isStoreAdmin() && selected()!.payment_status !== 'PAGADO' && !showPayForm()) {
+                <button class="btn ghost sm" type="button" (click)="openPayForm()">
+                  <app-icon name="plus" [size]="12"/>Registrar pago
+                </button>
+              }
+            </div>
+
+            <!-- Formulario inline de pago -->
+            @if (showPayForm()) {
+              <div style="background:var(--surface-2);border-radius:var(--radius-ds);padding:16px;margin-bottom:16px;border:1px solid var(--border-ds)">
+                <div style="font-size:12px;font-weight:600;color:var(--text-ds);margin-bottom:12px">Registrar pago</div>
+
+                <div class="mfield-row">
+                  <div class="mfield">
+                    <label>Monto <span style="color:var(--danger)">*</span></label>
+                    <input class="m-input mono" type="number" min="0.01" step="0.01" placeholder="0.00"
+                           [formControl]="payForm.controls.amount"/>
+                    @if (payForm.controls.amount.touched && payForm.controls.amount.invalid) {
+                      <div class="hint" style="color:var(--danger)">
+                        @if (payForm.controls.amount.errors?.['max']) { Supera el monto pendiente }
+                        @else { Ingresa un monto válido }
+                      </div>
+                    }
+                  </div>
+                  <div class="mfield">
+                    <label>Fecha de pago</label>
+                    <input class="m-input" type="date" [formControl]="payForm.controls.payment_date"/>
+                  </div>
+                </div>
+
+                <div class="mfield">
+                  <label>Método de pago <span style="color:var(--danger)">*</span></label>
+                  <div class="seg" style="flex-wrap:wrap">
+                    @for (m of PAYMENT_METHODS; track m) {
+                      <button class="seg-btn" type="button"
+                              [class.active]="payMethodSig() === m"
+                              (click)="onPayMethodChange(m); payForm.controls.payment_method.setValue(m)">
+                        {{ PAYMENT_METHOD_LABELS[m] }}
+                      </button>
+                    }
+                  </div>
+                </div>
+
+                @if (payMethodSig() === 'TRANSFERENCIA') {
+                  <div class="mfield">
+                    <label>Referencia transferencia <span style="color:var(--danger)">*</span></label>
+                    <input class="m-input" placeholder="N° de transferencia" [formControl]="payForm.controls.transfer_reference"/>
+                    @if (payForm.controls.transfer_reference.touched && payForm.controls.transfer_reference.invalid) {
+                      <div class="hint" style="color:var(--danger)">Requerido para transferencias</div>
+                    }
+                  </div>
+                }
+                @if (payMethodSig() === 'TARJETA_DEBITO' || payMethodSig() === 'TARJETA_CREDITO') {
+                  <div class="mfield">
+                    <label>Contrapartida tarjeta <span style="color:var(--danger)">*</span></label>
+                    <input class="m-input" placeholder="Últimos 4 dígitos" [formControl]="payForm.controls.card_contrapartida"/>
+                    @if (payForm.controls.card_contrapartida.touched && payForm.controls.card_contrapartida.invalid) {
+                      <div class="hint" style="color:var(--danger)">Requerido para pagos con tarjeta</div>
+                    }
+                  </div>
+                }
+                @if (payMethodSig() === 'CHEQUE') {
+                  <div class="mfield">
+                    <label>N° de cheque <span style="color:var(--danger)">*</span></label>
+                    <input class="m-input mono" placeholder="000000" [formControl]="payForm.controls.cheque_number"/>
+                    @if (payForm.controls.cheque_number.touched && payForm.controls.cheque_number.invalid) {
+                      <div class="hint" style="color:var(--danger)">Requerido para cheques</div>
+                    }
+                  </div>
+                }
+
+                <div class="mfield">
+                  <label>Notas <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+                  <input class="m-input" placeholder="Observaciones del pago" [formControl]="payForm.controls.notes"/>
+                </div>
+
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+                  <button class="btn secondary sm" type="button" (click)="showPayForm.set(false)">Cancelar</button>
+                  <button class="btn primary sm" type="button" (click)="submitPayment()" [disabled]="payFormLoading()">
+                    @if (payFormLoading()) { <span class="btn-spinner"></span> }
+                    @else { <app-icon name="check" [size]="12"/> }
+                    Confirmar pago
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Lista de pagos -->
+            @if (paymentsLoading()) {
+              <div style="display:flex;flex-direction:column;gap:8px">
+                @for (i of [1,2]; track i) {
+                  <div class="skel" style="height:52px;border-radius:var(--radius-sm-ds)"></div>
+                }
+              </div>
+            } @else if (payments().length === 0) {
+              <div style="text-align:center;padding:20px 0;color:var(--text-subtle);font-size:13px">
+                Sin pagos registrados
+              </div>
+            } @else {
+              <div style="display:flex;flex-direction:column;gap:6px">
+                @for (pay of payments(); track pay.id) {
+                  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface-2);border-radius:var(--radius-sm-ds);border:1px solid var(--border-ds)"
+                       [style.opacity]="pay.status === 'ANULADO' ? '0.5' : '1'">
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span style="font-family:var(--font-display);font-weight:700;font-size:14px"
+                              [style.color]="pay.status === 'ANULADO' ? 'var(--text-muted-ds)' : 'var(--success)'">
+                          ${{ formatCurrency(pay.amount) }}
+                        </span>
+                        <span class="badge {{ payStatusClass(pay.status) }}" style="font-size:10px">
+                          {{ pay.status }}
+                        </span>
+                      </div>
+                      <div style="font-size:11.5px;color:var(--text-subtle);display:flex;gap:8px;flex-wrap:wrap">
+                        <span>{{ PAYMENT_METHOD_LABELS[pay.payment_method] }}</span>
+                        @if (pay.payment_date) {
+                          <span>{{ formatDate(pay.payment_date) }}</span>
+                        }
+                        @if (pay.transfer_reference) {
+                          <span class="mono">{{ pay.transfer_reference }}</span>
+                        }
+                        @if (pay.card_contrapartida) {
+                          <span class="mono">···{{ pay.card_contrapartida }}</span>
+                        }
+                        @if (pay.cheque_number) {
+                          <span class="mono">Cheque #{{ pay.cheque_number }}</span>
+                        }
+                        @if (pay.notes) {
+                          <span style="color:var(--text-subtle)">{{ pay.notes }}</span>
+                        }
+                      </div>
+                    </div>
+                    @if (authService.isStoreAdmin() && pay.status !== 'ANULADO') {
+                      <button class="btn ghost sm" title="Anular pago" type="button"
+                              (click)="annulPayment(pay)">
+                        <app-icon name="ban" [size]="12"/>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+          </div>
+        }
+
+      </div>
+
+      <div class="drawer-foot">
+        @if (authService.isStoreAdmin() && selected()!.payment_status !== 'ANULADO') {
+          <button class="btn danger" type="button" [disabled]="annulling()"
+                  (click)="annulExpense(selected()!)">
+            @if (annulling()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="ban" [size]="13"/> }
+            Anular egreso
+          </button>
+        }
+        <button class="btn secondary" type="button" (click)="closeDrawer()" style="margin-left:auto">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ── Modal crear / editar ─────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" style="max-width:560px" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nuevo egreso' : 'Editar egreso' }}</div>
+            <div class="d">
+              {{ isNew ? 'Registra un egreso operacional.' : 'Actualiza los datos del egreso.' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" (click)="modalOpen.set(false)" type="button">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Categoría <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="category_id">
+                <option [value]="null">— Selecciona una categoría —</option>
+                @for (cat of categories(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.name }}</option>
+                }
+              </select>
+              @if (form.get('category_id')?.touched && form.get('category_id')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Selecciona una categoría</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Descripción <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Ej: Pago servicios básicos enero" formControlName="description"/>
+              @if (form.get('description')?.touched && form.get('description')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
+              }
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Monto <span style="color:var(--danger)">*</span></label>
+                <input class="m-input mono" type="number" min="0.01" step="0.01" placeholder="0.00" formControlName="amount"/>
+                @if (form.get('amount')?.touched && form.get('amount')?.invalid) {
+                  <div class="hint" style="color:var(--danger)">Ingresa un monto válido</div>
+                }
+              </div>
+              <div class="mfield">
+                <label>Fecha del egreso</label>
+                <input class="m-input" type="date" formControlName="expense_date"/>
+              </div>
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Tipo de comprobante</label>
+                <select class="m-input" formControlName="voucher_type">
+                  <option value="">— Sin especificar —</option>
+                  @for (vt of VOUCHER_TYPES; track vt) {
+                    <option [value]="vt">{{ VOUCHER_TYPE_LABELS[vt] }}</option>
+                  }
+                </select>
+              </div>
+              <div class="mfield">
+                <label>N° Comprobante</label>
+                <input class="m-input mono" placeholder="001-001-000123456" formControlName="voucher_number"/>
+              </div>
+            </div>
+
+            <div class="mfield">
+              <label>Proveedor registrado <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+              <select class="m-input" formControlName="supplier_id">
+                <option [value]="null">— Sin proveedor registrado —</option>
+                @for (s of suppliers(); track s.id) {
+                  <option [value]="s.id">{{ s.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="mfield">
+              <label>Nombre de proveedor libre <span style="color:var(--text-muted-ds);font-weight:400">(si no está registrado)</span></label>
+              <input class="m-input" placeholder="Ej: Empresa XYZ" formControlName="supplier_name_free"/>
+            </div>
+
+            <div class="mfield">
+              <label>Notas <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+              <input class="m-input" placeholder="Observaciones adicionales" formControlName="notes"/>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="save()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Registrar egreso' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

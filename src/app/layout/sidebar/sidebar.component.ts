@@ -80,8 +80,9 @@ export class SidebarComponent implements OnInit {
       items: [
         { label: 'Clientes',    icon: 'people',        route: '/customers',          moduleCode: 'MOD_INVOICING', warehouseHidden: true },
         { label: 'Facturas',    icon: 'receipt_long',  route: '/invoices',           moduleCode: 'MOD_INVOICING', warehouseHidden: true },
-        { label: 'Caja chica',  icon: 'wallet',        route: '/finance/petty-cash', moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
-        { label: 'Reportes',    icon: 'bar_chart',     route: '/reports',            moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Caja chica',  icon: 'wallet',        route: '/finance/petty-cash',         moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
+        { label: 'Egresos',     icon: 'trending_down', route: '/finance/expenses',            moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
+        { label: 'Reportes',    icon: 'bar_chart',     route: '/reports',                    moduleCode: 'MOD_INVOICING', warehouseHidden: true },
       ],
     },
     // ── Catálogo (productos requiere MOD_PRODUCTS, prov. MOD_SUPPLIERS) ─
@@ -103,6 +104,8 @@ export class SidebarComponent implements OnInit {
           adminOnly: true,
           moduleCode: 'MOD_TAX',
         },
+        { label: 'Cat. egresos',   icon: 'tag',    route: '/finance/expense-categories', adminOnly: true, moduleCode: 'MOD_FINANCE' },
+        { label: 'Presupuestos',   icon: 'target', route: '/finance/expense-budgets',     adminOnly: true, moduleCode: 'MOD_FINANCE' },
         { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',           adminOnly: true },
         { label: 'Módulos',   icon: 'extension',       route: '/module-requests', adminOnly: true },
         { label: 'Actividad', icon: 'manage_search',   route: '/reports', queryParams: { view: 'activity' }, adminOnly: true },
