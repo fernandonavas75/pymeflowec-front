@@ -1288,7 +1288,7 @@
        TABS: Coming soon placeholders
   ═══════════════════════════════════════════════════════════════════ -->
   @for (tab of tabs; track tab.id) {
-    @if (activeTab() === tab.id && tab.id !== 'ingresos' && tab.id !== 'cxc' && tab.id !== 'cxp' && tab.id !== 'ventas' && tab.id !== 'egresos' && tab.id !== 'compras') {
+    @if (activeTab() === tab.id && tab.id !== 'ingresos' && tab.id !== 'cxc' && tab.id !== 'cxp' && tab.id !== 'ventas' && tab.id !== 'egresos' && tab.id !== 'compras' && tab.id !== 'reportes') {
       <div class="fin-coming-soon">
         <div class="fin-cs-icon">
           <app-icon [name]="tab.icon" [size]="36" [strokeWidth]="1.5"/>
@@ -1297,6 +1297,460 @@
         <p class="fin-cs-desc">{{ tab.description }}</p>
         <span class="fin-cs-badge">En desarrollo</span>
       </div>
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Reportes
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'reportes') {
+
+    @if (reportesLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando reportes…
+      </div>
+    } @else {
+
+      <!-- Period selector -->
+      <div style="display:flex;align-items:center;gap:10px;margin:16px 0 12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:0;border:1px solid var(--border-ds);border-radius:var(--radius-ds);overflow:hidden;background:var(--surface)">
+          <button type="button"
+            style="padding:7px 13px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;line-height:1"
+            (click)="reportesPrevMonth()">&#8249;</button>
+          <span style="padding:7px 16px;font-size:0.88rem;font-weight:600;color:var(--text);min-width:150px;text-align:center;border-left:1px solid var(--border-ds);border-right:1px solid var(--border-ds)">
+            {{ MONTH_NAMES[reportesMonth() - 1] }} {{ reportesYear() }}
+          </span>
+          <button type="button"
+            style="padding:7px 13px;background:none;border:none;cursor:pointer;font-size:1.1rem;line-height:1"
+            [style.color]="reportesIsCurrentMonth() ? 'var(--border-ds)' : 'var(--text-muted)'"
+            [disabled]="reportesIsCurrentMonth()"
+            (click)="reportesNextMonth()">&#8250;</button>
+        </div>
+        <button type="button"
+          style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);font-size:0.8rem;font-weight:500;color:var(--text-muted);cursor:pointer"
+          (click)="reloadReportes()">
+          <app-icon name="refresh_cw" [size]="14"/> Actualizar
+        </button>
+        @if (ingresosLoading() || egresosLoading() || cxcLoading() || cxpLoading()) {
+          <span style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;gap:5px">
+            <app-icon name="loader" [size]="13"/> Cargando datos…
+          </span>
+        }
+      </div>
+
+      <!-- KPI strip principal -->
+      <div class="cxc-kpi-strip" style="margin-bottom:16px">
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total Ventas</div>
+          <div class="cxc-kpi-value" style="color:var(--success)">${{ reportesTotalVentas() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">{{ reportesNumFacturas() }} facturas emitidas</div>
+        </div>
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total Gastos</div>
+          <div class="cxc-kpi-value" style="color:var(--danger)">${{ reportesTotalGastos() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">egresos operacionales</div>
+        </div>
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Ganancia / Pérdida</div>
+          <div class="cxc-kpi-value" [style.color]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'">
+            ${{ reportesGanancia() | number:'1.2-2' }}
+          </div>
+          <div class="cxc-kpi-sub">{{ reportesGananciaPct() }}% margen sobre ventas</div>
+        </div>
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">IVA Neto (SRI)</div>
+          <div class="cxc-kpi-value" [style.color]="reportesIvaBalance() >= 0 ? 'var(--warn)' : 'var(--success)'">
+            ${{ reportesIvaBalance() | number:'1.2-2' }}
+          </div>
+          <div class="cxc-kpi-sub">cobrado − crédito tributario</div>
+        </div>
+      </div>
+
+      <!-- Charts row: 6-month bars + ganancia donut -->
+      <div style="display:grid;grid-template-columns:1fr 230px;gap:16px;margin-bottom:16px;align-items:start">
+
+        <!-- 6-month bar chart -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
+              Ventas vs Gastos — últimos 6 meses
+            </span>
+            <div style="display:flex;align-items:center;gap:14px;font-size:0.72rem;color:var(--text-muted)">
+              <span style="display:flex;align-items:center;gap:5px">
+                <span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span>Ventas
+              </span>
+              <span style="display:flex;align-items:center;gap:5px">
+                <span style="width:10px;height:10px;border-radius:2px;background:var(--danger);display:inline-block;opacity:0.7"></span>Gastos
+              </span>
+            </div>
+          </div>
+          <svg viewBox="0 0 580 128" style="width:100%;height:128px;overflow:visible">
+            <!-- grid lines -->
+            <line x1="10" y1="0"   x2="570" y2="0"   stroke="var(--border-ds)" stroke-width="0.5"/>
+            <line x1="10" y1="33"  x2="570" y2="33"  stroke="var(--border-ds)" stroke-width="0.5"/>
+            <line x1="10" y1="67"  x2="570" y2="67"  stroke="var(--border-ds)" stroke-width="0.5"/>
+            <line x1="10" y1="100" x2="570" y2="100" stroke="var(--border-ds)" stroke-width="0.5"/>
+            @for (bar of reportesChartBars(); track bar.month) {
+              <!-- Ventas bar (accent) -->
+              @if (bar.hV > 0) {
+                <rect [attr.x]="bar.xV" [attr.y]="bar.yV" [attr.width]="bar.barW" [attr.height]="bar.hV"
+                  fill="var(--accent)" rx="2" opacity="0.85">
+                  <title>${{ bar.ventas | number:'1.2-2' }}</title>
+                </rect>
+              }
+              <!-- Gastos bar (danger) -->
+              @if (bar.hG > 0) {
+                <rect [attr.x]="bar.xG" [attr.y]="bar.yG" [attr.width]="bar.barW" [attr.height]="bar.hG"
+                  fill="var(--danger)" rx="2" opacity="0.65">
+                  <title>${{ bar.gastos | number:'1.2-2' }}</title>
+                </rect>
+              }
+              <!-- Month label -->
+              <text [attr.x]="bar.xLabel" y="115" text-anchor="middle"
+                style="font-size:8px;fill:var(--text-muted);font-family:var(--font-ui)">
+                {{ bar.month }}
+              </text>
+            }
+          </svg>
+        </div>
+
+        <!-- Ganancia donut -->
+        <div class="pie-card">
+          <div class="pie-card-title">Margen del período</div>
+          <div class="pie-wrap">
+            <svg viewBox="0 0 100 100">
+              <!-- Track -->
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--border-ds)" stroke-width="14"/>
+              <!-- Arc -->
+              @if (reportesTotalVentas() > 0) {
+                <circle cx="50" cy="50" r="38" fill="none"
+                  [attr.stroke]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'"
+                  stroke-width="14"
+                  stroke-linecap="round"
+                  [attr.stroke-dasharray]="reportesGananciaArc() + ' ' + (DONUT_CIRC - reportesGananciaArc())"
+                  stroke-dashoffset="0"
+                  transform="rotate(-90, 50, 50)"/>
+              }
+            </svg>
+            <div class="pie-center">
+              <div class="pie-center-val"
+                [style.color]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                {{ reportesGananciaPct() }}%
+              </div>
+              <div class="pie-center-label">margen</div>
+            </div>
+          </div>
+          <div class="pie-legend">
+            <div class="pie-legend-item">
+              <span class="pie-legend-dot" style="background:var(--success)"></span>
+              <div class="pie-legend-text">
+                <div class="pie-legend-name">Ventas</div>
+                <div class="pie-legend-val">${{ reportesTotalVentas() | number:'1.2-2' }}</div>
+              </div>
+            </div>
+            <div class="pie-legend-item">
+              <span class="pie-legend-dot" style="background:var(--danger)"></span>
+              <div class="pie-legend-text">
+                <div class="pie-legend-name">Gastos</div>
+                <div class="pie-legend-val">${{ reportesTotalGastos() | number:'1.2-2' }}</div>
+              </div>
+            </div>
+            <div class="pie-legend-item">
+              <span class="pie-legend-dot"
+                [style.background]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'"></span>
+              <div class="pie-legend-text">
+                <div class="pie-legend-name">{{ reportesGanancia() >= 0 ? 'Ganancia' : 'Pérdida' }}</div>
+                <div class="pie-legend-val"
+                  [style.color]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                  ${{ reportesGanancia() | number:'1.2-2' }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- IVA resumen -->
+      <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
+            Resumen de Impuestos (IVA 15%)
+          </span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+          <div class="cxc-kpi">
+            <div class="cxc-kpi-label">Subtotal Ventas</div>
+            <div class="cxc-kpi-value" style="font-size:1.1rem">${{ reportesSubtotalVentas() | number:'1.2-2' }}</div>
+            <div class="cxc-kpi-sub">antes de impuestos</div>
+          </div>
+          <div class="cxc-kpi">
+            <div class="cxc-kpi-label">IVA Cobrado</div>
+            <div class="cxc-kpi-value" style="font-size:1.1rem;color:var(--warn)">${{ reportesIvaCobrado() | number:'1.2-2' }}</div>
+            <div class="cxc-kpi-sub">IVA en facturas emitidas</div>
+          </div>
+          <div class="cxc-kpi">
+            <div class="cxc-kpi-label">Crédito Tributario</div>
+            <div class="cxc-kpi-value" style="font-size:1.1rem;color:var(--success)">${{ reportesIvaPagado() | number:'1.2-2' }}</div>
+            <div class="cxc-kpi-sub">IVA en compras (facturas)</div>
+          </div>
+          <div class="cxc-kpi">
+            <div class="cxc-kpi-label">IVA a Declarar SRI</div>
+            <div class="cxc-kpi-value" style="font-size:1.1rem"
+              [style.color]="reportesIvaBalance() >= 0 ? 'var(--danger)' : 'var(--success)'">
+              ${{ reportesIvaBalance() | number:'1.2-2' }}
+            </div>
+            <div class="cxc-kpi-sub">{{ reportesIvaBalance() >= 0 ? 'a pagar al SRI' : 'crédito a favor' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Clientes + Top Productos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Top clientes -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
+              Top Clientes — {{ MONTH_NAMES[reportesMonth() - 1] }}
+            </span>
+            <button type="button"
+              style="padding:4px 10px;font-size:0.72rem;border-radius:var(--radius-sm-ds);border:1px solid var(--border-ds);background:transparent;color:var(--text-muted);cursor:pointer"
+              (click)="exportCsvClientes()">CSV</button>
+          </div>
+          @if (reportesTopClients().length === 0) {
+            <div style="text-align:center;padding:24px 0;color:var(--text-subtle);font-size:0.8rem">
+              Sin facturas en este período
+            </div>
+          } @else {
+            <table class="ds-table" style="font-size:0.8rem">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Cliente</th>
+                  <th style="text-align:right">Facturas</th>
+                  <th style="text-align:right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of reportesTopClients(); track c.name; let idx = $index) {
+                  <tr>
+                    <td style="color:var(--text-subtle);font-size:0.72rem">{{ idx + 1 }}</td>
+                    <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.name }}</td>
+                    <td style="text-align:right;color:var(--text-muted)">{{ c.count }}</td>
+                    <td style="text-align:right;font-weight:600;color:var(--success)">${{ c.total | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+
+        <!-- Top productos -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
+              Top Productos más vendidos
+            </span>
+          </div>
+          @if (reportesTopProducts().length === 0) {
+            <div style="text-align:center;padding:24px 0;color:var(--text-subtle);font-size:0.8rem;line-height:1.5">
+              Sin datos de detalle de productos.<br>
+              <span style="color:var(--text-muted)">Visite el tab <strong>Ventas</strong> para cargarlos.</span>
+            </div>
+          } @else {
+            <table class="ds-table" style="font-size:0.8rem">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Producto</th>
+                  <th style="text-align:right">Cant.</th>
+                  <th style="text-align:right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of reportesTopProducts(); track p.name; let idx = $index) {
+                  <tr>
+                    <td style="color:var(--text-subtle);font-size:0.72rem">{{ idx + 1 }}</td>
+                    <td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</td>
+                    <td style="text-align:right;color:var(--text-muted)">{{ p.qty }}</td>
+                    <td style="text-align:right;font-weight:600;color:var(--accent)">${{ p.total | number:'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+
+      </div>
+
+      <!-- Deudas pendientes + Stock bajo -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Deudas -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px">
+          <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:14px">
+            Deudas Pendientes
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--warn-soft);border-radius:var(--radius-ds)">
+              <div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--warn)">Cuentas por Cobrar</div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">{{ cxcFiltered().length }} facturas pendientes / parciales</div>
+              </div>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--warn)">${{ reportesCxcTotal() | number:'1.2-2' }}</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--danger-soft);border-radius:var(--radius-ds)">
+              <div>
+                <div style="font-size:0.8rem;font-weight:600;color:var(--danger)">Cuentas por Pagar</div>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">{{ cxpFiltered().length }} egresos pendientes / parciales</div>
+              </div>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--danger)">${{ reportesCxpTotal() | number:'1.2-2' }}</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius-ds)">
+              <div style="font-size:0.8rem;font-weight:600;color:var(--text)">Balance neto de deudas</div>
+              <div style="font-size:1.1rem;font-weight:700"
+                [style.color]="(reportesCxcTotal() - reportesCxpTotal()) >= 0 ? 'var(--success)' : 'var(--danger)'">
+                ${{ (reportesCxcTotal() - reportesCxpTotal()) | number:'1.2-2' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock bajo -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px">
+          <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:14px">
+            Stock Bajo
+            @if (reportesLowStock().length > 0) {
+              <span style="margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--danger-soft);color:var(--danger);font-size:0.7rem">
+                {{ reportesLowStock().length }} productos
+              </span>
+            }
+          </div>
+          @if (reportesLowStock().length === 0) {
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 0;color:var(--text-subtle);font-size:0.8rem;text-align:center">
+              <app-icon name="check_circle" [size]="28" style="color:var(--success)"/>
+              Sin productos con stock bajo
+            </div>
+          } @else {
+            <table class="ds-table" style="font-size:0.8rem">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th style="text-align:right">Stock</th>
+                  <th style="text-align:right">Mínimo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of reportesLowStock(); track p.id) {
+                  <tr>
+                    <td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.name }}</td>
+                    <td style="text-align:right;font-weight:700"
+                      [style.color]="p.stock === 0 ? 'var(--danger)' : 'var(--warn)'">
+                      {{ p.stock }}
+                    </td>
+                    <td style="text-align:right;color:var(--text-muted)">{{ p.min_stock > 0 ? p.min_stock : 5 }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+
+      </div>
+
+      <!-- Ventas + Gastos CSV export row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Export ventas -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">Exportar Ventas</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">
+              {{ reportesNumFacturas() }} facturas · {{ MONTH_NAMES[reportesMonth() - 1] }} {{ reportesYear() }}
+            </div>
+          </div>
+          <button type="button"
+            style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--radius-sm-ds);font-size:0.8rem;font-weight:500;color:var(--accent);cursor:pointer"
+            (click)="exportCsvVentas()">
+            <app-icon name="download" [size]="14"/> CSV
+          </button>
+        </div>
+
+        <!-- Export gastos -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:0.85rem;font-weight:600;color:var(--text)">Exportar Gastos</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px">
+              {{ reportesNumGastos() }} egresos · {{ MONTH_NAMES[reportesMonth() - 1] }} {{ reportesYear() }}
+            </div>
+          </div>
+          <button type="button"
+            style="display:flex;align-items:center;gap:6px;padding:7px 14px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--radius-sm-ds);font-size:0.8rem;font-weight:500;color:var(--accent);cursor:pointer"
+            (click)="exportCsvGastos()">
+            <app-icon name="download" [size]="14"/> CSV
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Caja chica -->
+      <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px;margin-bottom:16px">
+        <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:14px">
+          Caja Chica
+        </div>
+        @if (!reportesPettyCash()) {
+          <div style="text-align:center;padding:20px 0;color:var(--text-subtle);font-size:0.82rem">
+            Sin sesión de caja chica activa
+          </div>
+        } @else {
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:8px;min-width:220px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:0.8rem;color:var(--text-muted)">Fondo inicial</span>
+                <span style="font-size:0.85rem;font-weight:600">${{ reportesPcOpening() | number:'1.2-2' }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:0.8rem;color:var(--text-muted)">Saldo actual</span>
+                <span style="font-size:1rem;font-weight:700;color:var(--success)">${{ reportesPcBalance() | number:'1.2-2' }}</span>
+              </div>
+              @if (reportesPcOpening() > 0) {
+                <div style="margin-top:4px">
+                  <div style="height:6px;border-radius:999px;background:var(--surface-3);overflow:hidden">
+                    <div style="height:100%;border-radius:999px;transition:width 0.4s"
+                      [style.width.%]="(reportesPcBalance() / reportesPcOpening()) * 100"
+                      [style.background]="(reportesPcBalance() / reportesPcOpening()) > 0.4 ? 'var(--success)' : (reportesPcBalance() / reportesPcOpening()) > 0.15 ? 'var(--warn)' : 'var(--danger)'">
+                    </div>
+                  </div>
+                  <div style="font-size:0.68rem;color:var(--text-subtle);margin-top:3px">
+                    {{ ((reportesPcBalance() / reportesPcOpening()) * 100) | number:'1.0-0' }}% del fondo disponible
+                  </div>
+                </div>
+              }
+            </div>
+            @if (reportesPcMovsRecent().length > 0) {
+              <div>
+                <div style="font-size:0.72rem;font-weight:600;color:var(--text-subtle);margin-bottom:8px">Últimos movimientos</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  @for (mv of reportesPcMovsRecent(); track mv.id) {
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+                      <div>
+                        <div style="font-size:0.78rem;font-weight:500;color:var(--text)">{{ mv.description }}</div>
+                        <div style="font-size:0.68rem;color:var(--text-muted)">{{ MOVEMENT_TYPE_LABELS[mv.movement_type] }}</div>
+                      </div>
+                      <span style="font-size:0.85rem;font-weight:700"
+                        [style.color]="mv.movement_type === 'EXPENSE' ? 'var(--danger)' : 'var(--success)'">
+                        {{ mv.movement_type === 'EXPENSE' ? '-' : '+' }}${{ mv.amount | number:'1.2-2' }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
     }
   }
 

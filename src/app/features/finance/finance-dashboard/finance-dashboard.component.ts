@@ -16,6 +16,10 @@ import { Expense, ExpensePaymentStatus, EXPENSE_PAYMENT_STATUS_LABELS, VOUCHER_T
 import { ExpensePayment } from '../../../core/models/expense-payment.model';
 import { ExpenseCategoriesService } from '../../../core/services/expense-categories.service';
 import { ExpenseCategory } from '../../../core/models/expense-category.model';
+import { ProductsService } from '../../../core/services/products.service';
+import { PettyCashService } from '../../../core/services/petty-cash.service';
+import { Product } from '../../../core/models/product.model';
+import { PettyCash, PettyCashMovement, MOVEMENT_TYPE_LABELS } from '../../../core/models/petty-cash.model';
 
 type FinanceTab = 'ingresos' | 'egresos' | 'compras' | 'ventas' | 'cxc' | 'cxp' | 'reportes';
 
@@ -174,6 +178,8 @@ export class FinanceDashboardComponent {
   private expensesService        = inject(ExpensesService);
   private expensePaymentsService = inject(ExpensePaymentsService);
   private categoriesSvc          = inject(ExpenseCategoriesService);
+  private productsService        = inject(ProductsService);
+  private pettyCashService       = inject(PettyCashService);
   private snackBar               = inject(MatSnackBar);
   authService                    = inject(AuthService);
 
@@ -710,6 +716,155 @@ export class FinanceDashboardComponent {
     cheque_number:      new FormControl(''),
   });
 
+  // ── Reportes data ─────────────────────────────────────────────────
+  reportesProducts    = signal<Product[]>([]);
+  reportesPettyCash   = signal<PettyCash | null>(null);
+  reportesPcMovements = signal<PettyCashMovement[]>([]);
+  reportesLoading     = signal(false);
+  private reportesLoaded = false;
+
+  readonly MONTH_NAMES          = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  readonly MOVEMENT_TYPE_LABELS = MOVEMENT_TYPE_LABELS;
+  reportesYear  = signal(new Date().getFullYear());
+  reportesMonth = signal(new Date().getMonth() + 1);
+
+  private reportesFrom = computed(() => {
+    const y = this.reportesYear(), m = this.reportesMonth();
+    return `${y}-${String(m).padStart(2, '0')}-01`;
+  });
+
+  private reportesTo = computed(() => {
+    const y = this.reportesYear(), m = this.reportesMonth();
+    const lastDay = new Date(y, m, 0).getDate();
+    return `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  });
+
+  private reportesPeriodInvoices = computed(() => {
+    const from = this.reportesFrom(), to = this.reportesTo();
+    return this.allIngresosInvoices().filter(inv =>
+      inv.status === 'ISSUED' &&
+      (inv.issue_date ?? '').slice(0, 10) >= from &&
+      (inv.issue_date ?? '').slice(0, 10) <= to
+    );
+  });
+
+  private reportesPeriodExpenses = computed(() => {
+    const from = this.reportesFrom(), to = this.reportesTo();
+    return this.allEgresos().filter(e =>
+      e.payment_status !== 'ANULADO' &&
+      (e.expense_date ?? e.created_at.slice(0, 10)) >= from &&
+      (e.expense_date ?? e.created_at.slice(0, 10)) <= to
+    );
+  });
+
+  reportesTotalVentas    = computed(() => this.reportesPeriodInvoices().reduce((s, i) => s + +i.total, 0));
+  reportesTotalGastos    = computed(() => this.reportesPeriodExpenses().reduce((s, e) => s + +e.amount, 0));
+  reportesGanancia       = computed(() => this.reportesTotalVentas() - this.reportesTotalGastos());
+  reportesNumFacturas    = computed(() => this.reportesPeriodInvoices().length);
+  reportesNumGastos      = computed(() => this.reportesPeriodExpenses().length);
+  reportesSubtotalVentas = computed(() => this.reportesPeriodInvoices().reduce((s, i) => s + +(i.subtotal ?? 0), 0));
+  reportesIvaCobrado     = computed(() => this.reportesPeriodInvoices().reduce((s, i) => s + +(i.tax_amount ?? 0), 0));
+  reportesIvaPagado      = computed(() =>
+    this.reportesPeriodExpenses()
+      .filter(e => e.voucher_type === 'FACTURA')
+      .reduce((s, e) => s + (+e.amount - +e.amount / 1.15), 0)
+  );
+  reportesIvaBalance = computed(() => this.reportesIvaCobrado() - this.reportesIvaPagado());
+
+  reportesTopClients = computed(() => {
+    const map = new Map<number, { name: string; count: number; total: number }>();
+    for (const inv of this.reportesPeriodInvoices()) {
+      const id  = inv.customer_id ?? 0;
+      const cur = map.get(id) ?? { name: inv.customer?.full_name ?? 'Consumidor Final', count: 0, total: 0 };
+      map.set(id, { ...cur, count: cur.count + 1, total: cur.total + +inv.total });
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 10);
+  });
+
+  reportesTopProducts = computed(() => {
+    const from = this.reportesFrom(), to = this.reportesTo();
+    const productMap = new Map<string, { qty: number; total: number }>();
+    for (const inv of this.ventasDetailMap().values()) {
+      const d = (inv.issue_date ?? '').slice(0, 10);
+      if (d < from || d > to) continue;
+      for (const det of inv.details ?? []) {
+        const cur = productMap.get(det.product_name) ?? { qty: 0, total: 0 };
+        productMap.set(det.product_name, { qty: cur.qty + +det.quantity, total: cur.total + +det.line_total });
+      }
+    }
+    return Array.from(productMap.entries())
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+  });
+
+  reportesCxcTotal = computed(() => this.allCxcInvoices().reduce((s, i) => s + +(i.amount_pending ?? 0), 0));
+  reportesCxpTotal = computed(() => this.allCxpExpenses().reduce((s, e) => s + +(e.amount_pending ?? e.amount), 0));
+
+  reportesLowStock = computed(() =>
+    this.reportesProducts()
+      .filter(p => p.status === 'ACTIVE' && p.stock <= (p.min_stock > 0 ? p.min_stock : 5))
+      .sort((a, b) => a.stock - b.stock)
+      .slice(0, 10)
+  );
+
+  reportesPcBalance    = computed(() => this.reportesPettyCash()?.current_balance ?? 0);
+  reportesPcOpening    = computed(() => this.reportesPettyCash()?.opening_amount ?? 0);
+  reportesPcMovsRecent = computed(() => this.reportesPcMovements().slice(0, 5));
+
+  reportesIsCurrentMonth = computed(() => {
+    const now = new Date();
+    return this.reportesYear() === now.getFullYear() && this.reportesMonth() === now.getMonth() + 1;
+  });
+
+  reportesMonthlyChart = computed<{ month: string; ventas: number; gastos: number }[]>(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const d     = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const year  = d.getFullYear(), month = d.getMonth();
+      const ventas = this.allIngresosInvoices()
+        .filter(inv => inv.status === 'ISSUED')
+        .filter(inv => { const dt = new Date(inv.issue_date); return dt.getFullYear() === year && dt.getMonth() === month; })
+        .reduce((s, inv) => s + +inv.total, 0);
+      const gastos = this.allEgresos()
+        .filter(e => e.payment_status !== 'ANULADO')
+        .filter(e => { const dt = new Date(e.expense_date ?? e.created_at); return dt.getFullYear() === year && dt.getMonth() === month; })
+        .reduce((s, e) => s + +e.amount, 0);
+      return { month: d.toLocaleDateString('es-EC', { month: 'short', year: '2-digit' }), ventas, gastos };
+    });
+  });
+
+  reportesChartMax = computed(() =>
+    Math.max(...this.reportesMonthlyChart().flatMap(d => [d.ventas, d.gastos]), 0.01)
+  );
+
+  reportesChartBars = computed<{ xV: number; xG: number; barW: number; hV: number; hG: number; yV: number; yG: number; xLabel: number; month: string; ventas: number; gastos: number }[]>(() => {
+    const data   = this.reportesMonthlyChart();
+    const max    = this.reportesChartMax();
+    const maxH   = 100, usableW = 560, startX = 10;
+    const groupW = usableW / data.length;
+    const barW   = Math.max((groupW - 12) / 2 - 2, 4);
+    return data.map((d, i) => {
+      const gx  = startX + i * groupW;
+      const xV  = gx + (groupW - barW * 2 - 4) / 2;
+      const xG  = xV + barW + 4;
+      const hV  = (d.ventas / max) * maxH;
+      const hG  = (d.gastos / max) * maxH;
+      return { xV, xG, barW, hV, hG, yV: maxH - hV, yG: maxH - hG, xLabel: gx + groupW / 2, month: d.month, ventas: d.ventas, gastos: d.gastos };
+    });
+  });
+
+  reportesGananciaPct = computed(() => {
+    const v = this.reportesTotalVentas(), g = this.reportesGanancia();
+    if (v <= 0) return 0;
+    return Math.round((g / v) * 100);
+  });
+
+  reportesGananciaArc = computed(() => {
+    const pct = this.reportesGananciaPct();
+    return pct > 0 ? Math.min((pct / 100) * DONUT_CIRC, DONUT_CIRC) : 0;
+  });
+
   constructor() {
     effect(() => {
       if (this.activeTab() === 'ingresos' && !this.ingresosLoaded) {
@@ -735,6 +890,11 @@ export class FinanceDashboardComponent {
       const tab = this.activeTab();
       if ((tab === 'egresos' || tab === 'compras') && !this.egresosLoaded) {
         this.loadEgresos();
+      }
+    });
+    effect(() => {
+      if (this.activeTab() === 'reportes' && !this.reportesLoaded) {
+        this.loadReportes();
       }
     });
   }
@@ -1203,5 +1363,108 @@ export class FinanceDashboardComponent {
     const d = new Date(issueDate);
     d.setDate(d.getDate() + 30);
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  }
+
+  // ── Reportes methods ──────────────────────────────────────────────
+
+  loadReportes(): void {
+    this.reportesLoading.set(true);
+    this.productsService.list({ limit: 500 }).pipe(
+      finalize(() => this.reportesLoading.set(false))
+    ).subscribe({
+      next: res => {
+        this.reportesProducts.set(res.data ?? []);
+        this.reportesLoaded = true;
+        if (!this.ingresosLoaded) this.loadIngresos();
+        if (!this.egresosLoaded)  this.loadEgresos();
+        if (!this.cxcLoaded)      this.loadCxc();
+        if (!this.cxpLoaded)      this.loadCxp();
+        this.pettyCashService.getOpen().subscribe({
+          next: pc => {
+            this.reportesPettyCash.set(pc);
+            if (pc) {
+              this.pettyCashService.listMovements(pc.id, { limit: 10 }).subscribe({
+                next: mv => this.reportesPcMovements.set(mv.data ?? []),
+                error: () => {},
+              });
+            }
+          },
+          error: () => this.reportesPettyCash.set(null),
+        });
+      },
+      error: () => { this.reportesLoaded = true; },
+    });
+  }
+
+  reloadReportes(): void {
+    this.reportesLoaded = false;
+    this.ingresosLoaded = false;
+    this.egresosLoaded  = false;
+    this.cxcLoaded      = false;
+    this.cxpLoaded      = false;
+    this.loadReportes();
+  }
+
+  reportesPrevMonth(): void {
+    let m = this.reportesMonth(), y = this.reportesYear();
+    if (m === 1) { m = 12; y--; } else { m--; }
+    this.reportesYear.set(y);
+    this.reportesMonth.set(m);
+  }
+
+  reportesNextMonth(): void {
+    if (this.reportesIsCurrentMonth()) return;
+    let m = this.reportesMonth(), y = this.reportesYear();
+    if (m === 12) { m = 1; y++; } else { m++; }
+    this.reportesYear.set(y);
+    this.reportesMonth.set(m);
+  }
+
+  exportCsvVentas(): void {
+    const rows: string[][] = [
+      ['N° Factura', 'Cliente', 'Fecha', 'Subtotal', 'IVA', 'Total', 'Estado Cobro'],
+      ...this.reportesPeriodInvoices().map(i => [
+        i.invoice_number,
+        i.customer?.full_name ?? '',
+        i.issue_date ?? '',
+        (+(i.subtotal ?? 0)).toFixed(2),
+        (+(i.tax_amount ?? 0)).toFixed(2),
+        (+i.total).toFixed(2),
+        i.payment_status ?? '',
+      ]),
+    ];
+    this.downloadCsv(rows, `ventas-${this.reportesYear()}-${String(this.reportesMonth()).padStart(2, '0')}.csv`);
+  }
+
+  exportCsvGastos(): void {
+    const rows: string[][] = [
+      ['Fecha', 'Categoría', 'Descripción', 'Proveedor', 'Monto', 'Estado'],
+      ...this.reportesPeriodExpenses().map(e => [
+        e.expense_date ?? e.created_at.slice(0, 10),
+        e.category?.name ?? '',
+        e.description,
+        e.supplier?.name ?? e.supplier_name_free ?? '',
+        (+e.amount).toFixed(2),
+        e.payment_status,
+      ]),
+    ];
+    this.downloadCsv(rows, `gastos-${this.reportesYear()}-${String(this.reportesMonth()).padStart(2, '0')}.csv`);
+  }
+
+  exportCsvClientes(): void {
+    const rows: string[][] = [
+      ['Cliente', 'N° Facturas', 'Total Facturado'],
+      ...this.reportesTopClients().map(c => [c.name, String(c.count), c.total.toFixed(2)]),
+    ];
+    this.downloadCsv(rows, `clientes-${this.reportesYear()}-${String(this.reportesMonth()).padStart(2, '0')}.csv`);
+  }
+
+  private downloadCsv(rows: string[][], filename: string): void {
+    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
   }
 }
