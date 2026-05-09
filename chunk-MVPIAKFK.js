@@ -1,0 +1,1 @@
+var A={PENDIENTE:"Pendiente",PARCIAL:"Parcial",PAGADO:"Pagado",ANULADO:"Anulado"},E={FACTURA:"Factura",NOTA_VENTA:"Nota de venta",RECIBO:"Recibo",LIQUIDACION:"Liquidaci\xF3n",SIN_COMPROBANTE:"Sin comprobante",OTRO:"Otro"},O=["FACTURA","NOTA_VENTA","RECIBO","LIQUIDACION","SIN_COMPROBANTE","OTRO"];export{A as a,E as b,O as c};
