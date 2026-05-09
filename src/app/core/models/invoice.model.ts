@@ -14,6 +14,7 @@ export interface InvoiceDetail {
   description?: string | null;
   quantity: number;
   unit_price: number;
+  discount: number;
   tax_percentage: number;
   tax_amount: number;
   line_subtotal: number;
@@ -49,6 +50,7 @@ export interface CreateInvoiceItemDto {
   description?: string;
   quantity: number;
   unit_price: number;
+  discount?: number;
   tax_rate_id?: number;
 }
 

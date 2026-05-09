@@ -47,8 +47,13 @@ export class CompanyModulesService {
       .pipe(
         map(r => r?.data ?? []),
         tap(items => {
+          const now = new Date();
           this.catalog.set(items);
-          this.approvedCodes.set(new Set(items.filter(m => m.status === 'APPROVED').map(m => m.code)));
+          this.approvedCodes.set(new Set(
+            items
+              .filter(m => m.status === 'APPROVED' && (!m.expires_at || new Date(m.expires_at) > now))
+              .map(m => m.code)
+          ));
           this.pendingCodes.set(new Set(items.filter(m => m.status === 'PENDING').map(m => m.code)));
           this.loadFailed.set(false);
           this.catalogReady.set(true);
@@ -74,8 +79,13 @@ export class CompanyModulesService {
       .pipe(
         map(r => r?.data ?? []),
         tap(items => {
+          const now = new Date();
           this.catalog.set(items);
-          this.approvedCodes.set(new Set(items.filter(m => m.status === 'APPROVED').map(m => m.code)));
+          this.approvedCodes.set(new Set(
+            items
+              .filter(m => m.status === 'APPROVED' && (!m.expires_at || new Date(m.expires_at) > now))
+              .map(m => m.code)
+          ));
           this.pendingCodes.set(new Set(items.filter(m => m.status === 'PENDING').map(m => m.code)));
           this.loadFailed.set(false);
           this.catalogReady.set(true);

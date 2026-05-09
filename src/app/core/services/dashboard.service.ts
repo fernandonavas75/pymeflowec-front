@@ -3,6 +3,7 @@ import { Observable, forkJoin, map, catchError, of } from 'rxjs';
 import { InvoicesService } from './invoices.service';
 import { ProductsService } from './products.service';
 import { CustomersService } from './customers.service';
+import { ExpensesService } from './expenses.service';
 import { Invoice } from '../models/invoice.model';
 
 export interface RevenueByDay {
@@ -30,6 +31,7 @@ export class DashboardService {
   private invoicesService  = inject(InvoicesService);
   private productsService  = inject(ProductsService);
   private customersService = inject(CustomersService);
+  private expensesService  = inject(ExpensesService);
 
   getDashboardData(): Observable<DashboardData> {
     const emptyList = { data: [] as any[], total: 0 };
@@ -37,18 +39,17 @@ export class DashboardService {
       invoices:  this.invoicesService.list({ page: 1, limit: 50 }).pipe(catchError(() => of(emptyList))),
       products:  this.productsService.list({ page: 1, limit: 50 }).pipe(catchError(() => of(emptyList))),
       customers: this.customersService.list({ page: 1, limit: 1 }).pipe(catchError(() => of(emptyList))),
+      expenses:  this.expensesService.list({ limit: 500 }).pipe(catchError(() => of(emptyList))),
     }).pipe(
-      map(({ invoices, products, customers }) => {
+      map(({ invoices, products, customers, expenses }) => {
         const allInvoices = invoices.data;
         const allProducts = products.data;
+        const allExpenses = (expenses.data as any[]).filter((e: any) => e.payment_status !== 'ANULADO');
 
         const issuedInvoices = allInvoices.filter((i: any) => i.status === 'ISSUED');
         const totalRevenue = issuedInvoices.reduce((sum: number, i: any) => sum + Number(i.total), 0);
 
-        // Gastos: valor del inventario al precio de compra
-        const totalExpenses = allProducts
-          .filter((p: any) => p.status === 'ACTIVE')
-          .reduce((sum: number, p: any) => sum + Number(p.purchase_price ?? 0) * Number(p.stock ?? 0), 0);
+        const totalExpenses = allExpenses.reduce((sum: number, e: any) => sum + Number(e.amount), 0);
 
         const netBalance = totalRevenue - totalExpenses;
 
@@ -72,12 +73,11 @@ export class DashboardService {
             .reduce((sum: number, inv: any) => sum + Number(inv.tax_amount ?? 0), 0),
         }));
 
-        // Gastos del día: productos creados ese día × costo × stock inicial
         const expensesByDay: RevenueByDay[] = last7Days.map(day => ({
           date: day.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric' }),
-          amount: allProducts
-            .filter((p: any) => new Date(p.created_at).toDateString() === day.toDateString())
-            .reduce((sum: number, p: any) => sum + Number(p.purchase_price ?? 0) * Number(p.stock ?? 0), 0),
+          amount: allExpenses
+            .filter((e: any) => new Date(e.expense_date).toDateString() === day.toDateString())
+            .reduce((sum: number, e: any) => sum + Number(e.amount), 0),
         }));
 
         const recentInvoices = [...allInvoices]

@@ -23,7 +23,7 @@ export class ExpensesService {
         '/expenses',
         params as Record<string, string | number | boolean | undefined>,
       )
-      .pipe(map(res => ({ data: res.data ?? [], total: res.total ?? 0 })));
+      .pipe(map(res => ({ data: res.data ?? [], total: res.pagination?.total ?? 0 })));
   }
 
   get(id: number): Observable<Expense> {

@@ -110,7 +110,7 @@ export class SidebarComponent implements OnInit {
         { label: 'Recurrentes',    icon: 'repeat', route: '/finance/expense-recurring',   adminOnly: true, moduleCode: 'MOD_FINANCE' },
         { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',           adminOnly: true },
         { label: 'Módulos',   icon: 'extension',       route: '/module-requests', adminOnly: true },
-        { label: 'Actividad', icon: 'manage_search',   route: '/reports', queryParams: { view: 'activity' }, adminOnly: true },
+        { label: 'Actividad', icon: 'manage_search',   route: '/reports', queryParams: { view: 'activity' }, adminOnly: true, moduleCode: 'MOD_INVOICING' },
       ],
     },
     // ── Plataforma: sólo usuarios sin empresa ────────────────────────

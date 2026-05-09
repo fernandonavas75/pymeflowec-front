@@ -32,11 +32,5 @@ export interface ApiListResponse<T> {
   };
 }
 
-/** Wrapper de respuesta paginada — endpoints del módulo financiero */
-export interface FinanceListResponse<T> {
-  success: boolean;
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-}
+/** @deprecated Usar ApiListResponse<T> — todos los endpoints usan paginatedResponse con estructura anidada */
+export type FinanceListResponse<T> = ApiListResponse<T>;

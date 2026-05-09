@@ -14,7 +14,7 @@ import { Product } from '../../../core/models/product.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 
-interface CartItem { product: Product; qty: number; }
+interface CartItem { product: Product; qty: number; discount: number; }
 
 @Component({
   selector: 'app-invoice-create',
@@ -72,7 +72,7 @@ export class InvoiceCreateComponent implements OnInit {
   cartCount = computed(() => this.cart().reduce((s, i) => s + i.qty, 0));
 
   subtotal = computed(() =>
-    this.cart().reduce((s, i) => s + i.qty * i.product.sale_price, 0)
+    this.cart().reduce((s, i) => s + Math.max(0, i.qty * i.product.sale_price - i.discount), 0)
   );
 
   selectedTaxRate = computed((): TaxRate | null =>
@@ -114,7 +114,7 @@ export class InvoiceCreateComponent implements OnInit {
       const exists = cart.find(i => i.product.id === p.id);
       return exists
         ? cart.map(i => i.product.id === p.id ? { ...i, qty: Math.min(i.qty + 1, p.stock) } : i)
-        : [...cart, { product: p, qty: 1 }];
+        : [...cart, { product: p, qty: 1, discount: 0 }];
     });
   }
 
@@ -128,6 +128,15 @@ export class InvoiceCreateComponent implements OnInit {
 
   removeFromCart(productId: number): void {
     this.cart.update(cart => cart.filter(i => i.product.id !== productId));
+  }
+
+  discountSum = (acc: number, i: CartItem) => acc + i.discount;
+
+  setDiscount(productId: number, value: string): void {
+    const discount = Math.max(0, parseFloat(value) || 0);
+    this.cart.update(cart =>
+      cart.map(i => i.product.id === productId ? { ...i, discount } : i)
+    );
   }
 
   pickCustomer(c: Customer): void {
@@ -178,6 +187,7 @@ export class InvoiceCreateComponent implements OnInit {
         product_name: i.product.name,
         quantity:     i.qty,
         unit_price:   i.product.sale_price,
+        discount:     i.discount > 0 ? i.discount : undefined,
         tax_rate_id:  taxRateId,
       })),
     }).subscribe({

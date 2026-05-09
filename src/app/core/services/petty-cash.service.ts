@@ -15,10 +15,10 @@ export class PettyCashService {
     return this.api.get<FinanceListResponse<PettyCash>>('/petty-cash', params as Record<string, string | number | boolean | undefined>).pipe(
       map(res => ({
         data: res.data ?? [],
-        total: res.total ?? 0,
-        page: res.page ?? 1,
-        limit: res.limit ?? 20,
-        totalPages: Math.ceil((res.total ?? 0) / (res.limit ?? 20)),
+        total: res.pagination?.total ?? 0,
+        page: res.pagination?.current_page ?? 1,
+        limit: res.pagination?.per_page ?? 20,
+        totalPages: res.pagination?.total_pages ?? 0,
       }))
     );
   }
@@ -48,10 +48,10 @@ export class PettyCashService {
     ).pipe(
       map(res => ({
         data: res.data ?? [],
-        total: res.total ?? 0,
-        page: res.page ?? 1,
-        limit: res.limit ?? 50,
-        totalPages: Math.ceil((res.total ?? 0) / (res.limit ?? 50)),
+        total: res.pagination?.total ?? 0,
+        page: res.pagination?.current_page ?? 1,
+        limit: res.pagination?.per_page ?? 50,
+        totalPages: res.pagination?.total_pages ?? 0,
       }))
     );
   }

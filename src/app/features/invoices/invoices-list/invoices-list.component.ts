@@ -633,7 +633,7 @@ export class InvoicesListComponent implements OnInit {
   }
 
   exportCsv(): void {
-    const STATUS_LABELS: Record<string, string> = { BORRADOR: 'Borrador', ISSUED: 'Emitida', CANCELLED: 'Anulada' };
+    const STATUS_LABELS: Record<string, string> = { ISSUED: 'Emitida', CANCELLED: 'Anulada' };
     const PAY_LABELS: Record<string, string>    = { PENDIENTE: 'Pendiente', PARCIAL: 'Parcial', COBRADO: 'Cobrado' };
     const rows = this.filteredInvoices();
     const headers = ['N° Factura', 'Cliente', 'Documento', 'Estado', 'Estado cobro', 'Subtotal', 'IVA', 'Total', 'Cobrado', 'Pendiente', 'Fecha emisión'];
