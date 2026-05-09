@@ -196,6 +196,20 @@ export const routes: Routes = [
         data: { adminOnly: true },
       },
 
+      // Finanzas — Egresos recurrentes (solo admin)
+      {
+        path: 'finance/expense-recurring',
+        loadComponent: () => import('./features/finance/expense-recurring/expense-recurring.component').then(m => m.ExpenseRecurringComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
+      },
+
+      // Finanzas — Dashboard financiero
+      {
+        path: 'finance/dashboard',
+        loadComponent: () => import('./features/finance/finance-dashboard/finance-dashboard.component').then(m => m.FinanceDashboardComponent),
+      },
+
       // Módulos de plataforma
       {
         path: 'platform/modules',

@@ -8,8 +8,11 @@ import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.c
 import { ProductsService, BulkCreateResult } from '../../../core/services/products.service';
 import { SuppliersService } from '../../../core/services/suppliers.service';
 import { TaxRatesService } from '../../../core/services/tax-rates.service';
+import { ExpensesService } from '../../../core/services/expenses.service';
+import { ExpenseCategoriesService } from '../../../core/services/expense-categories.service';
 import { Supplier } from '../../../core/models/supplier.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
+import { ExpenseCategory } from '../../../core/models/expense-category.model';
 
 interface ParsedRow {
   rowNum: number;
@@ -68,7 +71,7 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
     <!-- Body -->
     <div class="ds-modal-body" style="overflow-y:auto;flex:1">
 
-      <!-- ── idle: drop zone ───────────────────────────────────────── -->
+      <!-- ── idle ─────────────────────────────────────────────────── -->
       @if (step() === 'idle') {
         <div class="drop-zone"
              [class.drag-over]="dragOver()"
@@ -77,9 +80,7 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
              (dragleave)="dragOver.set(false)"
              (drop)="onDrop($event)">
           <app-icon name="upload" [size]="32" style="color:var(--accent);margin-bottom:12px"/>
-          <p style="font-weight:600;font-size:14px;margin-bottom:4px">
-            Arrastra tu archivo CSV aquí
-          </p>
+          <p style="font-weight:600;font-size:14px;margin-bottom:4px">Arrastra tu archivo CSV aquí</p>
           <p style="font-size:12px;color:var(--text-subtle)">o haz clic para seleccionar</p>
         </div>
         <input #fileInput type="file" accept=".csv,text/csv" style="display:none"
@@ -177,7 +178,7 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
           </div>
         }
 
-      <!-- ── resolving (cargando proveedores) ─────────────────────── -->
+      <!-- ── resolving ─────────────────────────────────────────────── -->
       } @else if (step() === 'resolving') {
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:16px">
           <span class="btn-spinner" style="width:24px;height:24px;border-width:3px"></span>
@@ -187,21 +188,18 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
       <!-- ── resolve / confirm ─────────────────────────────────────── -->
       } @else if (step() === 'resolve') {
 
-        <!-- Bloqueo: sin tasa de IVA activa -->
         @if (!activeTaxRate()) {
           <div class="ds-alert" style="border-color:var(--danger);background:var(--danger-soft);margin-bottom:16px">
             <app-icon name="alert_circle" [size]="16" style="color:var(--danger);flex-shrink:0;margin-top:1px"/>
             <div>
               <div class="t" style="color:var(--danger)">No hay tasa de IVA activa</div>
               <div class="d" style="margin-top:4px">
-                Para importar productos necesitas al menos una tasa de IVA activa.
                 Ve al módulo <strong>Tasas de IVA</strong>, crea una y luego vuelve a importar.
               </div>
             </div>
           </div>
         }
 
-        <!-- Proveedores no encontrados -->
         @if (unresolvedSuppliers().length > 0) {
           <div class="ds-alert warn" style="margin-bottom:16px">
             <app-icon name="alert_triangle" [size]="16" style="flex-shrink:0;margin-top:1px"/>
@@ -237,8 +235,8 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
           </div>
         }
 
-        <!-- Resumen de importación -->
-        <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px">
+        <!-- Resumen -->
+        <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px;margin-bottom:16px">
           <div style="font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:12px">
             Resumen de importación
           </div>
@@ -264,19 +262,41 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
               <strong style="color:var(--accent)">{{ suppliersToCreate().length }}</strong>
             </div>
           }
-          @if (suppliersToSkip().length > 0) {
-            <div class="summary-row">
-              <span style="color:var(--text-subtle)">Sin proveedor (ignorados)</span>
-              <span style="color:var(--text-subtle)">{{ suppliersToSkip().length }} nombre{{ suppliersToSkip().length !== 1 ? 's' : '' }}</span>
-            </div>
-          }
           @if (invalidRows().length > 0) {
             <div class="summary-row">
               <span style="color:var(--danger)">Filas con error (no se importan)</span>
               <span style="color:var(--danger)">{{ invalidRows().length }}</span>
             </div>
           }
+          @if (totalStockCost() > 0) {
+            <div class="summary-row">
+              <span>Costo total de adquisición</span>
+              <strong style="font-family:var(--font-display)">{{ fmtCost(totalStockCost()) }}</strong>
+            </div>
+          }
         </div>
+
+        <!-- Aviso de egreso automático -->
+        @if (totalStockCost() > 0) {
+          @if (inventarioCategory()) {
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--accent-soft);border:1px solid var(--accent-soft-strong);border-radius:var(--radius-sm-ds)">
+              <app-icon name="receipt" [size]="15" style="color:var(--accent);flex-shrink:0"/>
+              <span style="font-size:12.5px;color:var(--text-ds)">
+                Se registrará automáticamente un egreso de
+                <strong>{{ fmtCost(totalStockCost()) }}</strong>
+                en la categoría <strong>Inventario</strong>.
+              </span>
+            </div>
+          } @else {
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--radius-sm-ds)">
+              <app-icon name="alert_triangle" [size]="15" style="color:var(--warn);flex-shrink:0"/>
+              <span style="font-size:12px;color:var(--text-muted-ds)">
+                Sin categoría <strong>INVENTARIO</strong> activa — el egreso de adquisición no se registrará.
+                Créala en <strong>Finanzas → Cat. egresos</strong>.
+              </span>
+            </div>
+          }
+        }
 
       <!-- ── importing ─────────────────────────────────────────────── -->
       } @else if (step() === 'importing') {
@@ -305,6 +325,16 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
                   + {{ createdSuppliersCount() }} proveedor{{ createdSuppliersCount() !== 1 ? 'es' : '' }} creado{{ createdSuppliersCount() !== 1 ? 's' : '' }}
                 </div>
               }
+              @if (expenseCreated()) {
+                <div style="font-size:12px;color:var(--text-muted-ds);margin-top:2px">
+                  + egreso de adquisición {{ fmtCost(totalStockCost()) }} registrado
+                </div>
+              }
+              @if (expenseError()) {
+                <div style="font-size:12px;color:var(--danger);margin-top:4px">
+                  Egreso no registrado: {{ expenseError() }}
+                </div>
+              }
               @if (allFailed().length > 0) {
                 <div style="font-size:12px;color:var(--text-muted-ds);margin-top:2px">
                   {{ allFailed().length }} fila{{ allFailed().length !== 1 ? 's' : '' }} no se pudo{{ allFailed().length !== 1 ? 'ron' : '' }} importar
@@ -320,9 +350,7 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
             <div style="display:flex;flex-direction:column;gap:6px">
               @for (f of allFailed(); track f.row) {
                 <div style="display:flex;gap:10px;align-items:flex-start;background:var(--danger-soft);border-radius:var(--radius-sm-ds);padding:10px 12px">
-                  <span style="font-size:11px;color:var(--text-subtle);min-width:48px;flex-shrink:0;margin-top:1px">
-                    Fila {{ f.row }}
-                  </span>
+                  <span style="font-size:11px;color:var(--text-subtle);min-width:48px;flex-shrink:0;margin-top:1px">Fila {{ f.row }}</span>
                   <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:12.5px">{{ f.name || '(sin nombre)' }}</div>
                     <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ f.errors.join(' · ') }}</div>
@@ -367,36 +395,39 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
   `,
 })
 export class CsvImportDialogComponent {
-  ref              = inject(MatDialogRef<CsvImportDialogComponent>);
-  private svc      = inject(ProductsService);
-  private supSvc   = inject(SuppliersService);
-  private taxSvc   = inject(TaxRatesService);
-  private snack    = inject(MatSnackBar);
+  ref          = inject(MatDialogRef<CsvImportDialogComponent>);
+  private svc  = inject(ProductsService);
+  private supSvc  = inject(SuppliersService);
+  private taxSvc  = inject(TaxRatesService);
+  private expSvc  = inject(ExpensesService);
+  private catSvc  = inject(ExpenseCategoriesService);
+  private snack   = inject(MatSnackBar);
 
   step     = signal<DialogStep>('idle');
   rows     = signal<ParsedRow[]>([]);
   dragOver = signal(false);
   result   = signal<BulkCreateResult | null>(null);
 
-  activeTaxRate              = signal<TaxRate | null>(null);
-  private allSuppliers       = signal<Supplier[]>([]);
-  unresolvedSuppliers        = signal<string[]>([]);
-  private supplierActions    = signal<Map<string, 'create' | 'skip'>>(new Map());
-  private createdSuppliers   = signal<Supplier[]>([]);
-
-  private preInvalid       = signal<{ row: number; name: string; errors: string[] }[]>([]);
+  activeTaxRate           = signal<TaxRate | null>(null);
+  inventarioCategory      = signal<ExpenseCategory | null>(null);
+  expenseCreated          = signal(false);
+  expenseError            = signal<string | null>(null);
+  private allSuppliers    = signal<Supplier[]>([]);
+  unresolvedSuppliers     = signal<string[]>([]);
+  private supplierActions = signal<Map<string, 'create' | 'skip'>>(new Map());
+  private createdSuppliers = signal<Supplier[]>([]);
+  private preInvalid      = signal<{ row: number; name: string; errors: string[] }[]>([]);
   private backendIdxToRow: number[] = [];
 
   validRows   = computed(() => this.rows().filter(r => r.errors.length === 0));
   invalidRows = computed(() => this.rows().filter(r => r.errors.length > 0));
 
   suppliersToCreate = computed(() =>
-    this.unresolvedSuppliers().filter(n => (this.supplierActions().get(n) ?? 'create') === 'create')
+    this.unresolvedSuppliers().filter(n => (this.supplierActions().get(n) ?? 'create') === 'create'),
   );
   suppliersToSkip = computed(() =>
-    this.unresolvedSuppliers().filter(n => (this.supplierActions().get(n) ?? 'create') === 'skip')
+    this.unresolvedSuppliers().filter(n => (this.supplierActions().get(n) ?? 'create') === 'skip'),
   );
-
   rowsWithSupplier = computed(() => {
     const existingNames = new Set(this.allSuppliers().map(s => s.name.toLowerCase()));
     const willCreate    = new Set(this.suppliersToCreate().map(n => n.toLowerCase()));
@@ -405,27 +436,35 @@ export class CsvImportDialogComponent {
       return n && (existingNames.has(n) || willCreate.has(n));
     }).length;
   });
-
   createdSuppliersCount = computed(() => this.createdSuppliers().length);
-
   allFailed = computed(() => {
     const r   = this.result();
     const pre = this.preInvalid();
     return [...pre, ...(r?.failed ?? [])].sort((a, b) => a.row - b.row);
   });
-
+  totalStockCost = computed(() =>
+    this.validRows().reduce((sum, r) => {
+      const cost  = r.cost_price ? +r.cost_price : 0;
+      const stock = r.stock      ? +r.stock      : 0;
+      return sum + cost * stock;
+    }, 0),
+  );
   headerSub = computed(() => {
     switch (this.step()) {
-      case 'idle':       return 'Sube un archivo CSV con tus productos';
-      case 'preview':    return `${this.rows().length} filas · ${this.validRows().length} válidas`;
-      case 'resolving':  return 'Verificando proveedores…';
-      case 'resolve':    return this.unresolvedSuppliers().length > 0
-                           ? `${this.unresolvedSuppliers().length} proveedor(es) no encontrado(s)`
-                           : 'Confirmar importación';
-      case 'importing':  return 'Procesando…';
-      case 'done':       return 'Importación completada';
+      case 'idle':      return 'Sube un archivo CSV con tus productos';
+      case 'preview':   return `${this.rows().length} filas · ${this.validRows().length} válidas`;
+      case 'resolving': return 'Verificando proveedores…';
+      case 'resolve':   return this.unresolvedSuppliers().length > 0
+                          ? `${this.unresolvedSuppliers().length} proveedor(es) no encontrado(s)`
+                          : 'Confirmar importación';
+      case 'importing': return 'Procesando…';
+      case 'done':      return 'Importación completada';
     }
   });
+
+  fmtCost(n: number): string {
+    return '$' + (+n).toFixed(2);
+  }
 
   getAction(name: string): 'create' | 'skip' {
     return this.supplierActions().get(name) ?? 'create';
@@ -457,7 +496,7 @@ export class CsvImportDialogComponent {
       this.rows.set(parsed);
       this.preInvalid.set(
         parsed.filter(r => r.errors.length > 0)
-              .map(r => ({ row: r.rowNum, name: r.name, errors: r.errors }))
+              .map(r => ({ row: r.rowNum, name: r.name, errors: r.errors })),
       );
       this.step.set('preview');
     };
@@ -485,8 +524,7 @@ export class CsvImportDialogComponent {
       supplier_name: idx('supplier_name', 'proveedor', 'proveedor_nombre', 'supplier'),
     };
 
-    const get = (parts: string[], i: number) =>
-      i >= 0 ? (parts[i] ?? '').trim() : '';
+    const get = (parts: string[], i: number) => i >= 0 ? (parts[i] ?? '').trim() : '';
 
     const rows: ParsedRow[] = [];
     for (let i = 1; i < lines.length; i++) {
@@ -495,15 +533,13 @@ export class CsvImportDialogComponent {
       const uprice = get(parts, col.unit_price);
       const errors: string[] = [];
 
-      if (!name)                                  errors.push('Nombre requerido');
-      else if (name.length < 2)                   errors.push('Nombre muy corto (mín. 2 caracteres)');
-
-      if (uprice === '')                           errors.push('Precio de venta requerido');
-      else if (isNaN(+uprice) || +uprice < 0)     errors.push(`Precio de venta inválido: "${uprice}"`);
+      if (!name)                               errors.push('Nombre requerido');
+      else if (name.length < 2)                errors.push('Nombre muy corto (mín. 2 caracteres)');
+      if (uprice === '')                        errors.push('Precio de venta requerido');
+      else if (isNaN(+uprice) || +uprice < 0)  errors.push(`Precio de venta inválido: "${uprice}"`);
 
       rows.push({
-        rowNum:        i,
-        name,
+        rowNum: i, name,
         unit_price:    uprice,
         cost_price:    get(parts, col.cost_price),
         stock:         get(parts, col.stock),
@@ -522,23 +558,22 @@ export class CsvImportDialogComponent {
     this.step.set('resolving');
 
     forkJoin({
-      suppliers: this.supSvc.list({ page: 1, limit: 500 }),
-      taxRates:  this.taxSvc.list({ page: 1, limit: 100 }),
+      suppliers:  this.supSvc.list({ page: 1, limit: 500 }),
+      taxRates:   this.taxSvc.list({ page: 1, limit: 100 }),
+      categories: this.catSvc.list({ limit: 500 }),
     }).subscribe({
-      next: ({ suppliers, taxRates }) => {
+      next: ({ suppliers, taxRates, categories }) => {
         this.allSuppliers.set(suppliers.data);
-
-        const active = taxRates.data.find(t => t.is_active) ?? null;
-        this.activeTaxRate.set(active);
+        this.activeTaxRate.set(taxRates.data.find(t => t.is_active) ?? null);
+        this.inventarioCategory.set(
+          categories.find((c: ExpenseCategory) => c.is_active && c.category_type === 'INVENTARIO') ?? null,
+        );
 
         const existingNames = new Set(suppliers.data.map((s: Supplier) => s.name.toLowerCase()));
-        const csvNames      = [...new Set(
-          this.validRows()
-            .map(r => r.supplier_name.trim())
-            .filter(n => n.length > 0)
+        const csvNames = [...new Set(
+          this.validRows().map(r => r.supplier_name.trim()).filter(n => n.length > 0),
         )];
-        const unresolved    = csvNames.filter(n => !existingNames.has(n.toLowerCase()));
-
+        const unresolved = csvNames.filter(n => !existingNames.has(n.toLowerCase()));
         this.unresolvedSuppliers.set(unresolved);
 
         const map = new Map<string, 'create' | 'skip'>();
@@ -555,8 +590,8 @@ export class CsvImportDialogComponent {
   }
 
   doImport(): void {
-    const valid      = this.validRows();
-    const taxRate    = this.activeTaxRate();
+    const valid   = this.validRows();
+    const taxRate = this.activeTaxRate();
     if (!valid.length || !taxRate) return;
 
     this.backendIdxToRow = valid.map(r => r.rowNum);
@@ -578,8 +613,8 @@ export class CsvImportDialogComponent {
         const products = valid.map(r => ({
           name:        r.name,
           unit_price:  +r.unit_price,
-          cost_price:  r.cost_price  ? +r.cost_price             : undefined,
-          stock:       r.stock       ? parseInt(r.stock,    10)  : 0,
+          cost_price:  r.cost_price  ? +r.cost_price            : undefined,
+          stock:       r.stock       ? parseInt(r.stock,    10) : 0,
           min_stock:   r.min_stock   ? parseInt(r.min_stock, 10) : 0,
           sku:         r.sku         || undefined,
           description: r.description || undefined,
@@ -590,10 +625,10 @@ export class CsvImportDialogComponent {
         }));
 
         return this.svc.bulkCreate(products);
-      })
+      }),
     ).subscribe({
       next: (res) => {
-        const remapped = {
+        const remapped: BulkCreateResult = {
           ...res,
           failed: res.failed.map(f => ({
             ...f,
@@ -601,6 +636,31 @@ export class CsvImportDialogComponent {
           })),
         };
         this.result.set(remapped);
+        this.expenseCreated.set(false);
+        this.expenseError.set(null);
+
+        // Auto-register inventory expense
+        const cat    = this.inventarioCategory();
+        const amount = +this.totalStockCost().toFixed(2);
+        if (cat && amount > 0) {
+          const dto = {
+            category_id:       cat.id,
+            description:       `Adquisición masiva de inventario (${res.created_count} productos)`,
+            amount,
+            supplier_name_free: 'Importación CSV',
+            expense_date:      new Date().toISOString().slice(0, 10),
+          };
+          console.log('[bulk-import] creating expense:', dto);
+          this.expSvc.create(dto).subscribe({
+            next:  () => this.expenseCreated.set(true),
+            error: (err) => {
+              const msg = err?.error?.message || 'Error al registrar egreso de inventario';
+              console.error('[bulk-import] expense error:', err);
+              this.expenseError.set(msg);
+            },
+          });
+        }
+
         this.step.set('done');
       },
       error: (err) => {
@@ -622,8 +682,7 @@ export class CsvImportDialogComponent {
 
   private splitLine(line: string): string[] {
     const result: string[] = [];
-    let cur = '';
-    let inQ = false;
+    let cur = ''; let inQ = false;
     for (let i = 0; i < line.length; i++) {
       const ch = line[i];
       if (ch === '"') {

@@ -8,6 +8,20 @@ import { ApiResponse, FinanceListResponse, PaginatedResponse, PaginationParams }
 export class InvoicePaymentsService {
   private api = inject(ApiService);
 
+  list(params?: PaginationParams): Observable<PaginatedResponse<InvoicePayment>> {
+    return this.api.get<FinanceListResponse<InvoicePayment>>('/invoice-payments', {
+      ...(params as Record<string, string | number | boolean | undefined>),
+    }).pipe(
+      map(res => ({
+        data: res.data ?? [],
+        total: res.total ?? 0,
+        page: res.page ?? 1,
+        limit: res.limit ?? 20,
+        totalPages: Math.ceil((res.total ?? 0) / (res.limit ?? 20)),
+      }))
+    );
+  }
+
   listByInvoice(invoiceId: number, params?: PaginationParams): Observable<PaginatedResponse<InvoicePayment>> {
     return this.api.get<FinanceListResponse<InvoicePayment>>('/invoice-payments', {
       invoice_id: invoiceId,

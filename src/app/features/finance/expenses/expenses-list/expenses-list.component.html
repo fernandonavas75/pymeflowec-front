@@ -211,14 +211,14 @@
           <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
             <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Pagado</div>
             <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--success)">
-              ${{ formatCurrency(selected()!.amount_paid ?? 0) }}
+              ${{ formatCurrency(drawerAmountPaid()) }}
             </div>
           </div>
           <div style="padding:12px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
             <div style="font-size:10px;font-weight:600;color:var(--text-subtle);letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px">Pendiente</div>
             <div style="font-family:var(--font-display);font-size:20px;font-weight:700"
-                 [style.color]="(selected()!.amount_pending ?? 0) > 0 ? 'var(--warn)' : 'var(--text-muted-ds)'">
-              ${{ formatCurrency(selected()!.amount_pending ?? selected()!.amount) }}
+                 [style.color]="drawerAmountPending() > 0 ? 'var(--warn)' : 'var(--text-muted-ds)'">
+              ${{ formatCurrency(drawerAmountPending()) }}
             </div>
           </div>
         </div>
@@ -476,7 +476,7 @@
               <label>Categoría <span style="color:var(--danger)">*</span></label>
               <select class="m-input" formControlName="category_id">
                 <option [value]="null">— Selecciona una categoría —</option>
-                @for (cat of categories(); track cat.id) {
+                @for (cat of activeCategories(); track cat.id) {
                   <option [value]="cat.id">{{ cat.name }}</option>
                 }
               </select>

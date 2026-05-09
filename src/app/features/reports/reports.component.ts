@@ -4,19 +4,21 @@ import { RouterLink, ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, forkJoin, of, finalize, catchError, map } from 'rxjs';
-import { DashboardService, DashboardData, RevenueByDay } from '../../core/services/dashboard.service';
+import { FormsModule } from '@angular/forms';
+import { DashboardService, DashboardData } from '../../core/services/dashboard.service';
 import { ProductsService } from '../../core/services/products.service';
 import { AuditLogsService } from '../../core/services/audit-logs.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CompanyModulesService } from '../../core/services/company-modules.service';
 import { AdminViewService } from '../../core/services/admin-view.service';
+import { InvoicesService } from '../../core/services/invoices.service';
+import { PettyCashService } from '../../core/services/petty-cash.service';
+import { ExpensesService } from '../../core/services/expenses.service';
 import { Product } from '../../core/models/product.model';
 import { AuditLog } from '../../core/models/audit-log.model';
+import { Invoice } from '../../core/models/invoice.model';
+import { PettyCash } from '../../core/models/petty-cash.model';
 import { AppIconComponent } from '../../shared/components/app-icon/app-icon.component';
-
-interface BarItem    { x: number; y: number; w: number; h: number; isLast: boolean; }
-interface GridLine   { y: number; value: number; isZero: boolean; }
-interface ChartLabel { x: number; text: string; }
 
 interface ActivityEvent {
   icon: string;
@@ -42,7 +44,7 @@ interface UserSummary {
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, RouterLink, AppIconComponent],
+  imports: [CommonModule, RouterLink, AppIconComponent, FormsModule],
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.scss'],
 })
@@ -50,6 +52,9 @@ export class ReportsComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   private productsService  = inject(ProductsService);
   private auditLogsSvc     = inject(AuditLogsService);
+  private invoicesSvc      = inject(InvoicesService);
+  private pettyCashSvc     = inject(PettyCashService);
+  private expensesSvc      = inject(ExpensesService);
   private route            = inject(ActivatedRoute);
   authService              = inject(AuthService);
   adminViewSvc             = inject(AdminViewService);
@@ -65,16 +70,14 @@ export class ReportsComponent implements OnInit, OnDestroy {
   lastUpdated = new Date();
   private sub?: Subscription;
 
-  todaySales      = 0;
-  sparkPath       = '';
-  sparkArea       = '';
-  chartBars:      BarItem[]    = [];
-  chartGridLines: GridLine[]   = [];
-  chartLabels:    ChartLabel[] = [];
-  chartStats      = { avg: 0, vat: 0, best: 0 };
+  sparkPath  = '';
+  sparkArea  = '';
 
-  lowStockList = signal<Product[]>([]);
-  range        = signal<'7d'|'30d'>('7d');
+  lowStockList  = signal<Product[]>([]);
+  todayInvoices = signal<Invoice[]>([]);
+
+  todaySalesTotal  = computed(() => this.todayInvoices().reduce((s, inv) => s + Number(inv.total), 0));
+  todayInvoiceCount = computed(() => this.todayInvoices().length);
 
   // ── Actividad del equipo ──────────────────────────────────────────
   activityLogs     = signal<AuditLog[]>([]);
@@ -148,6 +151,83 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   activityPages = computed(() => Math.max(1, Math.ceil(this.activityTotal() / this.activityPageSize)));
 
+  // ── Finance tab ──────────────────────────────────────────────────
+  financeLoading    = signal(false);
+  financeSubTab     = signal<'kpis' | 'vs'>('kpis');
+  pettyCash         = signal<PettyCash | null>(null);
+  pendingInvoices   = signal<Invoice[]>([]);
+  pendingExpTotal   = signal(0);
+  pendingExpCount   = signal(0);
+  private financeSub?: Subscription;
+
+  // ── Ventas vs Egresos sub-tab ────────────────────────────────────
+  vsPeriod      = signal<'month' | 'quarter' | 'year'>('month');
+  vsLoading     = signal(false);
+  vsAllInvoices = signal<Invoice[]>([]);
+  vsAllExpenses = signal<any[]>([]);
+  private vsSub?: Subscription;
+
+  vsSalesTotal = computed(() => this.vsAllInvoices().reduce((s, inv) => s + Number(inv.total), 0));
+  vsExpTotal   = computed(() => this.vsAllExpenses().reduce((s, e) => s + Number(e.amount), 0));
+  vsBalance    = computed(() => this.vsSalesTotal() - this.vsExpTotal());
+
+  vsPeriodMonths = computed((): { key: string; label: string }[] => {
+    const period = this.vsPeriod();
+    const now    = new Date();
+    const count  = period === 'month' ? 1 : period === 'quarter' ? 3 : now.getMonth() + 1;
+    const result: { key: string; label: string }[] = [];
+    for (let i = count - 1; i >= 0; i--) {
+      const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('es-EC', { month: 'short', year: count > 3 ? '2-digit' : undefined });
+      result.push({ key, label });
+    }
+    return result;
+  });
+
+  vsMonthly = computed((): { label: string; sales: number; exp: number }[] => {
+    const invByMonth = new Map<string, number>();
+    const expByMonth = new Map<string, number>();
+    for (const inv of this.vsAllInvoices()) {
+      const key = (inv.issue_date ?? '').substring(0, 7);
+      invByMonth.set(key, (invByMonth.get(key) ?? 0) + Number(inv.total));
+    }
+    for (const e of this.vsAllExpenses()) {
+      const key = (e.expense_date ?? e.created_at ?? '').substring(0, 7);
+      expByMonth.set(key, (expByMonth.get(key) ?? 0) + Number(e.amount));
+    }
+    return this.vsPeriodMonths().map(({ key, label }) => ({
+      label,
+      sales: invByMonth.get(key) ?? 0,
+      exp:   expByMonth.get(key) ?? 0,
+    }));
+  });
+
+  vsChartMax = computed(() => Math.max(...this.vsMonthly().flatMap(m => [m.sales, m.exp]), 1));
+
+  pendingInvTotal = computed(() =>
+    this.pendingInvoices().reduce((s, inv) => s + (inv.amount_pending ?? 0), 0)
+  );
+
+  pettyCashPct = computed(() => {
+    const pc = this.pettyCash();
+    if (!pc || pc.opening_amount === 0) return 0;
+    return Math.min(100, Math.round((pc.current_balance / pc.opening_amount) * 100));
+  });
+
+  pettyCashState = computed((): 'ok' | 'warn' | 'danger' => {
+    const pct = this.pettyCashPct();
+    if (pct > 40) return 'ok';
+    if (pct > 15) return 'warn';
+    return 'danger';
+  });
+
+  hasFinance = computed(() => {
+    const isCV = this.adminViewSvc.isClientViewMode();
+    if (!isCV && !this.authService.isStoreUser()) return false;
+    return this.modulesSvc.approvedCodes().has('MOD_FINANCE') || this.modulesSvc.loadFailed();
+  });
+
   hasAnalytics = computed(() => {
     const isCV = this.adminViewSvc.isClientViewMode();
     if (!isCV && !this.authService.isStoreUser()) return false;
@@ -166,14 +246,6 @@ export class ReportsComponent implements OnInit, OnDestroy {
     return `Reportes · Hoy ${wd} ${d.getDate()} de ${mo}, ${d.getFullYear()}`;
   }
 
-  get todayInvoiceCount(): number {
-    if (!this.data) return 0;
-    const today = new Date().toDateString();
-    return this.data.recentInvoices.filter(
-      inv => inv.status === 'ISSUED' && new Date(inv.issue_date).toDateString() === today
-    ).length;
-  }
-
   ngOnInit(): void {
     const isCV = this.adminViewSvc.isClientViewMode();
     if (!isCV && !this.authService.isStoreUser()) { this.loading = false; return; }
@@ -181,6 +253,19 @@ export class ReportsComponent implements OnInit, OnDestroy {
     if (this.view() === 'activity') {
       this.loading = false;
       this.loadActivity();
+      return;
+    }
+
+    if (this.view() === 'finance') {
+      this.loading = false;
+      if (isCV) {
+        this.loadFinance();
+      } else {
+        this.modulesSvc.loadCatalog().subscribe({
+          next:  () => this.loadFinance(),
+          error: () => this.loadFinance(),
+        });
+      }
       return;
     }
 
@@ -198,22 +283,106 @@ export class ReportsComponent implements OnInit, OnDestroy {
     this.hasAnalytics() ? this.load() : (this.loading = false);
   }
 
+  loadFinance(): void {
+    this.financeLoading.set(true);
+    this.financeSub?.unsubscribe();
+    this.financeSub = forkJoin({
+      invoices:  this.invoicesSvc.list({ status: 'ISSUED', limit: 300 }).pipe(
+        catchError(() => of({ data: [] as Invoice[], total: 0, page: 1, limit: 300, totalPages: 0 })),
+      ),
+      pettyCash: this.pettyCashSvc.getOpen().pipe(catchError(() => of(null))),
+      expenses:  this.expensesSvc.list({ limit: 300 }).pipe(
+        catchError(() => of({ data: [], total: 0 })),
+      ),
+    }).pipe(finalize(() => this.financeLoading.set(false)))
+    .subscribe({
+      next: ({ invoices, pettyCash, expenses }) => {
+        const pending = invoices.data.filter(
+          inv => inv.payment_status === 'PENDIENTE' || inv.payment_status === 'PARCIAL',
+        );
+        this.pendingInvoices.set(pending);
+        this.pettyCash.set(pettyCash);
+
+        const pendingExp = expenses.data.filter(
+          (e: any) => e.payment_status === 'PENDIENTE' || e.payment_status === 'PARCIAL',
+        );
+        this.pendingExpTotal.set(pendingExp.reduce((s: number, e: any) => s + Number(e.amount_pending ?? e.amount), 0));
+        this.pendingExpCount.set(pendingExp.length);
+      },
+      error: () => {},
+    });
+  }
+
+  refreshFinance(): void { this.financeSub?.unsubscribe(); this.loadFinance(); }
+
+  setFinanceSubTab(tab: 'kpis' | 'vs'): void {
+    this.financeSubTab.set(tab);
+    if (tab === 'vs' && this.vsAllInvoices().length === 0 && !this.vsLoading()) {
+      this.loadVsData();
+    }
+  }
+
+  setVsPeriod(p: 'month' | 'quarter' | 'year'): void {
+    this.vsPeriod.set(p);
+    this.loadVsData();
+  }
+
+  loadVsData(): void {
+    this.vsLoading.set(true);
+    this.vsSub?.unsubscribe();
+    const { from, to } = this.vsPeriodRange();
+    this.vsSub = forkJoin({
+      invoices: this.invoicesSvc.list({ status: 'ISSUED', from, to, limit: 1000 }).pipe(
+        catchError(() => of({ data: [] as Invoice[], total: 0 })),
+      ),
+      expenses: this.expensesSvc.list({ from, to, limit: 1000 }).pipe(
+        catchError(() => of({ data: [], total: 0 })),
+      ),
+    }).pipe(finalize(() => this.vsLoading.set(false)))
+    .subscribe({
+      next: ({ invoices, expenses }) => {
+        this.vsAllInvoices.set(invoices.data);
+        this.vsAllExpenses.set(expenses.data.filter((e: any) => e.payment_status !== 'ANULADO'));
+      },
+      error: () => {},
+    });
+  }
+
+  private vsPeriodRange(): { from: string; to: string } {
+    const now = new Date();
+    const to  = now.toISOString().split('T')[0];
+    const period = this.vsPeriod();
+    let from: Date;
+    if (period === 'month') {
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (period === 'quarter') {
+      from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    } else {
+      from = new Date(now.getFullYear(), 0, 1);
+    }
+    return { from: from.toISOString().split('T')[0], to };
+  }
+
   load(): void {
     this.loading = !this.data;
+    const today = new Date().toISOString().split('T')[0];
     this.sub = forkJoin({
       dashboard: this.dashboardService.getDashboardData(),
-      products:  this.productsService.list({ page: 1, limit: 100 }).pipe(
-        catchError(() => of({ data: [] as Product[], total: 0, page: 1, limit: 100, totalPages: 0 }))
+      products:  this.productsService.list({ page: 1, limit: 500 }).pipe(
+        catchError(() => of({ data: [] as Product[], total: 0, page: 1, limit: 500, totalPages: 0 }))
+      ),
+      todayInv: this.invoicesSvc.list({ status: 'ISSUED', from: today, to: today, limit: 200 }).pipe(
+        catchError(() => of({ data: [] as Invoice[], total: 0, page: 1, limit: 200, totalPages: 0 }))
       ),
     }).pipe(finalize(() => { this.loading = false; })).subscribe({
-      next: ({ dashboard, products }) => {
+      next: ({ dashboard, products, todayInv }) => {
         this.data = dashboard;
         this.lastUpdated = new Date();
+        this.todayInvoices.set(todayInv.data);
         this.lowStockList.set(
           products.data
             .filter(p => p.stock < p.min_stock && p.status === 'ACTIVE')
             .sort((a, b) => (a.stock / Math.max(a.min_stock, 1)) - (b.stock / Math.max(b.min_stock, 1)))
-            .slice(0, 4)
         );
         this.onDataLoaded(dashboard);
       },
@@ -222,7 +391,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void { this.sub?.unsubscribe(); this.data = null; this.load(); }
-  ngOnDestroy(): void { this.sub?.unsubscribe(); }
+  ngOnDestroy(): void { this.sub?.unsubscribe(); this.financeSub?.unsubscribe(); this.vsSub?.unsubscribe(); }
 
   // ── Activity tab ─────────────────────────────────────────────────
 
@@ -361,16 +530,8 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   private onDataLoaded(data: DashboardData): void {
     const values = data.revenueByDay.map(d => d.amount);
-    this.todaySales = values[values.length - 1] ?? 0;
-    this.sparkPath  = this.buildSparkPath(values, 200, 32);
-    this.sparkArea  = this.buildSparkArea(values, 200, 32);
-    this.buildBarData(data.revenueByDay);
-    const total = values.reduce((s, v) => s + v, 0);
-    this.chartStats = {
-      avg:  total / (values.length || 1),
-      vat:  data.taxByDay.reduce((s, d) => s + d.amount, 0),
-      best: Math.max(...values, 0),
-    };
+    this.sparkPath = this.buildSparkPath(values, 200, 32);
+    this.sparkArea = this.buildSparkArea(values, 200, 32);
   }
 
   private buildSparkPath(values: number[], w: number, h: number): string {
@@ -386,32 +547,6 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   private buildSparkArea(values: number[], w: number, h: number): string {
     return this.buildSparkPath(values, w, h) + ` L${w - 2},${h} L2,${h} Z`;
-  }
-
-  private buildBarData(days: RevenueByDay[]): void {
-    const W = 760, H = 220, PL = 44, PR = 12, PT = 14, PB = 28;
-    const max = Math.max(...days.map(d => d.amount), 1);
-    const step = (W - PL - PR) / days.length;
-    const barW = step * 0.65;
-
-    this.chartGridLines = Array.from({ length: 5 }, (_, i) => {
-      const value = (max / 4) * i;
-      const y = H - PB - (H - PT - PB) * (value / max);
-      return { y, value: Math.round(value), isZero: i === 0 };
-    });
-
-    this.chartBars = days.map((d, i) => ({
-      x: PL + i * step + (step - barW) / 2,
-      y: H - PB - (H - PT - PB) * (d.amount / max || 0),
-      w: barW,
-      h: (H - PT - PB) * (d.amount / max || 0),
-      isLast: i === days.length - 1,
-    }));
-
-    const every = Math.ceil(days.length / 5);
-    this.chartLabels = days
-      .map((d, i) => ({ x: PL + i * step + step / 2, text: d.date.split(',')[0] }))
-      .filter((_, i) => i === 0 || i % every === 0 || i === days.length - 1);
   }
 
   formatCurrency(v: number): string {

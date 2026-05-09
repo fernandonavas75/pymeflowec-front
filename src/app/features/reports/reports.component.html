@@ -4,24 +4,32 @@
   <div class="page-head">
     <div>
       <div class="page-title">
-        {{ view() === 'activity' ? 'Actividad del equipo' : 'Reportes' }}
+        @if (view() === 'activity') { Actividad del equipo }
+        @else if (view() === 'finance') { KPIs Financieros }
+        @else { Reportes }
       </div>
       <div class="page-sub-en">
-        {{ view() === 'activity' ? 'Registro de acciones de tu empresa' : todayDate }}
+        @if (view() === 'activity') { Registro de acciones de tu empresa }
+        @else if (view() === 'finance') { Cobros pendientes · Caja chica · Egresos }
+        @else { {{ todayDate }} }
       </div>
     </div>
     <div class="page-actions">
-      @if (view() !== 'activity') {
+      @if (view() === 'finance') {
+        <button class="btn secondary" type="button" (click)="refreshFinance()" [disabled]="financeLoading()">
+          <app-icon name="refresh" [size]="16"/>Actualizar
+        </button>
+      } @else if (view() === 'activity') {
+        <button class="btn secondary" type="button" (click)="loadActivity()" [disabled]="activityLoading()">
+          <app-icon name="refresh" [size]="16"/>Actualizar
+        </button>
+      } @else {
         <button class="btn secondary" type="button" (click)="refresh()">
           <app-icon name="refresh" [size]="16"/>Actualizar
         </button>
         <a routerLink="/invoices/new" class="btn primary">
           <app-icon name="plus" [size]="16"/>Nueva factura
         </a>
-      } @else {
-        <button class="btn secondary" type="button" (click)="loadActivity()" [disabled]="activityLoading()">
-          <app-icon name="refresh" [size]="16"/>Actualizar
-        </button>
       }
     </div>
   </div>
@@ -59,51 +67,18 @@
   <!-- ── Contenido de reportes ───────────────────────────────────── -->
   @if (!loading && hasAnalytics() && data) {
 
-    <!-- KPI row -->
-    <div class="kpi-grid">
-
+    <!-- Ventas del día KPI -->
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr">
       <div class="kpi">
         <div class="kpi-label">Ventas de hoy <span class="en">/ Today</span></div>
-        <div class="kpi-value"><span class="cur">$</span>{{ todaySales | number:'1.2-2' }}</div>
+        <div class="kpi-value"><span class="cur">$</span>{{ todaySalesTotal() | number:'1.2-2' }}</div>
         <div class="kpi-sub">
-          <span class="kpi-delta up"><app-icon name="trending_up" [size]="11"/>Hoy</span>
-          <span>{{ todayInvoiceCount }} facturas emitidas</span>
-        </div>
-        <div class="kpi-spark">
-          <svg viewBox="0 0 200 32" preserveAspectRatio="none"
-               style="width:100%;height:32px;display:block">
-            <path [attr.d]="sparkArea" fill="var(--accent)" opacity="0.12"/>
-            <path [attr.d]="sparkPath" fill="none" stroke="var(--accent)" stroke-width="1.6"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </div>
-
-      <div class="kpi">
-        <div class="kpi-label">Facturas emitidas <span class="en">/ Invoices</span></div>
-        <div class="kpi-value">
-          {{ todayInvoiceCount }}<span
-            style="font-size:16px;color:var(--text-muted-ds);font-weight:500;margin-left:6px"
-          >/ día</span>
-        </div>
-        <div class="kpi-sub">
-          <span class="kpi-delta up">
-            <app-icon name="trending_up" [size]="11"/>+{{ todayInvoiceCount }}
+          <span class="kpi-delta" [class.up]="todayInvoiceCount() > 0" [class.flat]="todayInvoiceCount() === 0">
+            <app-icon name="receipt_long" [size]="11"/>{{ todayInvoiceCount() }} factura{{ todayInvoiceCount() !== 1 ? 's' : '' }} emitida{{ todayInvoiceCount() !== 1 ? 's' : '' }}
           </span>
-          <span>{{ todayInvoiceCount }} emitidas · 0 canceladas</span>
-        </div>
-      </div>
-
-      <div class="kpi">
-        <div class="kpi-label">Ventas 30 días <span class="en">/ 30-day</span></div>
-        <div class="kpi-value"><span class="cur">$</span>{{ data.totalRevenue | number:'1.2-2' }}</div>
-        <div class="kpi-sub">
-          <span class="kpi-delta up"><app-icon name="trending_up" [size]="11"/>Este mes</span>
-          <span>vs. mes anterior</span>
         </div>
         <div class="kpi-spark">
-          <svg viewBox="0 0 200 32" preserveAspectRatio="none"
-               style="width:100%;height:32px;display:block">
+          <svg viewBox="0 0 200 32" preserveAspectRatio="none" style="width:100%;height:32px;display:block">
             <path [attr.d]="sparkArea" fill="var(--accent)" opacity="0.12"/>
             <path [attr.d]="sparkPath" fill="none" stroke="var(--accent)" stroke-width="1.6"
                   stroke-linecap="round" stroke-linejoin="round"/>
@@ -114,95 +89,96 @@
       <div class="kpi">
         <div class="kpi-label">Stock bajo <span class="en">/ Low stock</span></div>
         <div class="kpi-value"
-             [style.color]="data.lowStockProducts > 0 ? 'var(--warn)' : null">
-          {{ data.lowStockProducts }}
+             [style.color]="lowStockList().length > 0 ? 'var(--warn)' : null">
+          {{ lowStockList().length }}
         </div>
         <div class="kpi-sub">
           <span class="kpi-delta"
-                [class.down]="data.lowStockProducts > 0"
-                [class.flat]="data.lowStockProducts === 0">
-            <app-icon name="alert_circle" [size]="11"/>Acción
+                [class.down]="lowStockList().length > 0"
+                [class.flat]="lowStockList().length === 0">
+            <app-icon name="alert_circle" [size]="11"/>
+            {{ lowStockList().length > 0 ? 'Requieren atención' : 'Todo en orden' }}
           </span>
           <span>productos por debajo del mínimo</span>
         </div>
       </div>
+    </div>
 
-    </div><!-- /kpi-grid -->
+    <!-- Grid: actividad reciente + stock bajo -->
+    <div class="grid-2" style="align-items:start;margin-top:var(--density-gap)">
 
-    <!-- Chart + right panel -->
-    <div class="grid-2" style="align-items:start">
-
-      <!-- Bar chart card -->
+      <!-- Actividad reciente — facturas de hoy -->
       <div class="card">
         <div class="card-head">
-          <div class="card-title">Ventas <span class="en">Sales over time</span></div>
-          <div class="chart-tabs">
-            <button class="chart-tab" [class.active]="range() === '7d'"
-                    (click)="range.set('7d')" type="button">7 días</button>
-            <button class="chart-tab" [class.active]="range() === '30d'"
-                    (click)="range.set('30d')" type="button">30 días</button>
-          </div>
+          <div class="card-title">Actividad reciente <span class="en">Facturas de hoy · {{ todayInvoiceCount() }}</span></div>
+          <a routerLink="/invoices" class="btn ghost sm">
+            Ver todas <app-icon name="chevron_right" [size]="12"/>
+          </a>
         </div>
-        <div class="card-body">
-          <svg viewBox="0 0 760 220" style="width:100%;height:auto">
-            @for (line of chartGridLines; track $index) {
-              <line [attr.x1]="44" [attr.y1]="line.y"
-                    [attr.x2]="748" [attr.y2]="line.y"
-                    stroke="var(--border-ds)"
-                    [attr.stroke-dasharray]="line.isZero ? '0' : '3 3'"/>
-              <text [attr.x]="36" [attr.y]="line.y + 3"
-                    font-size="10" fill="var(--text-subtle)"
-                    text-anchor="end"
-                    font-family="var(--font-mono)">${{ line.value }}</text>
-            }
-            @for (bar of chartBars; track bar.x) {
-              <rect [attr.x]="bar.x" [attr.y]="bar.y"
-                    [attr.width]="bar.w" [attr.height]="bar.h"
-                    rx="2"
-                    [attr.fill]="bar.isLast ? 'var(--accent)' : 'var(--accent-soft-strong)'"
-                    [attr.opacity]="bar.isLast ? 1 : 0.85"/>
-            }
-            @for (lbl of chartLabels; track lbl.x) {
-              <text [attr.x]="lbl.x" y="212"
-                    font-size="10" fill="var(--text-subtle)"
-                    text-anchor="middle"
-                    font-family="var(--font-mono)">{{ lbl.text }}</text>
-            }
-          </svg>
-          <div style="display:flex;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--border-ds)">
-            <div>
-              <div style="font-size:11px;color:var(--text-subtle);font-weight:600;letter-spacing:0.04em;text-transform:uppercase">Promedio diario</div>
-              <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:2px">${{ chartStats.avg | number:'1.0-0' }}</div>
+        <div class="card-body p0">
+          @if (todayInvoices().length === 0) {
+            <div style="padding:32px;text-align:center;color:var(--text-subtle);font-size:13px">
+              <app-icon name="receipt_long" [size]="32" style="display:block;margin:0 auto 8px;opacity:.3"/>
+              Sin facturas emitidas hoy
             </div>
-            <div>
-              <div style="font-size:11px;color:var(--text-subtle);font-weight:600;letter-spacing:0.04em;text-transform:uppercase">IVA 15% recaudado</div>
-              <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:2px">${{ chartStats.vat | number:'1.0-0' }}</div>
-            </div>
-            <div>
-              <div style="font-size:11px;color:var(--text-subtle);font-weight:600;letter-spacing:0.04em;text-transform:uppercase">Mejor día</div>
-              <div style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-top:2px">${{ chartStats.best | number:'1.0-0' }}</div>
-            </div>
-          </div>
+          } @else {
+            <table class="ds-table">
+              <thead>
+                <tr>
+                  <th>Factura</th>
+                  <th>Cliente</th>
+                  <th class="num">Total</th>
+                  <th>Cobro</th>
+                  <th>Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (inv of (todayInvoices() | slice:0:10); track inv.id) {
+                  <tr class="row-link" [routerLink]="['/invoices', inv.id]">
+                    <td><span class="inv-num">{{ inv.invoice_number }}</span></td>
+                    <td>{{ customerName(inv) }}</td>
+                    <td class="num mono"><strong>{{ formatCurrency(inv.total) }}</strong></td>
+                    <td>
+                      @if (inv.payment_status === 'COBRADO') {
+                        <span class="badge success"><span class="dot"></span>Cobrada</span>
+                      } @else if (inv.payment_status === 'PARCIAL') {
+                        <span class="badge warn"><span class="dot"></span>Parcial</span>
+                      } @else {
+                        <span class="badge neutral"><span class="dot"></span>Pendiente</span>
+                      }
+                    </td>
+                    <td class="date-cell">{{ inv.issue_date | date:'HH:mm' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            @if (todayInvoices().length > 10) {
+              <div style="padding:10px 16px;font-size:12px;color:var(--text-subtle);border-top:1px solid var(--border-ds)">
+                Mostrando 10 de {{ todayInvoices().length }}.
+                <a routerLink="/invoices" style="color:var(--accent)">Ver todas →</a>
+              </div>
+            }
+          }
         </div>
       </div>
 
-      <!-- Right panel -->
+      <!-- Stock bajo -->
       <div class="ds-stack">
-
-        <!-- Low stock card -->
         <div class="card">
           <div class="card-head">
-            <div class="card-title">Stock bajo <span class="en">Low stock</span></div>
+            <div class="card-title">
+              Stock bajo <span class="en">{{ lowStockList().length }} producto{{ lowStockList().length !== 1 ? 's' : '' }}</span>
+            </div>
             <a routerLink="/products" class="btn ghost sm">
               Ver todo <app-icon name="chevron_right" [size]="12"/>
             </a>
           </div>
-          <div class="card-body p0">
-            @for (p of lowStockList(); track p.id) {
-              <div style="padding:12px 16px;border-bottom:1px solid var(--border-ds);display:flex;align-items:center;gap:12px">
+          <div class="card-body p0" style="max-height:360px;overflow-y:auto">
+            @for (p of (lowStockList() | slice:0:12); track p.id) {
+              <div style="padding:10px 16px;border-bottom:1px solid var(--border-ds);display:flex;align-items:center;gap:12px">
                 <div style="flex:1;min-width:0">
-                  <div style="font-weight:600;font-size:13px">{{ p.name }}</div>
-                  <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-subtle);margin-top:2px">{{ p.sku }}</div>
+                  <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</div>
+                  <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-subtle);margin-top:1px">{{ p.sku || '—' }}</div>
                 </div>
                 <div class="stock-bar"
                      [class.low]="stockState(p) === 'low'"
@@ -213,7 +189,14 @@
               </div>
             } @empty {
               <div style="padding:24px;text-align:center;color:var(--text-subtle);font-size:13px">
+                <app-icon name="check_circle" [size]="24" style="display:block;margin:0 auto 6px;opacity:.3"/>
                 Sin productos en alerta
+              </div>
+            }
+            @if (lowStockList().length > 12) {
+              <div style="padding:8px 16px;font-size:12px;color:var(--text-subtle);border-top:1px solid var(--border-ds)">
+                +{{ lowStockList().length - 12 }} más.
+                <a routerLink="/products" style="color:var(--accent)">Ver todos →</a>
               </div>
             }
           </div>
@@ -231,57 +214,9 @@
             </div>
           </div>
         }
+      </div>
 
-      </div><!-- /ds-stack -->
     </div><!-- /grid-2 -->
-
-    <!-- Recent invoices table -->
-    <div class="card" style="margin-top:var(--density-gap)">
-      <div class="card-head">
-        <div class="card-title">Actividad reciente <span class="en">Recent invoices</span></div>
-        <a routerLink="/invoices" class="btn ghost sm">
-          Ver todas <app-icon name="chevron_right" [size]="12"/>
-        </a>
-      </div>
-      <div class="card-body p0">
-        <table class="ds-table">
-          <thead>
-            <tr>
-              <th>Factura</th>
-              <th>Cliente</th>
-              <th class="num">Items</th>
-              <th class="num">Total</th>
-              <th>Estado</th>
-              <th>Emitida</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (inv of (data.recentInvoices | slice:0:6); track inv.id) {
-              <tr class="row-link" [routerLink]="['/invoices', inv.id]">
-                <td><span class="inv-num">{{ inv.invoice_number }}</span></td>
-                <td>{{ customerName(inv) }}</td>
-                <td class="num mono">{{ inv.details?.length ?? '—' }}</td>
-                <td class="num mono"><strong>{{ formatCurrency(inv.total) }}</strong></td>
-                <td>
-                  @switch (inv.status) {
-                    @case ('ISSUED') {
-                      <span class="badge success"><span class="dot"></span>Emitida</span>
-                    }
-                    @case ('CANCELLED') {
-                      <span class="badge danger"><span class="dot"></span>Cancelada</span>
-                    }
-                    @default {
-                      <span class="badge neutral"><span class="dot"></span>{{ inv.status }}</span>
-                    }
-                  }
-                </td>
-                <td class="date-cell">{{ inv.issue_date | date:'dd/MM/yy' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    </div>
 
   }
 
@@ -475,5 +410,384 @@
     } <!-- /!loading && !error -->
 
   } <!-- /vista activity -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       VISTA: KPIs FINANCIEROS
+  ════════════════════════════════════════════════════════════════ -->
+  @if (view() === 'finance') {
+
+    <!-- Sin acceso -->
+    @if (!hasFinance()) {
+      <div class="ds-alert accent" style="margin-top:8px">
+        <app-icon name="wallet" [size]="20" class="alert-icon"/>
+        <div style="flex:1">
+          <div class="t">Módulo de Finanzas requerido</div>
+          <div class="d">Activa el módulo MOD_FINANCE para acceder a los KPIs financieros.</div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <a routerLink="/module-requests" class="btn primary sm">Ver módulos</a>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (hasFinance()) {
+
+      <!-- ── Subtabs de finanzas ───────────────────────────────────── -->
+      <div class="ds-tabs" style="margin-bottom:var(--density-gap)">
+        <button class="ds-tab" [class.active]="financeSubTab() === 'kpis'"
+                (click)="setFinanceSubTab('kpis')" type="button">
+          <app-icon name="bar_chart" [size]="13"/>KPIs pendientes
+        </button>
+        <button class="ds-tab" [class.active]="financeSubTab() === 'vs'"
+                (click)="setFinanceSubTab('vs')" type="button">
+          <app-icon name="trending_up" [size]="13"/>Ventas vs Egresos
+        </button>
+      </div>
+
+      <!-- Loading skeleton -->
+      @if (financeLoading() && financeSubTab() === 'kpis') {
+        <div class="kpi-grid">
+          <div class="skel" style="height:120px"></div>
+          <div class="skel" style="height:120px"></div>
+          <div class="skel" style="height:120px"></div>
+          <div class="skel" style="height:120px"></div>
+        </div>
+        <div class="skel" style="height:280px"></div>
+      }
+
+      @if (!financeLoading() && financeSubTab() === 'kpis') {
+
+        <!-- ── KPI row ─────────────────────────────────────────────── -->
+        <div class="kpi-grid">
+
+          <!-- Saldo caja chica -->
+          <div class="kpi">
+            <div class="kpi-label">Saldo caja chica <span class="en">/ Petty cash</span></div>
+            @if (pettyCash()) {
+              <div class="kpi-value"
+                   [style.color]="pettyCashState() === 'danger' ? 'var(--danger)' :
+                                   pettyCashState() === 'warn'   ? 'var(--warn)'   : null">
+                <span class="cur">$</span>{{ pettyCash()!.current_balance | number:'1.2-2' }}
+              </div>
+              <div class="kpi-sub">
+                <span class="kpi-delta"
+                      [class.up]="pettyCashState() === 'ok'"
+                      [class.flat]="pettyCashState() === 'warn'"
+                      [class.down]="pettyCashState() === 'danger'">
+                  <app-icon name="wallet" [size]="11"/>{{ pettyCashPct() }}% del fondo
+                </span>
+                <span>Apertura: ${{ pettyCash()!.opening_amount | number:'1.2-2' }}</span>
+              </div>
+              <div style="margin-top:8px;background:var(--surface-2);border-radius:4px;height:5px;overflow:hidden">
+                <div [style.width.%]="pettyCashPct()"
+                     [style.background]="pettyCashState() === 'danger' ? 'var(--danger)' :
+                                          pettyCashState() === 'warn'   ? 'var(--warn)'   : 'var(--success)'"
+                     style="height:100%;border-radius:4px;transition:width .3s"></div>
+              </div>
+            } @else {
+              <div class="kpi-value" style="color:var(--text-subtle)">—</div>
+              <div class="kpi-sub">
+                <span class="kpi-delta flat"><app-icon name="alert_circle" [size]="11"/>Sin sesión activa</span>
+              </div>
+            }
+          </div>
+
+          <!-- Total por cobrar -->
+          <div class="kpi">
+            <div class="kpi-label">Total por cobrar <span class="en">/ Receivables</span></div>
+            <div class="kpi-value"
+                 [style.color]="pendingInvTotal() > 0 ? 'var(--warn)' : null">
+              <span class="cur">$</span>{{ pendingInvTotal() | number:'1.2-2' }}
+            </div>
+            <div class="kpi-sub">
+              <span class="kpi-delta" [class.flat]="pendingInvoices().length === 0" [class.down]="pendingInvoices().length > 0">
+                <app-icon name="receipt_long" [size]="11"/>{{ pendingInvoices().length }} factura{{ pendingInvoices().length !== 1 ? 's' : '' }}
+              </span>
+              <span>pendientes / parciales</span>
+            </div>
+          </div>
+
+          <!-- Egresos pendientes -->
+          <div class="kpi">
+            <div class="kpi-label">Egresos pendientes <span class="en">/ Payables</span></div>
+            <div class="kpi-value"
+                 [style.color]="pendingExpTotal() > 0 ? 'var(--danger)' : null">
+              <span class="cur">$</span>{{ pendingExpTotal() | number:'1.2-2' }}
+            </div>
+            <div class="kpi-sub">
+              <span class="kpi-delta" [class.flat]="pendingExpCount() === 0" [class.down]="pendingExpCount() > 0">
+                <app-icon name="trending_down" [size]="11"/>{{ pendingExpCount() }} egreso{{ pendingExpCount() !== 1 ? 's' : '' }}
+              </span>
+              <span>sin pagar completamente</span>
+            </div>
+          </div>
+
+          <!-- Balance neto -->
+          <div class="kpi">
+            <div class="kpi-label">Balance neto estimado <span class="en">/ Net</span></div>
+            <div class="kpi-value"
+                 [style.color]="(pendingInvTotal() - pendingExpTotal()) < 0 ? 'var(--danger)' : 'var(--success)'">
+              <span class="cur">$</span>{{ (pendingInvTotal() - pendingExpTotal()) | number:'1.2-2' }}
+            </div>
+            <div class="kpi-sub">
+              <span class="kpi-delta"
+                    [class.up]="(pendingInvTotal() - pendingExpTotal()) >= 0"
+                    [class.down]="(pendingInvTotal() - pendingExpTotal()) < 0">
+                <app-icon name="bar_chart" [size]="11"/>Por cobrar − Por pagar
+              </span>
+            </div>
+          </div>
+
+        </div><!-- /kpi-grid -->
+
+        <!-- ── Facturas pendientes de cobro ────────────────────────── -->
+        <div class="card" style="margin-top:var(--density-gap)">
+          <div class="card-head">
+            <div class="card-title">
+              Facturas por cobrar <span class="en">{{ pendingInvoices().length }} registros</span>
+            </div>
+            <a routerLink="/invoices" class="btn ghost sm">
+              Ver todas <app-icon name="chevron_right" [size]="12"/>
+            </a>
+          </div>
+          <div class="card-body p0">
+            @if (pendingInvoices().length === 0) {
+              <div style="padding:32px;text-align:center;color:var(--text-subtle);font-size:13px">
+                <app-icon name="check_circle" [size]="32" style="display:block;margin:0 auto 8px;opacity:.3"/>
+                Todas las facturas emitidas están cobradas
+              </div>
+            } @else {
+              <table class="ds-table">
+                <thead>
+                  <tr>
+                    <th>Factura</th>
+                    <th>Cliente</th>
+                    <th class="num">Total</th>
+                    <th class="num">Cobrado</th>
+                    <th class="num">Pendiente</th>
+                    <th>Estado cobro</th>
+                    <th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (inv of (pendingInvoices() | slice:0:10); track inv.id) {
+                    <tr class="row-link" [routerLink]="['/invoices', inv.id]">
+                      <td><span class="inv-num">{{ inv.invoice_number }}</span></td>
+                      <td>{{ $any(inv).customer?.full_name ?? 'Consumidor Final' }}</td>
+                      <td class="num mono">{{ formatCurrency(inv.total) }}</td>
+                      <td class="num mono" style="color:var(--success)">
+                        {{ formatCurrency(inv.amount_paid ?? 0) }}
+                      </td>
+                      <td class="num mono" style="color:var(--warn);font-weight:700">
+                        {{ formatCurrency(inv.amount_pending ?? inv.total) }}
+                      </td>
+                      <td>
+                        @if (inv.payment_status === 'PARCIAL') {
+                          <span class="badge warn"><span class="dot"></span>Parcial</span>
+                        } @else {
+                          <span class="badge neutral"><span class="dot"></span>Pendiente</span>
+                        }
+                      </td>
+                      <td class="date-cell">{{ inv.issue_date | date:'dd/MM/yy' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              @if (pendingInvoices().length > 10) {
+                <div style="padding:10px 16px;font-size:12px;color:var(--text-subtle);border-top:1px solid var(--border-ds)">
+                  Mostrando 10 de {{ pendingInvoices().length }}. <a routerLink="/invoices" style="color:var(--accent)">Ver todas →</a>
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+      } <!-- /!financeLoading && kpis -->
+
+      <!-- ═══════════════════════════════════════════════════════════
+           SUBTAB: VENTAS VS EGRESOS
+      ══════════════════════════════════════════════════════════════ -->
+      @if (financeSubTab() === 'vs') {
+
+        <!-- Selector de período -->
+        <div class="seg" style="margin-bottom:var(--density-gap)">
+          <button class="seg-btn" [class.active]="vsPeriod() === 'month'"
+                  (click)="setVsPeriod('month')" type="button">Este mes</button>
+          <button class="seg-btn" [class.active]="vsPeriod() === 'quarter'"
+                  (click)="setVsPeriod('quarter')" type="button">Últimos 3 meses</button>
+          <button class="seg-btn" [class.active]="vsPeriod() === 'year'"
+                  (click)="setVsPeriod('year')" type="button">Este año</button>
+        </div>
+
+        <!-- Loading skeleton VS -->
+        @if (vsLoading()) {
+          <div class="kpi-grid">
+            <div class="skel" style="height:120px"></div>
+            <div class="skel" style="height:120px"></div>
+            <div class="skel" style="height:120px"></div>
+          </div>
+          <div class="skel" style="height:260px;margin-top:var(--density-gap)"></div>
+        }
+
+        @if (!vsLoading()) {
+
+          <!-- KPI cards -->
+          <div class="kpi-grid" style="grid-template-columns:1fr 1fr 1fr">
+
+            <!-- Total ventas -->
+            <div class="kpi">
+              <div class="kpi-label">Total ventas <span class="en">/ Revenue</span></div>
+              <div class="kpi-value" style="color:var(--success)">
+                <span class="cur">$</span>{{ vsSalesTotal() | number:'1.2-2' }}
+              </div>
+              <div class="kpi-sub">
+                <span class="kpi-delta up">
+                  <app-icon name="receipt_long" [size]="11"/>{{ vsAllInvoices().length }} factura{{ vsAllInvoices().length !== 1 ? 's' : '' }} emitida{{ vsAllInvoices().length !== 1 ? 's' : '' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Total egresos -->
+            <div class="kpi">
+              <div class="kpi-label">Total egresos <span class="en">/ Expenses</span></div>
+              <div class="kpi-value" style="color:var(--danger)">
+                <span class="cur">$</span>{{ vsExpTotal() | number:'1.2-2' }}
+              </div>
+              <div class="kpi-sub">
+                <span class="kpi-delta" [class.flat]="vsAllExpenses().length === 0" [class.down]="vsAllExpenses().length > 0">
+                  <app-icon name="trending_down" [size]="11"/>{{ vsAllExpenses().length }} egreso{{ vsAllExpenses().length !== 1 ? 's' : '' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Balance -->
+            <div class="kpi">
+              <div class="kpi-label">Balance neto <span class="en">/ Net</span></div>
+              <div class="kpi-value"
+                   [style.color]="vsBalance() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                <span class="cur">$</span>{{ vsBalance() | number:'1.2-2' }}
+              </div>
+              <div class="kpi-sub">
+                <span class="kpi-delta"
+                      [class.up]="vsBalance() >= 0"
+                      [class.down]="vsBalance() < 0">
+                  <app-icon [name]="vsBalance() >= 0 ? 'trending_up' : 'trending_down'" [size]="11"/>
+                  {{ vsBalance() >= 0 ? 'A tu favor' : 'En tu contra' }}
+                </span>
+              </div>
+            </div>
+
+          </div><!-- /kpi-grid -->
+
+          <!-- Barra de ratio ventas/egresos -->
+          @if (vsSalesTotal() > 0 || vsExpTotal() > 0) {
+            <div class="card" style="margin-top:var(--density-gap);padding:16px 20px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Distribución ventas / egresos</div>
+                <div style="font-size:12px;color:var(--text-muted)">
+                  Ventas {{ (vsSalesTotal() + vsExpTotal()) > 0 ? ((vsSalesTotal() / (vsSalesTotal() + vsExpTotal())) * 100 | number:'1.0-0') : 0 }}%
+                  · Egresos {{ (vsSalesTotal() + vsExpTotal()) > 0 ? ((vsExpTotal() / (vsSalesTotal() + vsExpTotal())) * 100 | number:'1.0-0') : 0 }}%
+                </div>
+              </div>
+              <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--surface-2)">
+                @if (vsSalesTotal() > 0) {
+                  <div [style.width.%]="(vsSalesTotal() / (vsSalesTotal() + vsExpTotal())) * 100"
+                       style="background:var(--success);transition:width .4s"></div>
+                }
+                @if (vsExpTotal() > 0) {
+                  <div [style.width.%]="(vsExpTotal() / (vsSalesTotal() + vsExpTotal())) * 100"
+                       style="background:var(--danger);opacity:.7;transition:width .4s"></div>
+                }
+              </div>
+              <div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:var(--text-muted)">
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block"></span>Ventas
+                </span>
+                <span style="display:flex;align-items:center;gap:4px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--danger);opacity:.7;display:inline-block"></span>Egresos
+                </span>
+              </div>
+            </div>
+          }
+
+          <!-- Desglose mensual -->
+          @if (vsMonthly().length > 0) {
+            <div class="card" style="margin-top:var(--density-gap)">
+              <div class="card-head">
+                <div class="card-title">Desglose por mes</div>
+              </div>
+              <div class="card-body p0">
+                <table class="ds-table">
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th class="num">Ventas</th>
+                      <th class="num">Egresos</th>
+                      <th class="num">Balance</th>
+                      <th style="width:200px">Comparativa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of vsMonthly(); track row.label) {
+                      <tr>
+                        <td><strong>{{ row.label }}</strong></td>
+                        <td class="num mono" style="color:var(--success)">{{ formatCurrency(row.sales) }}</td>
+                        <td class="num mono" style="color:var(--danger)">{{ formatCurrency(row.exp) }}</td>
+                        <td class="num mono"
+                            [style.color]="(row.sales - row.exp) >= 0 ? 'var(--success)' : 'var(--danger)'"
+                            style="font-weight:700">
+                          {{ formatCurrency(row.sales - row.exp) }}
+                        </td>
+                        <td>
+                          <div style="display:flex;flex-direction:column;gap:3px">
+                            <!-- Barra ventas -->
+                            <div style="display:flex;align-items:center;gap:4px">
+                              <div style="width:100%;background:var(--surface-2);border-radius:3px;height:6px;overflow:hidden">
+                                <div [style.width.%]="vsChartMax() > 0 ? (row.sales / vsChartMax()) * 100 : 0"
+                                     style="height:100%;background:var(--success);border-radius:3px;transition:width .3s"></div>
+                              </div>
+                            </div>
+                            <!-- Barra egresos -->
+                            <div style="display:flex;align-items:center;gap:4px">
+                              <div style="width:100%;background:var(--surface-2);border-radius:3px;height:6px;overflow:hidden">
+                                <div [style.width.%]="vsChartMax() > 0 ? (row.exp / vsChartMax()) * 100 : 0"
+                                     style="height:100%;background:var(--danger);opacity:.7;border-radius:3px;transition:width .3s"></div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr style="background:var(--surface-2)">
+                      <td><strong>Total</strong></td>
+                      <td class="num mono" style="color:var(--success);font-weight:700">{{ formatCurrency(vsSalesTotal()) }}</td>
+                      <td class="num mono" style="color:var(--danger);font-weight:700">{{ formatCurrency(vsExpTotal()) }}</td>
+                      <td class="num mono"
+                          [style.color]="vsBalance() >= 0 ? 'var(--success)' : 'var(--danger)'"
+                          style="font-weight:700">{{ formatCurrency(vsBalance()) }}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          }
+
+          @if (vsAllInvoices().length === 0 && vsAllExpenses().length === 0) {
+            <div style="padding:48px;text-align:center;color:var(--text-subtle);font-size:13px">
+              <app-icon name="bar_chart" [size]="40" style="display:block;margin:0 auto 12px;opacity:.2"/>
+              Sin datos para el período seleccionado
+            </div>
+          }
+
+        } <!-- /!vsLoading -->
+
+      } <!-- /subtab vs -->
+
+    } <!-- /hasFinance -->
+
+  } <!-- /vista finance -->
 
 </div>

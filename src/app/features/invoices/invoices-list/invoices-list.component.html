@@ -9,7 +9,7 @@
       </div>
     </div>
     <div class="page-actions">
-      <button class="btn secondary" type="button">
+      <button class="btn secondary" type="button" (click)="exportCsv()">
         <app-icon name="download" [size]="14"/>Exportar CSV
       </button>
       @if (!authService.isStoreWarehouse()) {

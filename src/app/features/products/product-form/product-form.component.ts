@@ -7,8 +7,11 @@ import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.c
 import { ProductsService } from '../../../core/services/products.service';
 import { SuppliersService } from '../../../core/services/suppliers.service';
 import { TaxRatesService } from '../../../core/services/tax-rates.service';
+import { ExpensesService } from '../../../core/services/expenses.service';
+import { ExpenseCategoriesService } from '../../../core/services/expense-categories.service';
 import { Supplier } from '../../../core/models/supplier.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
+import { ExpenseCategory } from '../../../core/models/expense-category.model';
 
 @Component({
   selector: 'app-product-form',
@@ -25,11 +28,15 @@ export class ProductFormComponent implements OnInit {
   private taxRatesService = inject(TaxRatesService);
   private snackBar = inject(MatSnackBar);
 
+  private expenseSvc = inject(ExpensesService);
+  private catSvc     = inject(ExpenseCategoriesService);
+
   loading = signal(false);
   saving = signal(false);
   productId = signal<string | null>(null);
   suppliers = signal<Supplier[]>([]);
-  taxRates = signal<TaxRate[]>([]);
+  taxRates  = signal<TaxRate[]>([]);
+  private inventarioCategory = signal<ExpenseCategory | null>(null);
 
   form = this.fb.group({
     name:           ['', [Validators.required, Validators.minLength(2)]],
@@ -53,6 +60,13 @@ export class ProductFormComponent implements OnInit {
   ngOnInit(): void {
     this.suppliersService.list({ limit: 100 }).subscribe(res => this.suppliers.set(res.data));
     this.taxRatesService.list({ limit: 100 }).subscribe(res => this.taxRates.set(res.data));
+    this.catSvc.list({ limit: 500 }).subscribe({
+      next: cats => {
+        const cat = cats.find(c => c.is_active && c.category_type === 'INVENTARIO') ?? null;
+        this.inventarioCategory.set(cat);
+      },
+      error: () => {},
+    });
 
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
@@ -106,8 +120,28 @@ export class ProductFormComponent implements OnInit {
       : this.productsService.create(dto);
 
     obs.subscribe({
-      next: () => {
+      next: (product) => {
         this.snackBar.open(this.isEdit ? 'Producto actualizado' : 'Producto creado', 'OK', { duration: 3000 });
+
+        // Auto-register inventory expense on new product with initial stock
+        const cat = this.inventarioCategory();
+        const pp  = v.purchase_price ?? 0;
+        const stk = v.stock ?? 0;
+        if (!this.isEdit && cat && pp > 0 && stk > 0) {
+          const amount = +(pp * stk).toFixed(2);
+          this.expenseSvc.create({
+            category_id:        cat.id,
+            description:        `Adquisición de producto: ${v.name}`,
+            amount,
+            ...(v.supplier_id
+              ? { supplier_id: v.supplier_id }
+              : { supplier_name_free: 'Sin proveedor' }),
+            expense_date:       new Date().toISOString().slice(0, 10),
+          }).subscribe({
+            error: () => this.snackBar.open('Producto creado pero no se pudo registrar el egreso de inventario', 'OK', { duration: 4000 }),
+          });
+        }
+
         this.router.navigate(['/products']);
       },
       error: (err) => {

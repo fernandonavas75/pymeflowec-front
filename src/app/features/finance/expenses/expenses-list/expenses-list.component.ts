@@ -73,6 +73,23 @@ export class ExpensesListComponent implements OnInit {
   payFormLoading  = signal(false);
   payMethodSig    = signal<PaymentMethod>('EFECTIVO');
 
+  drawerAmountPaid = computed(() => {
+    const exp = this.selected();
+    if (!exp) return 0;
+    return parseFloat(
+      this.payments()
+        .filter(p => p.status !== 'ANULADO')
+        .reduce((s, p) => s + +p.amount, 0)
+        .toFixed(2)
+    );
+  });
+
+  drawerAmountPending = computed(() => {
+    const exp = this.selected();
+    if (!exp) return 0;
+    return parseFloat(Math.max(0, +exp.amount - this.drawerAmountPaid()).toFixed(2));
+  });
+
   payForm = new FormGroup({
     amount:             new FormControl<number | null>(null, [Validators.required, Validators.min(0.01)]),
     payment_method:     new FormControl<PaymentMethod>('EFECTIVO', { nonNullable: true, validators: Validators.required }),
@@ -112,6 +129,7 @@ export class ExpensesListComponent implements OnInit {
   pagadoCount    = computed(() => this.allExpenses().filter(e => e.payment_status === 'PAGADO').length);
   anulCount      = computed(() => this.allExpenses().filter(e => e.payment_status === 'ANULADO').length);
   totalCount     = computed(() => this.allExpenses().length);
+  activeCategories = computed(() => this.categories().filter(c => c.is_active));
 
   hasFilters = computed(() =>
     !!(this.searchQuery() || this.dateFrom() || this.dateTo() || this.categoryFilter()),
@@ -225,7 +243,7 @@ export class ExpensesListComponent implements OnInit {
   openPayForm(): void {
     const exp = this.selected();
     if (!exp) return;
-    const pending = parseFloat((+(exp.amount_pending ?? exp.amount)).toFixed(2));
+    const pending = this.drawerAmountPending();
     this.payForm.reset({ payment_method: 'EFECTIVO', payment_date: '', notes: '', transfer_reference: '', card_contrapartida: '', cheque_number: '' });
     this.payForm.get('amount')!.setValidators([Validators.required, Validators.min(0.01), Validators.max(pending)]);
     this.payForm.get('amount')!.setValue(pending > 0 ? pending : null);

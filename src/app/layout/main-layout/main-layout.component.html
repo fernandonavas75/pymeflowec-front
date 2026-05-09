@@ -1,5 +1,10 @@
 <div class="app" [attr.data-sidebar]="sidebarCollapsed() ? 'icons' : 'labels'">
   <app-sidebar [collapsed]="sidebarCollapsed()" />
+
+  @if (!sidebarCollapsed()) {
+    <div class="mobile-sidebar-backdrop" (click)="closeSidebar()"></div>
+  }
+
   <app-topbar
     [sidebarCollapsed]="sidebarCollapsed()"
     (toggleSidebar)="toggleSidebar()"

@@ -1,0 +1,1922 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Dashboard Financiero</div>
+      <div class="page-sub-en">Finance · Visión integral de las finanzas</div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────── -->
+  <div class="ds-tabs">
+    @for (tab of tabs; track tab.id) {
+      <button
+        class="ds-tab"
+        type="button"
+        [class.active]="activeTab() === tab.id"
+        (click)="activeTab.set(tab.id)">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Ingresos
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'ingresos') {
+
+    @if (ingresosLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando ingresos…
+      </div>
+    } @else {
+
+      <!-- KPI strip -->
+      <div class="cxc-kpi-strip" style="margin-top:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total facturado</div>
+          <div class="cxc-kpi-value">${{ ingresosTotalFacturado() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">{{ ingresosNumFacturas() }} facturas emitidas</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total cobrado</div>
+          <div class="cxc-kpi-value" style="color:var(--success)">${{ ingresosTotalCobrado() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">efectivo recibido</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Por cobrar</div>
+          <div class="cxc-kpi-value" style="color:var(--warn)">${{ ingresosTotalPendiente() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">pendiente de cobro</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Ticket promedio</div>
+          <div class="cxc-kpi-value">${{ ingresosTicketPromedio() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">por factura emitida</div>
+        </div>
+
+      </div>
+
+      <!-- Chart card -->
+      <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:20px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
+            Ventas por período
+          </span>
+          <div class="seg">
+            <button class="seg-btn" type="button"
+              [class.active]="ingresosPeriod() === 'semana'"
+              (click)="ingresosPeriod.set('semana')">Semana</button>
+            <button class="seg-btn" type="button"
+              [class.active]="ingresosPeriod() === '30dias'"
+              (click)="ingresosPeriod.set('30dias')">30 días</button>
+            <button class="seg-btn" type="button"
+              [class.active]="ingresosPeriod() === 'mes'"
+              (click)="ingresosPeriod.set('mes')">Este mes</button>
+            <button class="seg-btn" type="button"
+              [class.active]="ingresosPeriod() === 'anual'"
+              (click)="ingresosPeriod.set('anual')">12 meses</button>
+          </div>
+        </div>
+
+        <svg viewBox="0 0 600 130" style="width:100%;height:130px;overflow:visible;display:block">
+          <line x1="0" y1="100" x2="600" y2="100" stroke="var(--border-ds)" stroke-width="1"/>
+          <line x1="0" y1="66"  x2="600" y2="66"  stroke="var(--border-ds)" stroke-width="0.5" stroke-dasharray="4,4"/>
+          <line x1="0" y1="33"  x2="600" y2="33"  stroke="var(--border-ds)" stroke-width="0.5" stroke-dasharray="4,4"/>
+
+          @for (bar of ingresosChartBars(); track $index) {
+            <rect
+              [attr.x]="bar.x" [attr.y]="bar.y"
+              [attr.width]="bar.w" [attr.height]="bar.h"
+              fill="var(--accent)" rx="2"
+              [attr.fill-opacity]="bar.val > 0 ? 0.9 : 0.12">
+              <title>{{ bar.label || ($index + 1) }}: ${{ bar.val | number:'1.2-2' }}</title>
+            </rect>
+            @if (bar.label) {
+              <text [attr.x]="bar.x + bar.w / 2" y="118"
+                text-anchor="middle" font-size="8" fill="var(--text-subtle)">{{ bar.label }}</text>
+            }
+          }
+
+          @if (ingresosChartEmpty()) {
+            <text x="300" y="60" text-anchor="middle" font-size="12" fill="var(--text-subtle)">
+              Sin facturas emitidas en el período
+            </text>
+          }
+        </svg>
+      </div>
+
+      <!-- Payment method breakdown -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Efectivo</div>
+          <div class="cxc-kpi-value" style="font-size:1.1rem">${{ ingresosEfectivo() | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Transferencia</div>
+          <div class="cxc-kpi-value" style="font-size:1.1rem">${{ ingresosTransferencia() | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Tarjeta</div>
+          <div class="cxc-kpi-value" style="font-size:1.1rem">${{ ingresosTarjeta() | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Cheque</div>
+          <div class="cxc-kpi-value" style="font-size:1.1rem">${{ ingresosCheque() | number:'1.2-2' }}</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Otro</div>
+          <div class="cxc-kpi-value" style="font-size:1.1rem">${{ ingresosOtro() | number:'1.2-2' }}</div>
+        </div>
+
+      </div>
+
+      <!-- Filters -->
+      <div class="filters" style="margin-bottom:0">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13"/>
+          <input placeholder="Buscar por N° factura o cliente…" [formControl]="ingresosSearchCtrl"/>
+        </div>
+        <input class="m-input" type="date" [formControl]="ingresosDateFromCtrl"
+          style="padding:5px 8px;font-size:0.8rem" title="Desde">
+        <input class="m-input" type="date" [formControl]="ingresosDateToCtrl"
+          style="padding:5px 8px;font-size:0.8rem" title="Hasta">
+        <button class="btn ghost" type="button" (click)="clearIngresosFilters()">
+          <app-icon name="x" [size]="13"/>Limpiar
+        </button>
+        <button class="btn ghost" type="button" (click)="reloadIngresos()" style="margin-left:auto">
+          <app-icon name="refresh_cw" [size]="13"/>Actualizar
+        </button>
+        <span style="font-size:0.78rem;color:var(--text-muted)">
+          {{ ingresosFiltered().length }} resultado{{ ingresosFiltered().length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- Table -->
+      @if (ingresosFiltered().length === 0) {
+        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
+          No hay facturas emitidas en el período seleccionado.
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>N° Factura</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th style="text-align:right">Subtotal</th>
+              <th style="text-align:right">IVA</th>
+              <th style="text-align:right">Total</th>
+              <th style="text-align:right">Cobrado</th>
+              <th style="text-align:right">Pendiente</th>
+              <th>Estado cobro</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of ingresosFiltered(); track inv.id) {
+              <tr>
+                <td>
+                  <span class="badge" style="background:var(--surface-2);color:var(--text);font-family:var(--font-mono)">
+                    {{ inv.invoice_number }}
+                  </span>
+                </td>
+                <td>{{ inv.customer?.full_name ?? '—' }}</td>
+                <td style="white-space:nowrap">{{ formatDate(inv.issue_date) }}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums">${{ +inv.subtotal | number:'1.2-2' }}</td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums">${{ +inv.tax_amount | number:'1.2-2' }}</td>
+                <td style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">${{ +inv.total | number:'1.2-2' }}</td>
+                <td style="text-align:right;color:var(--success);font-variant-numeric:tabular-nums">
+                  ${{ +(inv.amount_paid ?? 0) | number:'1.2-2' }}
+                </td>
+                <td style="text-align:right;font-variant-numeric:tabular-nums">
+                  @if (+(inv.amount_pending ?? 0) > 0) {
+                    <span style="color:var(--warn)">${{ +(inv.amount_pending ?? 0) | number:'1.2-2' }}</span>
+                  } @else {
+                    <span style="color:var(--text-subtle)">—</span>
+                  }
+                </td>
+                <td>
+                  @switch (inv.payment_status) {
+                    @case ('COBRADO')   { <span class="badge" style="background:var(--success-soft);color:var(--success)">Cobrado</span> }
+                    @case ('PARCIAL')   { <span class="badge" style="background:var(--warn-soft);color:var(--warn)">Parcial</span> }
+                    @case ('PENDIENTE') { <span class="badge" style="background:var(--danger-soft);color:var(--danger)">Pendiente</span> }
+                    @default            { <span class="badge">—</span> }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" style="font-weight:600;color:var(--text-muted)">Total período</td>
+              <td style="text-align:right;font-weight:700;font-variant-numeric:tabular-nums">
+                ${{ ingresosTotalFacturado() | number:'1.2-2' }}
+              </td>
+              <td style="text-align:right;font-weight:700;color:var(--success);font-variant-numeric:tabular-nums">
+                ${{ ingresosTotalCobrado() | number:'1.2-2' }}
+              </td>
+              <td style="text-align:right;font-weight:700;color:var(--warn);font-variant-numeric:tabular-nums">
+                ${{ ingresosTotalPendiente() | number:'1.2-2' }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      }
+
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Cuentas por Cobrar
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'cxc') {
+
+    <!-- Loading spinner -->
+    @if (cxcLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando cuentas por cobrar…
+      </div>
+    } @else {
+
+      <!-- ── KPI strip ─────────────────────────────────────────────── -->
+      <div class="cxc-kpi-strip" style="margin-top:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total por cobrar</div>
+          <div class="cxc-kpi-value" style="color:var(--warn)">
+            ${{ cxcTotalPending() | number:'1.2-2' }}
+          </div>
+          <div class="cxc-kpi-sub">monto pendiente acumulado</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Facturas pendientes</div>
+          <div class="cxc-kpi-value">{{ cxcPendingCount() }}</div>
+          <div class="cxc-kpi-sub">sin ningún cobro aún</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Facturas parciales</div>
+          <div class="cxc-kpi-value">{{ cxcParcialCount() }}</div>
+          <div class="cxc-kpi-sub">con cobros parciales</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Clientes con deuda</div>
+          <div class="cxc-kpi-value">{{ cxcUniqueClients() }}</div>
+          <div class="cxc-kpi-sub">promedio ${{ cxcAvgPending() | number:'1.2-2' }}</div>
+        </div>
+
+      </div>
+
+      <!-- ── Chart + Summary ────────────────────────────────────────── -->
+      <div class="cxc-top-row">
+
+        <!-- Donut chart -->
+        <div class="pie-card">
+          <div class="pie-card-title">Distribución de deuda</div>
+
+          @if (cxcHasData()) {
+            <div class="pie-wrap">
+              <svg viewBox="0 0 100 100" style="width:100%;height:100%">
+                <!-- Background track -->
+                <circle cx="50" cy="50" r="38" fill="none"
+                  stroke="var(--border-ds)" stroke-width="13"/>
+                <!-- PENDIENTE segment (warn/orange) -->
+                <circle cx="50" cy="50" r="38" fill="none"
+                  stroke="var(--warn)" stroke-width="13"
+                  [attr.stroke-dasharray]="cxcPendingLen() + ' ' + DONUT_CIRC"
+                  stroke-dashoffset="0"
+                  stroke-linecap="butt"
+                  transform="rotate(-90 50 50)"/>
+                <!-- PARCIAL segment (accent/blue) -->
+                <circle cx="50" cy="50" r="38" fill="none"
+                  stroke="var(--accent)" stroke-width="13"
+                  [attr.stroke-dasharray]="cxcParcialLen() + ' ' + DONUT_CIRC"
+                  [attr.stroke-dashoffset]="-cxcPendingLen()"
+                  stroke-linecap="butt"
+                  transform="rotate(-90 50 50)"/>
+              </svg>
+              <div class="pie-center">
+                <span class="pie-center-val">{{ cxcPendingCount() + cxcParcialCount() }}</span>
+                <span class="pie-center-label">facturas</span>
+              </div>
+            </div>
+
+            <div class="pie-legend">
+              <div class="pie-legend-item">
+                <span class="pie-legend-dot" style="background:var(--warn)"></span>
+                <div class="pie-legend-text">
+                  <div class="pie-legend-name">Pendiente</div>
+                  <div class="pie-legend-val">{{ cxcPendingCount() }} ({{ cxcPendingPct() }}%)</div>
+                </div>
+              </div>
+              <div class="pie-legend-item">
+                <span class="pie-legend-dot" style="background:var(--accent)"></span>
+                <div class="pie-legend-text">
+                  <div class="pie-legend-name">Parcial</div>
+                  <div class="pie-legend-val">{{ cxcParcialCount() }} ({{ cxcParcialPct() }}%)</div>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="pie-empty">
+              <app-icon name="check_circle" [size]="32" style="color:var(--success)"/>
+              <span>Sin cuentas<br>por cobrar</span>
+            </div>
+          }
+        </div>
+
+        <!-- Summary card -->
+        <div class="cxc-summary-card">
+          <div class="cxc-summary-title">Resumen de cobranza</div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <span class="pie-legend-dot" style="background:var(--warn);display:inline-block"></span>
+              Pendiente de cobro total
+            </span>
+            <span class="cxc-summary-val" style="color:var(--warn)">${{ cxcTotalPending() | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="receipt" [size]="13"/>
+              Facturas sin cobrar
+            </span>
+            <span class="cxc-summary-val">{{ cxcPendingCount() + cxcParcialCount() }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="users" [size]="13"/>
+              Clientes con deuda
+            </span>
+            <span class="cxc-summary-val">{{ cxcUniqueClients() }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="trending_down" [size]="13"/>
+              Promedio por factura
+            </span>
+            <span class="cxc-summary-val">${{ cxcAvgPending() | number:'1.2-2' }}</span>
+          </div>
+
+          <div style="margin-top:auto;padding-top:8px">
+            <button class="btn secondary" type="button" style="width:100%;justify-content:center" (click)="reloadCxc()">
+              <app-icon name="refresh_cw" [size]="13"/>Actualizar datos
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Filters ─────────────────────────────────────────────────── -->
+      <div class="filters" style="margin-bottom:0">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13"/>
+          <input placeholder="Buscar por N° factura o cliente…" [formControl]="cxcSearchCtrl"/>
+        </div>
+        <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
+          {{ cxcFiltered().length }} resultado{{ cxcFiltered().length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- ── Table ──────────────────────────────────────────────────── -->
+      @if (cxcFiltered().length === 0 && !cxcLoading()) {
+        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
+          @if (cxcTotalPending() === 0) {
+            <app-icon name="check_circle" [size]="36" style="color:var(--success);display:block;margin:0 auto 12px"/>
+            No hay cuentas por cobrar pendientes.
+          } @else {
+            Sin resultados para la búsqueda.
+          }
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>N° Factura</th>
+              <th style="text-align:right">Total</th>
+              <th style="text-align:right">Cobrado</th>
+              <th style="text-align:right">Pendiente</th>
+              <th>Estado</th>
+              <th>Emisión</th>
+              <th>Vence (est.)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of cxcFiltered(); track inv.id) {
+              <tr (click)="selectCxcInvoice(inv)" style="cursor:pointer">
+                <td>
+                  <span style="font-weight:500;color:var(--text)">{{ inv.customer?.full_name ?? '—' }}</span>
+                </td>
+                <td>
+                  <span style="font-family:var(--font-mono);font-size:0.82rem">{{ inv.invoice_number }}</span>
+                </td>
+                <td style="text-align:right;font-weight:600">${{ inv.total | number:'1.2-2' }}</td>
+                <td style="text-align:right;color:var(--success)">
+                  ${{ (inv.amount_paid ?? 0) | number:'1.2-2' }}
+                </td>
+                <td style="text-align:right;color:var(--warn);font-weight:600">
+                  ${{ (inv.amount_pending ?? 0) | number:'1.2-2' }}
+                </td>
+                <td>
+                  @if (inv.payment_status === 'PENDIENTE') {
+                    <span class="badge warn">Pendiente</span>
+                  } @else if (inv.payment_status === 'PARCIAL') {
+                    <span class="badge accent">Parcial</span>
+                  }
+                </td>
+                <td style="color:var(--text-muted);font-size:0.8rem">{{ formatDate(inv.issue_date) }}</td>
+                <td style="font-size:0.78rem;color:var(--text-subtle)">
+                  {{ dueDate(inv.issue_date) }}
+                  <span style="font-size:0.65rem;color:var(--text-subtle)"> est.</span>
+                </td>
+                <td (click)="$event.stopPropagation()">
+                  <button class="cxc-row-btn" type="button" (click)="selectCxcInvoice(inv)">
+                    Registrar cobro
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Cuentas por Pagar
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'cxp') {
+
+    @if (cxpLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando cuentas por pagar…
+      </div>
+    } @else {
+
+      <!-- ── KPI strip ─────────────────────────────────────────────── -->
+      <div class="cxc-kpi-strip" style="margin-top:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total por pagar</div>
+          <div class="cxc-kpi-value" style="color:var(--danger)">
+            ${{ cxpTotalPending() | number:'1.2-2' }}
+          </div>
+          <div class="cxc-kpi-sub">monto pendiente acumulado</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Egresos pendientes</div>
+          <div class="cxc-kpi-value">{{ cxpPendingCount() }}</div>
+          <div class="cxc-kpi-sub">sin ningún pago aún</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Egresos parciales</div>
+          <div class="cxc-kpi-value">{{ cxpParcialCount() }}</div>
+          <div class="cxc-kpi-sub">con pagos parciales</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Proveedores con deuda</div>
+          <div class="cxc-kpi-value">{{ cxpUniqueSuppliers() }}</div>
+          <div class="cxc-kpi-sub">promedio ${{ cxpAvgPending() | number:'1.2-2' }}</div>
+        </div>
+
+      </div>
+
+      <!-- ── Chart + Summary ────────────────────────────────────────── -->
+      <div class="cxc-top-row">
+
+        <!-- Donut chart -->
+        <div class="pie-card">
+          <div class="pie-card-title">Distribución de deuda</div>
+
+          @if (cxpHasData()) {
+            <div class="pie-wrap">
+              <svg viewBox="0 0 100 100" style="width:100%;height:100%">
+                <circle cx="50" cy="50" r="38" fill="none"
+                  stroke="var(--border-ds)" stroke-width="13"/>
+                <circle cx="50" cy="50" r="38" fill="none"
+                  stroke="var(--danger)" stroke-width="13"
+                  [attr.stroke-dasharray]="cxpPendingLen() + ' ' + DONUT_CIRC"
+                  stroke-dashoffset="0"
+                  stroke-linecap="butt"
+                  transform="rotate(-90 50 50)"/>
+                <circle cx="50" cy="50" r="38" fill="none"
+                  stroke="var(--warn)" stroke-width="13"
+                  [attr.stroke-dasharray]="cxpParcialLen() + ' ' + DONUT_CIRC"
+                  [attr.stroke-dashoffset]="-cxpPendingLen()"
+                  stroke-linecap="butt"
+                  transform="rotate(-90 50 50)"/>
+              </svg>
+              <div class="pie-center">
+                <span class="pie-center-val">{{ cxpPendingCount() + cxpParcialCount() }}</span>
+                <span class="pie-center-label">egresos</span>
+              </div>
+            </div>
+
+            <div class="pie-legend">
+              <div class="pie-legend-item">
+                <span class="pie-legend-dot" style="background:var(--danger)"></span>
+                <div class="pie-legend-text">
+                  <div class="pie-legend-name">Pendiente</div>
+                  <div class="pie-legend-val">{{ cxpPendingCount() }} ({{ cxpPendingPct() }}%)</div>
+                </div>
+              </div>
+              <div class="pie-legend-item">
+                <span class="pie-legend-dot" style="background:var(--warn)"></span>
+                <div class="pie-legend-text">
+                  <div class="pie-legend-name">Parcial</div>
+                  <div class="pie-legend-val">{{ cxpParcialCount() }} ({{ cxpParcialPct() }}%)</div>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="pie-empty">
+              <app-icon name="check_circle" [size]="32" style="color:var(--success)"/>
+              <span>Sin cuentas<br>por pagar</span>
+            </div>
+          }
+        </div>
+
+        <!-- Summary card -->
+        <div class="cxc-summary-card">
+          <div class="cxc-summary-title">Resumen de pagos</div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <span class="pie-legend-dot" style="background:var(--danger);display:inline-block"></span>
+              Pendiente de pago total
+            </span>
+            <span class="cxc-summary-val" style="color:var(--danger)">${{ cxpTotalPending() | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="file_text" [size]="13"/>
+              Egresos sin pagar
+            </span>
+            <span class="cxc-summary-val">{{ cxpPendingCount() + cxpParcialCount() }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="truck" [size]="13"/>
+              Proveedores con deuda
+            </span>
+            <span class="cxc-summary-val">{{ cxpUniqueSuppliers() }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="trending_down" [size]="13"/>
+              Promedio por egreso
+            </span>
+            <span class="cxc-summary-val">${{ cxpAvgPending() | number:'1.2-2' }}</span>
+          </div>
+
+          <div style="margin-top:auto;padding-top:8px">
+            <button class="btn secondary" type="button" style="width:100%;justify-content:center" (click)="reloadCxp()">
+              <app-icon name="refresh_cw" [size]="13"/>Actualizar datos
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Filters ─────────────────────────────────────────────────── -->
+      <div class="filters" style="margin-bottom:0">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13"/>
+          <input placeholder="Buscar por descripción, proveedor o categoría…" [formControl]="cxpSearchCtrl"/>
+        </div>
+        <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
+          {{ cxpFiltered().length }} resultado{{ cxpFiltered().length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- ── Table ──────────────────────────────────────────────────── -->
+      @if (cxpFiltered().length === 0 && !cxpLoading()) {
+        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
+          @if (cxpTotalPending() === 0) {
+            <app-icon name="check_circle" [size]="36" style="color:var(--success);display:block;margin:0 auto 12px"/>
+            No hay cuentas por pagar pendientes.
+          } @else {
+            Sin resultados para la búsqueda.
+          }
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>Descripción</th>
+              <th>Categoría</th>
+              <th style="text-align:right">Monto</th>
+              <th style="text-align:right">Pagado</th>
+              <th style="text-align:right">Pendiente</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th>Límite (est.)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (exp of cxpFiltered(); track exp.id) {
+              <tr (click)="selectCxpExpense(exp)" style="cursor:pointer">
+                <td>
+                  <span style="font-weight:500;color:var(--text)">
+                    {{ exp.supplier?.name ?? exp.supplier_name_free ?? '—' }}
+                  </span>
+                </td>
+                <td style="max-width:200px">
+                  <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                    {{ exp.description }}
+                  </span>
+                </td>
+                <td>
+                  <span style="font-size:0.78rem;color:var(--text-muted)">{{ exp.category?.name ?? '—' }}</span>
+                </td>
+                <td style="text-align:right;font-weight:600">${{ exp.amount | number:'1.2-2' }}</td>
+                <td style="text-align:right;color:var(--success)">
+                  ${{ (exp.amount_paid ?? 0) | number:'1.2-2' }}
+                </td>
+                <td style="text-align:right;color:var(--danger);font-weight:600">
+                  ${{ (exp.amount_pending ?? exp.amount) | number:'1.2-2' }}
+                </td>
+                <td>
+                  @if (exp.payment_status === 'PENDIENTE') {
+                    <span class="badge danger">Pendiente</span>
+                  } @else if (exp.payment_status === 'PARCIAL') {
+                    <span class="badge warn">Parcial</span>
+                  }
+                </td>
+                <td style="color:var(--text-muted);font-size:0.8rem">
+                  {{ exp.expense_date ? formatDate(exp.expense_date) : '—' }}
+                </td>
+                <td style="font-size:0.78rem;color:var(--text-subtle)">
+                  {{ exp.expense_date ? dueDate(exp.expense_date) : '—' }}
+                  @if (exp.expense_date) {
+                    <span style="font-size:0.65rem;color:var(--text-subtle)"> est.</span>
+                  }
+                </td>
+                <td (click)="$event.stopPropagation()">
+                  <button class="cxc-row-btn" type="button" (click)="selectCxpExpense(exp)">
+                    Registrar pago
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Ventas
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'ventas') {
+
+    @if (ventasLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando ventas…
+      </div>
+    } @else {
+
+      <!-- ── KPI strip ─────────────────────────────────────────────── -->
+      <div class="cxc-kpi-strip" style="margin-top:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total facturado</div>
+          <div class="cxc-kpi-value" style="color:var(--success)">${{ ventasTotalFacturado() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">período seleccionado</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Facturas emitidas</div>
+          <div class="cxc-kpi-value">{{ ventasNumFacturas() }}</div>
+          <div class="cxc-kpi-sub">en el período</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Ticket promedio</div>
+          <div class="cxc-kpi-value">${{ ventasTicketPromedio() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">por factura</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Clientes distintos</div>
+          <div class="cxc-kpi-value">{{ ventasClientesUnicos() }}</div>
+          <div class="cxc-kpi-sub">en el período</div>
+        </div>
+
+      </div>
+
+      <!-- ── Top producto + Gráfico ────────────────────────────────── -->
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;margin-bottom:16px;align-items:start">
+
+        <!-- Top producto del mes -->
+        <div class="pie-card">
+          <div class="pie-card-title">Top producto · este mes</div>
+
+          @if (ventasDetailsLoading()) {
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0;color:var(--text-muted)">
+              <app-icon name="loader" [size]="20"/>
+              <span style="font-size:0.78rem">Analizando ventas…</span>
+            </div>
+          } @else if (ventasTopProduct()) {
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:38px;height:38px;border-radius:var(--radius-sm-ds);background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <app-icon name="star" [size]="20" style="color:var(--accent)"/>
+                </div>
+                <div style="min-width:0">
+                  <div style="font-weight:700;font-size:0.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                       [title]="ventasTopProduct()!.name">
+                    {{ ventasTopProduct()!.name }}
+                  </div>
+                  <div style="font-size:0.7rem;color:var(--text-muted)">más vendido este mes</div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div style="background:var(--surface-2);border-radius:var(--radius-sm-ds);padding:8px 10px">
+                  <div style="font-size:0.66rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-subtle);margin-bottom:2px">Unidades</div>
+                  <div style="font-size:1.1rem;font-weight:700;color:var(--text)">{{ ventasTopProduct()!.qty }}</div>
+                </div>
+                <div style="background:var(--surface-2);border-radius:var(--radius-sm-ds);padding:8px 10px">
+                  <div style="font-size:0.66rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-subtle);margin-bottom:2px">Ingresos</div>
+                  <div style="font-size:0.95rem;font-weight:700;color:var(--success)">${{ ventasTopProduct()!.total | number:'1.2-2' }}</div>
+                </div>
+              </div>
+            </div>
+          } @else {
+            <div class="pie-empty">
+              <app-icon name="package" [size]="28" style="color:var(--text-subtle)"/>
+              <span>Sin datos<br>este mes</span>
+            </div>
+          }
+        </div>
+
+        <!-- Gráfico de barras -->
+        <div class="pie-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="pie-card-title" style="margin-bottom:0">Ventas por período</div>
+            <div class="seg">
+              <button class="seg-btn" type="button" [class.active]="ventasPeriod()==='semana'"  (click)="ventasPeriod.set('semana')">Semana</button>
+              <button class="seg-btn" type="button" [class.active]="ventasPeriod()==='30dias'"  (click)="ventasPeriod.set('30dias')">30 días</button>
+              <button class="seg-btn" type="button" [class.active]="ventasPeriod()==='anual'"   (click)="ventasPeriod.set('anual')">Anual</button>
+            </div>
+          </div>
+
+          @if (ventasChartMaxVal() === 0) {
+            <div class="pie-empty" style="padding:32px 0">
+              <app-icon name="bar_chart" [size]="32" style="color:var(--text-subtle)"/>
+              <span>Sin ventas en este período</span>
+            </div>
+          } @else {
+            <div style="font-size:0.68rem;color:var(--text-subtle);text-align:right;margin-bottom:2px">
+              Máx: ${{ ventasChartMaxVal() | number:'1.0-0' }}
+            </div>
+            <svg viewBox="0 0 600 130" style="width:100%;display:block;overflow:visible">
+              <line x1="10" y1="100" x2="590" y2="100" stroke="var(--border-ds)" stroke-width="1"/>
+              @for (bar of ventasChartBars(); track bar.x) {
+                <rect
+                  [attr.x]="bar.x" [attr.y]="bar.y"
+                  [attr.width]="bar.w" [attr.height]="bar.h"
+                  fill="var(--accent)" rx="3" opacity="0.85"/>
+                @if (bar.h > 18) {
+                  <text
+                    [attr.x]="bar.x + bar.w / 2" [attr.y]="bar.y - 3"
+                    text-anchor="middle" font-size="8" fill="var(--text-muted)">
+                    ${{ bar.val | number:'1.0-0' }}
+                  </text>
+                }
+                @if (bar.label) {
+                  <text
+                    [attr.x]="bar.x + bar.w / 2" y="116"
+                    text-anchor="middle" font-size="9" fill="var(--text-muted)">
+                    {{ bar.label }}
+                  </text>
+                }
+              }
+            </svg>
+          }
+        </div>
+
+      </div>
+
+      <!-- ── Filtros ─────────────────────────────────────────────────── -->
+      <div class="filters" style="margin-bottom:0">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13"/>
+          <input placeholder="Buscar por N° factura o cliente…" [formControl]="ventasSearchCtrl"/>
+        </div>
+        <button class="btn secondary" type="button" (click)="reloadVentas()">
+          <app-icon name="refresh_cw" [size]="13"/>Actualizar
+        </button>
+        <span style="font-size:0.78rem;color:var(--text-muted)">
+          {{ ventasFiltered().length }} resultado{{ ventasFiltered().length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- ── Tabla ──────────────────────────────────────────────────── -->
+      @if (ventasFiltered().length === 0) {
+        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
+          Sin ventas en el período seleccionado.
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>N° Factura</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th style="text-align:right">Subtotal</th>
+              <th style="text-align:right">IVA</th>
+              <th style="text-align:right">Total</th>
+              <th>Estado cobro</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (inv of ventasFiltered(); track inv.id) {
+              <tr>
+                <td>
+                  <span style="font-family:var(--font-mono);font-size:0.82rem">{{ inv.invoice_number }}</span>
+                </td>
+                <td>{{ inv.customer?.full_name ?? '—' }}</td>
+                <td style="color:var(--text-muted);font-size:0.8rem">{{ formatDate(inv.issue_date) }}</td>
+                <td style="text-align:right">${{ inv.subtotal | number:'1.2-2' }}</td>
+                <td style="text-align:right;color:var(--text-muted)">${{ inv.tax_amount | number:'1.2-2' }}</td>
+                <td style="text-align:right;font-weight:600;color:var(--success)">${{ inv.total | number:'1.2-2' }}</td>
+                <td>
+                  @if (inv.payment_status === 'COBRADO') {
+                    <span class="badge success">Cobrada</span>
+                  } @else if (inv.payment_status === 'PARCIAL') {
+                    <span class="badge accent">Parcial</span>
+                  } @else if (inv.payment_status === 'PENDIENTE') {
+                    <span class="badge warn">Pendiente</span>
+                  } @else {
+                    <span style="color:var(--text-subtle);font-size:0.78rem">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--surface-2)">
+              <td colspan="3" style="font-weight:600;color:var(--text-muted);font-size:0.82rem">Total período</td>
+              <td style="text-align:right;font-weight:700">${{ ventasTotalSubtotal() | number:'1.2-2' }}</td>
+              <td style="text-align:right;font-weight:700;color:var(--text-muted)">${{ ventasTotalIva() | number:'1.2-2' }}</td>
+              <td style="text-align:right;font-weight:700;color:var(--success)">${{ ventasTotalFacturado() | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      }
+
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Compras
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'compras') {
+
+    @if (egresosLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando compras…
+      </div>
+    } @else {
+
+      <!-- ── KPI strip ─────────────────────────────────────────────── -->
+      <div class="cxc-kpi-strip" style="margin-top:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total compras</div>
+          <div class="cxc-kpi-value" style="color:var(--danger)">${{ comprasTotal() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">facturas de compra · sin anuladas</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Subtotal (sin IVA)</div>
+          <div class="cxc-kpi-value">${{ comprasTotalSubtotal() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">base imponible estimada</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">IVA 15% estimado</div>
+          <div class="cxc-kpi-value" style="color:var(--accent)">${{ comprasTotalIva() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">crédito tributario est.</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">N° compras · proveedores</div>
+          <div class="cxc-kpi-value">{{ comprasNumCompras() }}</div>
+          <div class="cxc-kpi-sub">{{ comprasUniqueProviders() }} proveedor{{ comprasUniqueProviders() !== 1 ? 'es' : '' }} distintos</div>
+        </div>
+
+      </div>
+
+      <!-- ── Filters ─────────────────────────────────────────────────── -->
+      <div class="filters" style="margin-bottom:0">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13"/>
+          <input placeholder="Buscar por proveedor, descripción o N° factura…" [formControl]="comprasSearchCtrl"/>
+        </div>
+        <input class="m-input" type="date" [formControl]="comprasDateFromCtrl" title="Desde" style="max-width:140px"/>
+        <input class="m-input" type="date" [formControl]="comprasDateToCtrl"   title="Hasta" style="max-width:140px"/>
+        @if (comprasSearchCtrl.value || comprasDateFromCtrl.value || comprasDateToCtrl.value) {
+          <button class="btn ghost" type="button" (click)="clearComprasFilters()">
+            <app-icon name="x" [size]="13"/>Limpiar
+          </button>
+        }
+        <button class="btn secondary" type="button" (click)="reloadEgresos()">
+          <app-icon name="refresh_cw" [size]="13"/>Actualizar
+        </button>
+        <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
+          {{ comprasFiltered().length }} resultado{{ comprasFiltered().length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- ── Table ──────────────────────────────────────────────────── -->
+      @if (comprasFiltered().length === 0) {
+        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
+          <app-icon name="local_shipping" [size]="36" style="display:block;margin:0 auto 12px;color:var(--text-subtle)"/>
+          Sin compras con factura de proveedor para los filtros seleccionados.
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Proveedor</th>
+              <th>N° Factura</th>
+              <th>Fecha</th>
+              <th>Descripción</th>
+              <th style="text-align:right">Subtotal</th>
+              <th style="text-align:right">IVA 15%</th>
+              <th style="text-align:right">Total</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (exp of comprasFiltered(); track exp.id) {
+              <tr [style.opacity]="exp.payment_status === 'ANULADO' ? '0.5' : '1'">
+                <td>
+                  <span style="font-weight:500;color:var(--text)">
+                    {{ exp.supplier?.name ?? exp.supplier_name_free ?? '—' }}
+                  </span>
+                </td>
+                <td>
+                  @if (exp.voucher_number) {
+                    <span style="font-family:var(--font-mono);font-size:0.82rem">{{ exp.voucher_number }}</span>
+                  } @else {
+                    <span style="color:var(--text-subtle);font-size:0.78rem">—</span>
+                  }
+                </td>
+                <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap">
+                  {{ exp.expense_date ? formatDate(exp.expense_date) : '—' }}
+                </td>
+                <td style="max-width:220px">
+                  <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                        [title]="exp.description">
+                    {{ exp.description }}
+                  </span>
+                </td>
+                <td style="text-align:right;color:var(--text-muted)">
+                  ${{ comprasSubtotal(exp.amount) | number:'1.2-2' }}
+                </td>
+                <td style="text-align:right;color:var(--accent)">
+                  ${{ comprasIva(exp.amount) | number:'1.2-2' }}
+                </td>
+                <td style="text-align:right;font-weight:700"
+                    [style.color]="exp.payment_status === 'ANULADO' ? 'var(--text-subtle)' : 'var(--danger)'">
+                  ${{ exp.amount | number:'1.2-2' }}
+                </td>
+                <td>
+                  @if (exp.payment_status === 'PENDIENTE') {
+                    <span class="badge warn">Pendiente</span>
+                  } @else if (exp.payment_status === 'PARCIAL') {
+                    <span class="badge accent">Parcial</span>
+                  } @else if (exp.payment_status === 'PAGADO') {
+                    <span class="badge success">Pagado</span>
+                  } @else if (exp.payment_status === 'ANULADO') {
+                    <span class="badge">Anulado</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--surface-2)">
+              <td colspan="4" style="font-weight:600;color:var(--text-muted);font-size:0.82rem">Total período</td>
+              <td style="text-align:right;font-weight:700;color:var(--text-muted)">${{ comprasTotalSubtotal() | number:'1.2-2' }}</td>
+              <td style="text-align:right;font-weight:700;color:var(--accent)">${{ comprasTotalIva() | number:'1.2-2' }}</td>
+              <td style="text-align:right;font-weight:700;color:var(--danger)">${{ comprasTotal() | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      }
+
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TAB: Egresos y Gastos
+  ═══════════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'egresos') {
+
+    @if (egresosLoading()) {
+      <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
+        <app-icon name="loader" [size]="20"/>Cargando egresos…
+      </div>
+    } @else {
+
+      <!-- ── KPI strip ─────────────────────────────────────────────── -->
+      <div class="cxc-kpi-strip" style="margin-top:16px">
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total egresos</div>
+          <div class="cxc-kpi-value" style="color:var(--danger)">${{ egresosTotal() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">período filtrado · sin anulados</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Total pagado</div>
+          <div class="cxc-kpi-value" style="color:var(--success)">${{ egresosPagado() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">pagos completados</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Por pagar</div>
+          <div class="cxc-kpi-value" style="color:var(--warn)">${{ egresosPendiente() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">pendiente + parcial</div>
+        </div>
+
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Registros</div>
+          <div class="cxc-kpi-value">{{ egresosAllCount() }}</div>
+          <div class="cxc-kpi-sub">{{ egresosFiltered().length }} en vista actual</div>
+        </div>
+
+      </div>
+
+      <!-- ── Chart + Summary ────────────────────────────────────────── -->
+      <div class="cxc-top-row">
+
+        <!-- Horizontal bars by category -->
+        <div class="pie-card">
+          <div class="pie-card-title">Egresos por categoría (top 5)</div>
+
+          @if (egresosTopCats().length === 0) {
+            <div class="pie-empty">
+              <app-icon name="trending_down" [size]="28" style="color:var(--text-subtle)"/>
+              <span>Sin datos en el período</span>
+            </div>
+          } @else {
+            <svg [attr.viewBox]="'0 0 240 ' + (egresosTopCats().length * 34)"
+                 style="width:100%;display:block;overflow:visible">
+              @for (cat of egresosTopCats(); track cat.name; let i = $index) {
+                <text x="96" [attr.y]="i * 34 + 18"
+                  text-anchor="end" font-size="10" fill="var(--text-muted)">
+                  {{ truncateCatName(cat.name) }}
+                </text>
+                <rect x="100" [attr.y]="i * 34 + 7"
+                  [attr.width]="(cat.total / egresosChartMax()) * 110"
+                  height="16" fill="var(--danger)" rx="2" opacity="0.75"/>
+                <text
+                  [attr.x]="100 + (cat.total / egresosChartMax()) * 110 + 4"
+                  [attr.y]="i * 34 + 18"
+                  font-size="9" fill="var(--text-muted)">
+                  ${{ cat.total | number:'1.0-0' }}
+                </text>
+              }
+            </svg>
+          }
+        </div>
+
+        <!-- Summary card -->
+        <div class="cxc-summary-card">
+          <div class="cxc-summary-title">Resumen de egresos</div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <span class="pie-legend-dot" style="background:var(--danger);display:inline-block"></span>
+              Total facturado
+            </span>
+            <span class="cxc-summary-val" style="color:var(--danger)">${{ egresosTotal() | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <span class="pie-legend-dot" style="background:var(--success);display:inline-block"></span>
+              Pagado
+            </span>
+            <span class="cxc-summary-val" style="color:var(--success)">${{ egresosPagado() | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <span class="pie-legend-dot" style="background:var(--warn);display:inline-block"></span>
+              Por pagar
+            </span>
+            <span class="cxc-summary-val" style="color:var(--warn)">${{ egresosPendiente() | number:'1.2-2' }}</span>
+          </div>
+
+          <div class="cxc-summary-row">
+            <span class="cxc-summary-key">
+              <app-icon name="trending_down" [size]="13"/>
+              Pendientes / Parciales
+            </span>
+            <span class="cxc-summary-val">{{ egresosPendienteCount() + egresosParcialCount() }}</span>
+          </div>
+
+          <div style="margin-top:auto;padding-top:8px">
+            <button class="btn secondary" type="button" style="width:100%;justify-content:center" (click)="reloadEgresos()">
+              <app-icon name="refresh_cw" [size]="13"/>Actualizar datos
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── Status tabs ────────────────────────────────────────────── -->
+      <div class="ds-tabs" style="margin-top:4px">
+        <button class="ds-tab" type="button" [class.active]="egresosTab() === 'all'" (click)="egresosTab.set('all')">
+          Todos <span class="count">{{ egresosAllCount() }}</span>
+        </button>
+        <button class="ds-tab" type="button" [class.active]="egresosTab() === 'PENDIENTE'" (click)="egresosTab.set('PENDIENTE')">
+          Pendiente <span class="count">{{ egresosPendienteCount() }}</span>
+        </button>
+        <button class="ds-tab" type="button" [class.active]="egresosTab() === 'PARCIAL'" (click)="egresosTab.set('PARCIAL')">
+          Parcial <span class="count">{{ egresosParcialCount() }}</span>
+        </button>
+        <button class="ds-tab" type="button" [class.active]="egresosTab() === 'PAGADO'" (click)="egresosTab.set('PAGADO')">
+          Pagado <span class="count">{{ egresosPagadoCount() }}</span>
+        </button>
+        <button class="ds-tab" type="button" [class.active]="egresosTab() === 'ANULADO'" (click)="egresosTab.set('ANULADO')">
+          Anulado <span class="count">{{ egresosAnuladoCount() }}</span>
+        </button>
+      </div>
+      <div class="ds-tabs-sep"></div>
+
+      <!-- ── Filters ─────────────────────────────────────────────────── -->
+      <div class="filters" style="margin-top:8px;margin-bottom:0">
+        <div class="filter-search">
+          <app-icon name="search" [size]="13"/>
+          <input placeholder="Buscar descripción, proveedor, categoría…" [formControl]="egresosSearchCtrl"/>
+        </div>
+        <select class="m-input" [formControl]="egresosCategoryCtrl" style="max-width:180px">
+          <option value="">Todas las categorías</option>
+          @for (cat of egresosCategories(); track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+        <input class="m-input" type="date" [formControl]="egresosDateFromCtrl" title="Desde" style="max-width:140px"/>
+        <input class="m-input" type="date" [formControl]="egresosDateToCtrl"   title="Hasta" style="max-width:140px"/>
+        @if (egresosSearchCtrl.value || egresosCategoryCtrl.value || egresosDateFromCtrl.value || egresosDateToCtrl.value) {
+          <button class="btn ghost" type="button" (click)="clearEgresosFilters()">
+            <app-icon name="x" [size]="13"/>Limpiar
+          </button>
+        }
+        <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
+          {{ egresosFiltered().length }} resultado{{ egresosFiltered().length !== 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <!-- ── Table ──────────────────────────────────────────────────── -->
+      @if (egresosFiltered().length === 0) {
+        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
+          <app-icon name="trending_down" [size]="36" style="display:block;margin:0 auto 12px;color:var(--text-subtle)"/>
+          Sin egresos para los filtros seleccionados.
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Categoría</th>
+              <th>Descripción</th>
+              <th>Proveedor</th>
+              <th>Comprobante</th>
+              <th style="text-align:right">Monto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (exp of egresosFiltered(); track exp.id) {
+              <tr (click)="selectEgreso(exp)" style="cursor:pointer"
+                [style.opacity]="exp.payment_status === 'ANULADO' ? '0.5' : '1'">
+                <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap">
+                  {{ exp.expense_date ? formatDate(exp.expense_date) : '—' }}
+                </td>
+                <td>
+                  <span style="font-size:0.78rem;color:var(--text-muted)">{{ exp.category?.name ?? '—' }}</span>
+                </td>
+                <td style="max-width:220px">
+                  <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;color:var(--text)"
+                    [title]="exp.description">
+                    {{ exp.description }}
+                  </span>
+                </td>
+                <td style="max-width:140px">
+                  <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.82rem">
+                    {{ egresosSupplierName(exp) }}
+                  </span>
+                </td>
+                <td>
+                  @if (exp.voucher_type) {
+                    <span style="font-size:0.72rem;padding:2px 7px;border-radius:999px;background:var(--surface-3);color:var(--text-muted);white-space:nowrap">
+                      {{ VOUCHER_TYPE_LABELS[exp.voucher_type] }}
+                    </span>
+                  } @else {
+                    <span style="color:var(--text-subtle);font-size:0.78rem">—</span>
+                  }
+                </td>
+                <td style="text-align:right;font-weight:700"
+                  [style.color]="exp.payment_status === 'ANULADO' ? 'var(--text-subtle)' : 'var(--danger)'">
+                  ${{ exp.amount | number:'1.2-2' }}
+                </td>
+                <td>
+                  @if (exp.payment_status === 'PENDIENTE') {
+                    <span class="badge warn">Pendiente</span>
+                  } @else if (exp.payment_status === 'PARCIAL') {
+                    <span class="badge accent">Parcial</span>
+                  } @else if (exp.payment_status === 'PAGADO') {
+                    <span class="badge success">Pagado</span>
+                  } @else if (exp.payment_status === 'ANULADO') {
+                    <span class="badge">Anulado</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--surface-2)">
+              <td colspan="5" style="font-weight:600;color:var(--text-muted);font-size:0.82rem">Total período</td>
+              <td style="text-align:right;font-weight:700;color:var(--danger)">${{ egresosTotal() | number:'1.2-2' }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      }
+
+    }
+  }
+
+  <!-- ════════════════════════════════════════════════════════════════
+       TABS: Coming soon placeholders
+  ═══════════════════════════════════════════════════════════════════ -->
+  @for (tab of tabs; track tab.id) {
+    @if (activeTab() === tab.id && tab.id !== 'ingresos' && tab.id !== 'cxc' && tab.id !== 'cxp' && tab.id !== 'ventas' && tab.id !== 'egresos' && tab.id !== 'compras') {
+      <div class="fin-coming-soon">
+        <div class="fin-cs-icon">
+          <app-icon [name]="tab.icon" [size]="36" [strokeWidth]="1.5"/>
+        </div>
+        <h3 class="fin-cs-title">{{ tab.label }}</h3>
+        <p class="fin-cs-desc">{{ tab.description }}</p>
+        <span class="fin-cs-badge">En desarrollo</span>
+      </div>
+    }
+  }
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     DRAWER: Detalle de factura + registrar cobro
+════════════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════════
+     DRAWER: Detalle de egreso + registrar pago
+════════════════════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════════════
+     DRAWER: Egresos y Gastos — detalle + registrar pago
+════════════════════════════════════════════════════════════════════ -->
+@if (egresosSelected()) {
+  <div class="drawer-backdrop" (click)="closeEgresosDrawer()"></div>
+
+  <div class="drawer">
+    <div class="drawer-head">
+      <div>
+        <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle)">
+          Egreso · {{ egresosSelected()!.category?.name ?? '—' }}
+        </div>
+        <div style="font-weight:700;font-size:1.05rem;color:var(--text)">
+          {{ egresosSelected()!.description }}
+        </div>
+      </div>
+      <button class="btn ghost" type="button" (click)="closeEgresosDrawer()">
+        <app-icon name="x" [size]="16"/>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+
+      @if (egresosDrawerLoading()) {
+        <div style="display:flex;align-items:center;gap:8px;padding:24px 0;color:var(--text-muted)">
+          <app-icon name="loader" [size]="16"/>Cargando…
+        </div>
+      } @else {
+
+        <!-- Proveedor + estado -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px">
+          <div>
+            <div style="font-size:0.72rem;color:var(--text-subtle)">Proveedor</div>
+            <div style="font-weight:600;color:var(--text)">
+              {{ egresosSelected()!.supplier?.name ?? egresosSelected()!.supplier_name_free ?? 'Sin proveedor' }}
+            </div>
+            @if (egresosSelected()!.voucher_type) {
+              <div style="font-size:0.72rem;color:var(--text-muted)">
+                {{ VOUCHER_TYPE_LABELS[egresosSelected()!.voucher_type!] }}
+                @if (egresosSelected()!.voucher_number) {
+                  · {{ egresosSelected()!.voucher_number }}
+                }
+              </div>
+            }
+          </div>
+          @if (egresosSelected()!.payment_status === 'PENDIENTE') {
+            <span class="badge warn">Pendiente</span>
+          } @else if (egresosSelected()!.payment_status === 'PARCIAL') {
+            <span class="badge accent">Parcial</span>
+          } @else if (egresosSelected()!.payment_status === 'PAGADO') {
+            <span class="badge success">Pagado</span>
+          } @else if (egresosSelected()!.payment_status === 'ANULADO') {
+            <span class="badge">Anulado</span>
+          }
+        </div>
+
+        <!-- KPI strip -->
+        <div class="drawer-kpi-strip">
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Total</div>
+            <div class="drawer-kpi-val">${{ egresosSelected()!.amount | number:'1.2-2' }}</div>
+          </div>
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Pagado</div>
+            <div class="drawer-kpi-val" style="color:var(--success)">
+              ${{ (egresosSelected()!.amount_paid ?? 0) | number:'1.2-2' }}
+            </div>
+          </div>
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Pendiente</div>
+            <div class="drawer-kpi-val" style="color:var(--danger)">
+              ${{ (egresosSelected()!.amount_pending ?? egresosSelected()!.amount) | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Fecha + notas -->
+        <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--text-muted);flex-wrap:wrap;margin-bottom:16px">
+          @if (egresosSelected()!.expense_date) {
+            <span><b style="color:var(--text)">Fecha:</b> {{ formatDate(egresosSelected()!.expense_date!) }}</span>
+          }
+          @if (egresosSelected()!.notes) {
+            <span><b style="color:var(--text)">Notas:</b> {{ egresosSelected()!.notes }}</span>
+          }
+        </div>
+
+        <!-- Pagos (solo si no está anulado) -->
+        @if (egresosSelected()!.payment_status !== 'ANULADO') {
+
+          <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-subtle);margin-bottom:8px">
+            Pagos registrados
+          </div>
+
+          @if (egresosPaymentsLoading()) {
+            <div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-muted);padding:8px 0">
+              <app-icon name="loader" [size]="14"/>Cargando pagos…
+            </div>
+          } @else if (egresosPayments().length === 0) {
+            <div style="font-size:0.8rem;color:var(--text-muted);padding:8px 0">Sin pagos registrados aún.</div>
+          } @else {
+            <div class="pay-list">
+              @for (pay of egresosPayments(); track pay.id) {
+                <div class="pay-item">
+                  <div class="pay-item-left">
+                    <span class="pay-item-method">{{ PAYMENT_METHOD_LABELS[pay.payment_method] }}</span>
+                    <span class="pay-item-date">{{ formatDate(pay.payment_date) }}</span>
+                    @if (pay.notes) {
+                      <span style="font-size:0.7rem;color:var(--text-muted)">{{ pay.notes }}</span>
+                    }
+                  </div>
+                  <div class="pay-item-right">
+                    <div class="pay-item-amt"
+                      [class.pay-stat-cobrado]="pay.status === 'PAGADO'"
+                      [class.pay-stat-anulado]="pay.status === 'ANULADO'"
+                      [class.pay-stat-pendiente]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO'">
+                      ${{ pay.amount | number:'1.2-2' }}
+                    </div>
+                    <span class="pay-item-status"
+                      [class.pay-badge-cobrado]="pay.status === 'PAGADO'"
+                      [class.pay-badge-anulado]="pay.status === 'ANULADO'"
+                      [class.pay-badge-pendiente]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO'">
+                      {{ pay.status }}
+                    </span>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Formulario de pago (solo PENDIENTE o PARCIAL) -->
+          @if (egresosSelected()!.payment_status === 'PENDIENTE' || egresosSelected()!.payment_status === 'PARCIAL') {
+            @if (!egresosShowPayForm()) {
+              <button
+                class="btn primary"
+                type="button"
+                style="width:100%;justify-content:center;margin-top:16px"
+                (click)="openEgresosPayForm()">
+                <app-icon name="plus" [size]="14"/>Registrar pago
+              </button>
+            } @else {
+              <div class="pay-form-inline" [formGroup]="egresosPayForm">
+                <div class="pay-form-title">Nuevo pago</div>
+
+                <div class="seg">
+                  @for (m of [['EFECTIVO','Efectivo'],['TRANSFERENCIA','Transfer.'],['TARJETA_DEBITO','T.Débito'],['TARJETA_CREDITO','T.Crédito']]; track m[0]) {
+                    <button type="button" class="seg-btn"
+                      [class.active]="egresosPayMethodSig() === m[0]"
+                      (click)="onEgresosPayMethodChange(m[0])">
+                      {{ m[1] }}
+                    </button>
+                  }
+                </div>
+
+                <div class="mfield">
+                  <label>Monto a pagar</label>
+                  <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px">
+                    Pendiente: ${{ egresosPendingAmount() | number:'1.2-2' }}
+                  </div>
+                  <input class="m-input" type="number" step="0.01" min="0.01"
+                    [max]="egresosPendingAmount()"
+                    formControlName="amount" placeholder="0.00"/>
+                </div>
+
+                @if (egresosPayMethodSig() === 'TRANSFERENCIA') {
+                  <div class="mfield">
+                    <label>N° de transferencia</label>
+                    <input class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
+                  </div>
+                }
+
+                @if (egresosPayMethodSig() === 'TARJETA_DEBITO' || egresosPayMethodSig() === 'TARJETA_CREDITO') {
+                  <div class="mfield">
+                    <label>Últimos 4 dígitos / contrapartida</label>
+                    <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
+                  </div>
+                }
+
+                @if (egresosPayMethodSig() === 'CHEQUE') {
+                  <div class="mfield">
+                    <label>N° de cheque</label>
+                    <input class="m-input" type="text" formControlName="cheque_number" placeholder="CHQ-…"/>
+                  </div>
+                }
+
+                <div class="mfield">
+                  <label>Fecha del pago</label>
+                  <input class="m-input" type="date" formControlName="payment_date"/>
+                </div>
+
+                <div class="mfield">
+                  <label>Notas</label>
+                  <input class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:4px">
+                  <button class="btn ghost" type="button" style="flex:1;justify-content:center"
+                    (click)="egresosShowPayForm.set(false)">Cancelar</button>
+                  <button class="btn primary" type="button" style="flex:2;justify-content:center"
+                    [disabled]="egresosPayForm.invalid || egresosPayFormLoading()"
+                    (click)="submitEgresosPayment()">
+                    @if (egresosPayFormLoading()) { <app-icon name="loader" [size]="13"/> }
+                    Guardar pago
+                  </button>
+                </div>
+              </div>
+            }
+          }
+
+        }
+      }
+    </div>
+
+    <div class="drawer-foot">
+      <button class="btn ghost" type="button" (click)="closeEgresosDrawer()">Cerrar</button>
+    </div>
+  </div>
+}
+
+@if (cxpSelected()) {
+  <div class="drawer-backdrop" (click)="closeCxpDrawer()"></div>
+
+  <div class="drawer">
+    <div class="drawer-head">
+      <div>
+        <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle)">
+          Egreso
+        </div>
+        <div style="font-weight:700;font-size:1.05rem;color:var(--text)">
+          {{ cxpSelected()!.description }}
+        </div>
+      </div>
+      <button class="btn ghost" type="button" (click)="closeCxpDrawer()">
+        <app-icon name="x" [size]="16"/>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+
+      @if (cxpDrawerLoading()) {
+        <div style="display:flex;align-items:center;gap:8px;padding:24px 0;color:var(--text-muted)">
+          <app-icon name="loader" [size]="16"/>Cargando…
+        </div>
+      } @else {
+        <!-- Proveedor + estado -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px">
+          <div>
+            <div style="font-size:0.72rem;color:var(--text-subtle)">Proveedor</div>
+            <div style="font-weight:600;color:var(--text)">
+              {{ cxpSelected()!.supplier?.name ?? cxpSelected()!.supplier_name_free ?? 'Sin proveedor' }}
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">
+              {{ cxpSelected()!.category?.name ?? '—' }}
+            </div>
+          </div>
+          @if (cxpSelected()!.payment_status === 'PENDIENTE') {
+            <span class="badge danger">Pendiente</span>
+          } @else if (cxpSelected()!.payment_status === 'PARCIAL') {
+            <span class="badge warn">Parcial</span>
+          }
+        </div>
+
+        <!-- KPI strip -->
+        <div class="drawer-kpi-strip">
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Total</div>
+            <div class="drawer-kpi-val">${{ cxpSelected()!.amount | number:'1.2-2' }}</div>
+          </div>
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Pagado</div>
+            <div class="drawer-kpi-val" style="color:var(--success)">
+              ${{ (cxpSelected()!.amount_paid ?? 0) | number:'1.2-2' }}
+            </div>
+          </div>
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Pendiente</div>
+            <div class="drawer-kpi-val" style="color:var(--danger)">
+              ${{ (cxpSelected()!.amount_pending ?? cxpSelected()!.amount) | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Fechas -->
+        <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">
+          @if (cxpSelected()!.expense_date) {
+            <span><b style="color:var(--text)">Fecha:</b> {{ formatDate(cxpSelected()!.expense_date!) }}</span>
+            <span>
+              <b style="color:var(--text)">Límite (est.):</b> {{ dueDate(cxpSelected()!.expense_date!) }}
+              <span style="font-size:0.65rem"> est.</span>
+            </span>
+          }
+          @if (cxpSelected()!.voucher_number) {
+            <span><b style="color:var(--text)">Comprobante:</b> {{ cxpSelected()!.voucher_number }}</span>
+          }
+        </div>
+
+        <!-- ── Pagos existentes ──────────────────────────────────── -->
+        <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-subtle);margin-bottom:8px">
+          Pagos registrados
+        </div>
+
+        @if (cxpPaymentsLoading()) {
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-muted);padding:8px 0">
+            <app-icon name="loader" [size]="14"/>Cargando pagos…
+          </div>
+        } @else if (cxpPayments().length === 0) {
+          <div style="font-size:0.8rem;color:var(--text-muted);padding:8px 0">Sin pagos registrados aún.</div>
+        } @else {
+          <div class="pay-list">
+            @for (pay of cxpPayments(); track pay.id) {
+              <div class="pay-item">
+                <div class="pay-item-left">
+                  <span class="pay-item-method">{{ PAYMENT_METHOD_LABELS[pay.payment_method] }}</span>
+                  <span class="pay-item-date">{{ formatDate(pay.payment_date) }}</span>
+                  @if (pay.notes) {
+                    <span style="font-size:0.7rem;color:var(--text-muted)">{{ pay.notes }}</span>
+                  }
+                </div>
+                <div class="pay-item-right">
+                  <div class="pay-item-amt"
+                    [class.pay-stat-cobrado]="pay.status === 'PAGADO'"
+                    [class.pay-stat-anulado]="pay.status === 'ANULADO'"
+                    [class.pay-stat-pendiente]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO'">
+                    ${{ pay.amount | number:'1.2-2' }}
+                  </div>
+                  <span class="pay-item-status"
+                    [class.pay-badge-cobrado]="pay.status === 'PAGADO'"
+                    [class.pay-badge-anulado]="pay.status === 'ANULADO'"
+                    [class.pay-badge-pendiente]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO'">
+                    {{ pay.status }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ── Formulario de pago ──────────────────────────────── -->
+        @if (!cxpShowPayForm()) {
+          <button
+            class="btn primary"
+            type="button"
+            style="width:100%;justify-content:center;margin-top:16px"
+            (click)="openCxpPayForm()">
+            <app-icon name="plus" [size]="14"/>Registrar pago
+          </button>
+        } @else {
+          <div class="pay-form-inline" [formGroup]="cxpPayForm">
+            <div class="pay-form-title">Nuevo pago</div>
+
+            <div class="seg">
+              @for (m of [['EFECTIVO','Efectivo'],['TRANSFERENCIA','Transfer.'],['TARJETA_DEBITO','T.Débito'],['TARJETA_CREDITO','T.Crédito']] ; track m[0]) {
+                <button type="button" class="seg-btn"
+                  [class.active]="cxpPayMethodSig() === m[0]"
+                  (click)="onCxpPayMethodChange(m[0])">
+                  {{ m[1] }}
+                </button>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Monto a pagar</label>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px">
+                Pendiente: ${{ cxpPendingAmount() | number:'1.2-2' }}
+              </div>
+              <input class="m-input" type="number" step="0.01" min="0.01"
+                [max]="cxpPendingAmount()"
+                formControlName="amount" placeholder="0.00"/>
+            </div>
+
+            @if (cxpPayMethodSig() === 'TRANSFERENCIA') {
+              <div class="mfield">
+                <label>N° de transferencia</label>
+                <input class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
+              </div>
+            }
+
+            @if (cxpPayMethodSig() === 'TARJETA_DEBITO' || cxpPayMethodSig() === 'TARJETA_CREDITO') {
+              <div class="mfield">
+                <label>Últimos 4 dígitos / contrapartida</label>
+                <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
+              </div>
+            }
+
+            <div class="mfield">
+              <label>Fecha del pago</label>
+              <input class="m-input" type="date" formControlName="payment_date"/>
+            </div>
+
+            <div class="mfield">
+              <label>Notas</label>
+              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
+            </div>
+
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn ghost" type="button" style="flex:1;justify-content:center"
+                (click)="cxpShowPayForm.set(false)">Cancelar</button>
+              <button class="btn primary" type="button" style="flex:2;justify-content:center"
+                [disabled]="cxpPayForm.invalid || cxpPayFormLoading()"
+                (click)="submitCxpPayment()">
+                @if (cxpPayFormLoading()) { <app-icon name="loader" [size]="13"/> }
+                Guardar pago
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="drawer-foot">
+      <button class="btn ghost" type="button" (click)="closeCxpDrawer()">Cerrar</button>
+    </div>
+  </div>
+}
+
+@if (cxcSelected()) {
+  <div class="drawer-backdrop" (click)="closeCxcDrawer()"></div>
+
+  <div class="drawer">
+    <!-- Head -->
+    <div class="drawer-head">
+      <div>
+        <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle)">
+          Factura
+        </div>
+        <div style="font-weight:700;font-size:1.05rem;color:var(--text);font-family:var(--font-mono)">
+          {{ cxcSelected()!.invoice_number }}
+        </div>
+      </div>
+      <button class="btn ghost" type="button" (click)="closeCxcDrawer()">
+        <app-icon name="x" [size]="16"/>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+
+      @if (cxcDrawerLoading()) {
+        <div style="display:flex;align-items:center;gap:8px;padding:24px 0;color:var(--text-muted)">
+          <app-icon name="loader" [size]="16"/>Cargando…
+        </div>
+      } @else {
+        <!-- Cliente + estado -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px">
+          <div>
+            <div style="font-size:0.72rem;color:var(--text-subtle)">Cliente</div>
+            <div style="font-weight:600;color:var(--text)">{{ cxcSelected()!.customer?.full_name ?? '—' }}</div>
+            @if (cxcSelected()!.customer) {
+              <div style="font-size:0.75rem;color:var(--text-muted)">
+                {{ $any(cxcSelected()!.customer).document_number }}
+              </div>
+            }
+          </div>
+          @if (cxcSelected()!.payment_status === 'PENDIENTE') {
+            <span class="badge warn">Pendiente</span>
+          } @else if (cxcSelected()!.payment_status === 'PARCIAL') {
+            <span class="badge accent">Parcial</span>
+          }
+        </div>
+
+        <!-- KPI strip -->
+        <div class="drawer-kpi-strip">
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Total</div>
+            <div class="drawer-kpi-val">${{ cxcSelected()!.total | number:'1.2-2' }}</div>
+          </div>
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Cobrado</div>
+            <div class="drawer-kpi-val" style="color:var(--success)">
+              ${{ (cxcSelected()!.amount_paid ?? 0) | number:'1.2-2' }}
+            </div>
+          </div>
+          <div class="drawer-kpi">
+            <div class="drawer-kpi-label">Pendiente</div>
+            <div class="drawer-kpi-val" style="color:var(--warn)">
+              ${{ (cxcSelected()!.amount_pending ?? 0) | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Fechas -->
+        <div style="display:flex;gap:16px;font-size:0.78rem;color:var(--text-muted);margin-bottom:16px">
+          <span><b style="color:var(--text)">Emisión:</b> {{ formatDate(cxcSelected()!.issue_date) }}</span>
+          <span>
+            <b style="color:var(--text)">Vence (est.):</b> {{ dueDate(cxcSelected()!.issue_date) }}
+            <span style="font-size:0.65rem"> est.</span>
+          </span>
+        </div>
+
+        <!-- ── Cobros existentes ─────────────────────────────────── -->
+        <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--text-subtle);margin-bottom:8px">
+          Cobros registrados
+        </div>
+
+        @if (cxcPaymentsLoading()) {
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:var(--text-muted);padding:8px 0">
+            <app-icon name="loader" [size]="14"/>Cargando cobros…
+          </div>
+        } @else if (cxcPayments().length === 0) {
+          <div style="font-size:0.8rem;color:var(--text-muted);padding:8px 0">Sin cobros registrados aún.</div>
+        } @else {
+          <div class="pay-list">
+            @for (pay of cxcPayments(); track pay.id) {
+              <div class="pay-item">
+                <div class="pay-item-left">
+                  <span class="pay-item-method">{{ PAYMENT_METHOD_LABELS[pay.payment_method] }}</span>
+                  <span class="pay-item-date">{{ formatDate(pay.payment_date) }}</span>
+                  @if (pay.notes) {
+                    <span style="font-size:0.7rem;color:var(--text-muted)">{{ pay.notes }}</span>
+                  }
+                </div>
+                <div class="pay-item-right">
+                  <div class="pay-item-amt"
+                    [class.pay-stat-cobrado]="pay.status === 'COBRADO'"
+                    [class.pay-stat-anulado]="pay.status === 'ANULADO'"
+                    [class.pay-stat-pendiente]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO'">
+                    ${{ pay.amount | number:'1.2-2' }}
+                  </div>
+                  <span class="pay-item-status"
+                    [class.pay-badge-cobrado]="pay.status === 'COBRADO'"
+                    [class.pay-badge-anulado]="pay.status === 'ANULADO'"
+                    [class.pay-badge-pendiente]="pay.status === 'PENDIENTE' || pay.status === 'VENCIDO'">
+                    {{ pay.status }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ── Formulario de cobro ──────────────────────────────── -->
+        @if (!cxcShowPayForm()) {
+          <button
+            class="btn primary"
+            type="button"
+            style="width:100%;justify-content:center;margin-top:16px"
+            (click)="openCxcPayForm()">
+            <app-icon name="plus" [size]="14"/>Registrar cobro
+          </button>
+        } @else {
+          <div class="pay-form-inline" [formGroup]="cxcPayForm">
+            <div class="pay-form-title">Nuevo cobro</div>
+
+            <!-- Método de pago -->
+            <div class="seg">
+              @for (m of [['EFECTIVO','Efectivo'],['TRANSFERENCIA','Transfer.'],['TARJETA_DEBITO','T.Débito'],['TARJETA_CREDITO','T.Crédito']] ; track m[0]) {
+                <button type="button" class="seg-btn"
+                  [class.active]="cxcPayMethodSig() === m[0]"
+                  (click)="onCxcPayMethodChange(m[0])">
+                  {{ m[1] }}
+                </button>
+              }
+            </div>
+
+            <!-- Monto -->
+            <div class="mfield">
+              <label>Monto a cobrar</label>
+              <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px">
+                Pendiente: ${{ cxcPendingAmount() | number:'1.2-2' }}
+              </div>
+              <input class="m-input" type="number" step="0.01" min="0.01"
+                [max]="cxcPendingAmount()"
+                formControlName="amount" placeholder="0.00"/>
+            </div>
+
+            <!-- Referencia (TRANSFERENCIA) -->
+            @if (cxcPayMethodSig() === 'TRANSFERENCIA') {
+              <div class="mfield">
+                <label>N° de transferencia</label>
+                <input class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
+              </div>
+            }
+
+            <!-- Contrapartida (TARJETA) -->
+            @if (cxcPayMethodSig() === 'TARJETA_DEBITO' || cxcPayMethodSig() === 'TARJETA_CREDITO') {
+              <div class="mfield">
+                <label>Últimos 4 dígitos / contrapartida</label>
+                <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
+              </div>
+            }
+
+            <!-- Fecha -->
+            <div class="mfield">
+              <label>Fecha del cobro</label>
+              <input class="m-input" type="date" formControlName="payment_date"/>
+            </div>
+
+            <!-- Notas -->
+            <div class="mfield">
+              <label>Notas</label>
+              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
+            </div>
+
+            <!-- Acciones -->
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn ghost" type="button" style="flex:1;justify-content:center"
+                (click)="cxcShowPayForm.set(false)">Cancelar</button>
+              <button class="btn primary" type="button" style="flex:2;justify-content:center"
+                [disabled]="cxcPayForm.invalid || cxcPayFormLoading()"
+                (click)="submitCxcPayment()">
+                @if (cxcPayFormLoading()) { <app-icon name="loader" [size]="13"/> }
+                Guardar cobro
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <div class="drawer-foot">
+      <button class="btn ghost" type="button" (click)="closeCxcDrawer()">Cerrar</button>
+    </div>
+  </div>
+}

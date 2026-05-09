@@ -25,7 +25,7 @@ export class ClientsListComponent implements OnInit {
   private fb               = inject(FormBuilder);
 
   private allCustomers  = signal<Customer[]>([]);
-  private invoiceStats  = signal<Map<number, { count: number; total: number }>>(new Map());
+  private invoiceStats  = signal<Map<string, { count: number; total: number }>>(new Map());
   loading   = signal(true);
   tab       = signal<'all' | 'RUC' | 'CEDULA' | 'FINAL_CONSUMER'>('all');
   modalOpen = signal(false);
@@ -70,23 +70,23 @@ export class ClientsListComponent implements OnInit {
   ngOnInit(): void { this.load(); this.loadStats(); }
 
   loadStats(): void {
-    this.invoicesService.list({ limit: 1000, status: 'ISSUED' }).subscribe({
+    this.invoicesService.list({ limit: 500 }).subscribe({
       next: res => {
-        const map = new Map<number, { count: number; total: number }>();
+        const map = new Map<string, { count: number; total: number }>();
         for (const inv of res.data) {
-          if (inv.customer_id) {
-            const curr = map.get(inv.customer_id) ?? { count: 0, total: 0 };
-            map.set(inv.customer_id, { count: curr.count + 1, total: curr.total + inv.total });
-          }
+          if (inv.status === 'CANCELLED' || !inv.customer_id) continue;
+          const key  = String(inv.customer_id);
+          const curr = map.get(key) ?? { count: 0, total: 0 };
+          map.set(key, { count: curr.count + 1, total: curr.total + parseFloat(String(inv.total || 0)) });
         }
         this.invoiceStats.set(map);
       },
-      error: () => {},
+      error: () => this.invoiceStats.set(new Map()),
     });
   }
 
   statsFor(customerId: number): { count: number; total: number } {
-    return this.invoiceStats().get(customerId) ?? { count: 0, total: 0 };
+    return this.invoiceStats().get(String(customerId)) ?? { count: 0, total: 0 };
   }
 
   load(): void {
@@ -169,6 +169,36 @@ export class ClientsListComponent implements OnInit {
 
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  exportCsv(): void {
+    const rows = this.filteredCustomers();
+    const headers = ['Nombre', 'Tipo', 'Documento', 'Email', 'Teléfono', 'Dirección', 'Facturas', 'Total facturado', 'Fecha registro'];
+    const lines = rows.map(c => {
+      const stats = this.statsFor(c.id);
+      return [
+        c.full_name,
+        this.typeLabel(c.customer_type),
+        c.document_number,
+        c.email ?? '',
+        c.phone ?? '',
+        c.address ?? '',
+        stats.count,
+        stats.total.toFixed(2),
+        this.formatDate(c.created_at),
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    });
+    this.downloadCsv([headers.join(','), ...lines].join('\n'), 'clientes');
+  }
+
+  private downloadCsv(content: string, name: string): void {
+    const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `${name}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   get docMaxLength(): number  { return this.form.get('customer_type')?.value === 'RUC' ? 13 : 10; }

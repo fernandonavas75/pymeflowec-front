@@ -631,4 +631,35 @@ export class InvoicesListComponent implements OnInit {
   formatDate(date: string): string {
     return new Date(date).toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: '2-digit' });
   }
+
+  exportCsv(): void {
+    const STATUS_LABELS: Record<string, string> = { BORRADOR: 'Borrador', ISSUED: 'Emitida', CANCELLED: 'Anulada' };
+    const PAY_LABELS: Record<string, string>    = { PENDIENTE: 'Pendiente', PARCIAL: 'Parcial', COBRADO: 'Cobrado' };
+    const rows = this.filteredInvoices();
+    const headers = ['N° Factura', 'Cliente', 'Documento', 'Estado', 'Estado cobro', 'Subtotal', 'IVA', 'Total', 'Cobrado', 'Pendiente', 'Fecha emisión'];
+    const lines = rows.map(i => [
+      i.invoice_number,
+      i.customer?.full_name ?? '',
+      (i.customer as any)?.document_number ?? '',
+      STATUS_LABELS[i.status] ?? i.status,
+      PAY_LABELS[i.payment_status ?? ''] ?? '',
+      (+i.subtotal).toFixed(2),
+      (+i.tax_amount).toFixed(2),
+      (+i.total).toFixed(2),
+      (+(i.amount_paid ?? 0)).toFixed(2),
+      (+(i.amount_pending ?? 0)).toFixed(2),
+      this.formatDate(i.issue_date),
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    this.downloadCsv([headers.join(','), ...lines].join('\n'), 'facturas');
+  }
+
+  private downloadCsv(content: string, name: string): void {
+    const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `${name}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }

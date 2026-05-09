@@ -1,0 +1,233 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div>
+      <div class="page-title">Egresos recurrentes</div>
+      <div class="page-sub-en">Recurring expenses · {{ totalCount() }} plantillas</div>
+    </div>
+    <div class="page-actions">
+      @if (authService.isStoreAdmin()) {
+        <button class="btn primary" type="button" (click)="openNew()">
+          <app-icon name="plus" [size]="14"/>Nueva plantilla
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ── Búsqueda ──────────────────────────────────────────────────── -->
+  <div class="filters">
+    <div class="search-wrap">
+      <app-icon name="search" [size]="14" class="search-icon"/>
+      <input class="search-input" type="search" placeholder="Buscar descripción o categoría…"
+             [formControl]="searchCtrl"/>
+    </div>
+  </div>
+
+  <!-- ── Tabla ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    @if (loading()) {
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="skel" style="height:44px;border-radius:var(--radius-sm-ds)"></div>
+        }
+      </div>
+
+    } @else if (filtered().length === 0) {
+      <div class="empty" style="padding:72px 24px">
+        <app-icon name="repeat" [size]="40" style="opacity:.25"/>
+        <p>No hay plantillas de egreso recurrente</p>
+        @if (authService.isStoreAdmin()) {
+          <button class="btn primary sm" type="button" (click)="openNew()">
+            <app-icon name="plus" [size]="12"/>Crear plantilla
+          </button>
+        }
+      </div>
+
+    } @else {
+      <div class="card-body p0">
+        <table class="ds-table">
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              <th>Categoría</th>
+              <th class="num">Monto</th>
+              <th>Ejecución</th>
+              <th>Método pago</th>
+              <th>Vigencia</th>
+              <th style="width:80px"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of filtered(); track r.id) {
+              <tr>
+                <td>
+                  <strong>{{ r.description }}</strong>
+                  @if (r.supplier_name_free) {
+                    <div style="font-size:11px;color:var(--text-subtle)">{{ r.supplier_name_free }}</div>
+                  }
+                </td>
+                <td style="font-size:13px">{{ r.category?.name ?? '—' }}</td>
+                <td class="num">
+                  <span style="font-family:var(--font-display);font-weight:700">
+                    ${{ formatCurrency(r.amount) }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge accent" style="font-size:11px">
+                    <app-icon name="calendar" [size]="10"/> Día {{ r.day_of_month }}
+                  </span>
+                </td>
+                <td style="font-size:12.5px;color:var(--text-muted-ds)">
+                  {{ r.default_payment_method ? PAYMENT_METHOD_LABELS[r.default_payment_method] : '—' }}
+                </td>
+                <td style="font-size:12px;color:var(--text-subtle)">
+                  @if (r.starts_at || r.ends_at) {
+                    {{ r.starts_at ? formatDate(r.starts_at) : '·' }}
+                    → {{ r.ends_at ? formatDate(r.ends_at) : 'indefinido' }}
+                  } @else {
+                    Indefinido
+                  }
+                </td>
+                <td style="text-align:right;display:flex;gap:4px;justify-content:flex-end;padding:8px 12px">
+                  <button class="btn ghost sm" title="Editar" type="button" (click)="openEdit(r)">
+                    <app-icon name="edit" [size]="13"/>
+                  </button>
+                  @if (authService.isStoreAdmin()) {
+                    <button class="btn ghost sm" title="Eliminar" type="button" (click)="deleteItem(r)">
+                      <app-icon name="trash" [size]="13"/>
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- ── Modal crear / editar ─────────────────────────────────────── -->
+  @if (modalOpen()) {
+    <div class="modal-backdrop" (click)="modalOpen.set(false)">
+      <div class="modal-box" (click)="$event.stopPropagation()">
+
+        <div class="modal-head">
+          <div>
+            <div class="t">{{ isNew ? 'Nueva plantilla recurrente' : 'Editar plantilla' }}</div>
+            <div class="d">
+              {{ isNew ? 'Define un egreso que se genera periódicamente cada mes.' : 'Actualiza los datos de la plantilla.' }}
+            </div>
+          </div>
+          <button class="btn ghost sm" type="button" (click)="modalOpen.set(false)">
+            <app-icon name="x" [size]="14"/>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <form [formGroup]="form">
+
+            <div class="mfield">
+              <label>Categoría <span style="color:var(--danger)">*</span></label>
+              <select class="m-input" formControlName="category_id">
+                <option [value]="null">— Selecciona una categoría —</option>
+                @for (cat of categories(); track cat.id) {
+                  <option [value]="cat.id">{{ cat.name }}</option>
+                }
+              </select>
+              @if (form.get('category_id')?.touched && form.get('category_id')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Selecciona una categoría</div>
+              }
+            </div>
+
+            <div class="mfield">
+              <label>Descripción <span style="color:var(--danger)">*</span></label>
+              <input class="m-input" placeholder="Ej: Arriendo local, Servicio de internet…"
+                     formControlName="description"/>
+              @if (form.get('description')?.touched && form.get('description')?.invalid) {
+                <div class="hint" style="color:var(--danger)">Ingresa una descripción válida</div>
+              }
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Monto <span style="color:var(--danger)">*</span></label>
+                <input class="m-input mono" type="number" min="0.01" step="0.01" placeholder="0.00"
+                       formControlName="amount"/>
+                @if (form.get('amount')?.touched && form.get('amount')?.invalid) {
+                  <div class="hint" style="color:var(--danger)">Ingresa un monto válido</div>
+                }
+              </div>
+
+              <div class="mfield">
+                <label>Día del mes <span style="color:var(--danger)">*</span></label>
+                <select class="m-input" formControlName="day_of_month">
+                  @for (d of DAYS; track d) {
+                    <option [value]="d">Día {{ d }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="mfield">
+              <label>Proveedor <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+              <input class="m-input" placeholder="Nombre del proveedor"
+                     formControlName="supplier_name_free"/>
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Tipo de comprobante</label>
+                <select class="m-input" formControlName="voucher_type">
+                  <option value="">— Sin especificar —</option>
+                  @for (vt of VOUCHER_TYPES; track vt) {
+                    <option [value]="vt">{{ VOUCHER_TYPE_LABELS[vt] }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="mfield">
+                <label>Método de pago por defecto</label>
+                <select class="m-input" formControlName="default_payment_method">
+                  <option value="">— Sin especificar —</option>
+                  @for (pm of PAYMENT_METHODS; track pm) {
+                    <option [value]="pm">{{ PAYMENT_METHOD_LABELS[pm] }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="mfield-row">
+              <div class="mfield">
+                <label>Fecha de inicio <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+                <input class="m-input" type="date" formControlName="starts_at"/>
+              </div>
+              <div class="mfield">
+                <label>Fecha de fin <span style="color:var(--text-muted-ds);font-weight:400">(opcional)</span></label>
+                <input class="m-input" type="date" formControlName="ends_at"/>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="modal-foot">
+          @if (!isNew && authService.isStoreAdmin()) {
+            <button class="btn danger" style="margin-right:auto" type="button"
+                    (click)="deleteItem(editing()!)">
+              <app-icon name="trash" [size]="13"/>Eliminar
+            </button>
+          }
+          <button class="btn secondary" type="button" (click)="modalOpen.set(false)">Cancelar</button>
+          <button class="btn primary" type="button" (click)="save()" [disabled]="saving()">
+            @if (saving()) { <span class="btn-spinner"></span> }
+            @else { <app-icon name="check" [size]="13"/> }
+            {{ isNew ? 'Crear plantilla' : 'Guardar cambios' }}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

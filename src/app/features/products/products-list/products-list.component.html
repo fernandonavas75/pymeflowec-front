@@ -10,7 +10,7 @@
     </div>
     <div class="page-actions">
       @if (canEdit()) {
-        <button class="btn secondary" type="button">
+        <button class="btn secondary" type="button" (click)="exportCsv()">
           <app-icon name="download" [size]="14"/>Exportar
         </button>
         <button class="btn secondary" type="button" (click)="openCsvImport()">
@@ -30,13 +30,13 @@
 
   <!-- ── Tabs ────────────────────────────────────────────────────── -->
   <div class="ds-tabs">
-    <button class="ds-tab" [class.active]="tabFilter() === 'all'" (click)="tabFilter.set('all')" type="button">
+    <button class="ds-tab" [class.active]="tabFilter() === 'all'" (click)="setTabFilter('all')" type="button">
       Todos <span class="count">{{ totalCount() }}</span>
     </button>
-    <button class="ds-tab" [class.active]="tabFilter() === 'low'" (click)="tabFilter.set('low')" type="button">
+    <button class="ds-tab" [class.active]="tabFilter() === 'low'" (click)="setTabFilter('low')" type="button">
       Stock bajo <span class="count">{{ lowCount() }}</span>
     </button>
-    <button class="ds-tab" [class.active]="tabFilter() === 'out'" (click)="tabFilter.set('out')" type="button">
+    <button class="ds-tab" [class.active]="tabFilter() === 'out'" (click)="setTabFilter('out')" type="button">
       Agotados <span class="count">{{ outCount() }}</span>
     </button>
   </div>
@@ -63,14 +63,14 @@
       @if (openDropdown() === 'supplier') {
         <div class="filter-dropdown" (click)="$event.stopPropagation()">
           <button class="filter-dropdown-item" [class.selected]="!supplierFilter()" type="button"
-                  (click)="supplierFilter.set(null); openDropdown.set(null)">
+                  (click)="supplierFilter.set(null); currentPage.set(0); openDropdown.set(null)">
             Todos los proveedores
           </button>
           @if (uniqueSuppliers().length > 0) {
             <div class="filter-dropdown-sep"></div>
             @for (s of uniqueSuppliers(); track s) {
               <button class="filter-dropdown-item" [class.selected]="supplierFilter() === s" type="button"
-                      (click)="supplierFilter.set(s); openDropdown.set(null)">
+                      (click)="supplierFilter.set(s); currentPage.set(0); openDropdown.set(null)">
                 {{ s }}
               </button>
             }
@@ -98,16 +98,16 @@
       @if (openDropdown() === 'status') {
         <div class="filter-dropdown" (click)="$event.stopPropagation()">
           <button class="filter-dropdown-item" [class.selected]="!statusFilter()" type="button"
-                  (click)="statusFilter.set(null); openDropdown.set(null)">
+                  (click)="statusFilter.set(null); currentPage.set(0); openDropdown.set(null)">
             Todos los estados
           </button>
           <div class="filter-dropdown-sep"></div>
           <button class="filter-dropdown-item" [class.selected]="statusFilter() === 'ACTIVE'" type="button"
-                  (click)="statusFilter.set('ACTIVE'); openDropdown.set(null)">
+                  (click)="statusFilter.set('ACTIVE'); currentPage.set(0); openDropdown.set(null)">
             <span class="badge success" style="font-size:11px">Activo</span>
           </button>
           <button class="filter-dropdown-item" [class.selected]="statusFilter() === 'INACTIVE'" type="button"
-                  (click)="statusFilter.set('INACTIVE'); openDropdown.set(null)">
+                  (click)="statusFilter.set('INACTIVE'); currentPage.set(0); openDropdown.set(null)">
             <span class="badge neutral" style="font-size:11px">Inactivo</span>
           </button>
         </div>
@@ -143,7 +143,7 @@
       </div>
 
     } @else {
-      <div class="card-body p0">
+      <div class="card-body p0" style="overflow:hidden">
         <table class="ds-table">
           <thead>
             <tr>
@@ -158,7 +158,7 @@
             </tr>
           </thead>
           <tbody>
-            @for (p of filteredProducts(); track p.id) {
+            @for (p of pagedProducts(); track p.id) {
               <tr style="cursor:pointer" title="Ver ficha del producto" (click)="openProductPopup(p, $event)">
                 <td>
                   @if (p.sku) {
@@ -212,6 +212,33 @@
           </tbody>
         </table>
       </div>
+
+      @if (filteredProducts().length > PAGE_SIZE) {
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border-ds)">
+          <span style="font-size:12px;color:var(--text-subtle)">{{ pageRangeLabel() }} productos</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button class="btn ghost sm" type="button"
+                    [disabled]="currentPage() === 0"
+                    (click)="setPage(currentPage() - 1)">
+              <app-icon name="chevron_left" [size]="14"/>
+            </button>
+            @for (pg of pageNumbers(); track pg) {
+              <button class="btn ghost sm" type="button"
+                      [style.background]="pg === currentPage() ? 'var(--accent-soft)' : ''"
+                      [style.color]="pg === currentPage() ? 'var(--accent)' : ''"
+                      [style.fontWeight]="pg === currentPage() ? '600' : ''"
+                      (click)="setPage(pg)">
+                {{ pg + 1 }}
+              </button>
+            }
+            <button class="btn ghost sm" type="button"
+                    [disabled]="currentPage() >= totalPages() - 1"
+                    (click)="setPage(currentPage() + 1)">
+              <app-icon name="chevron_right" [size]="14"/>
+            </button>
+          </div>
+        </div>
+      }
     }
 
   </div>

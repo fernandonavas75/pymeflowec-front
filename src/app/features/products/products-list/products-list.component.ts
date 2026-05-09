@@ -29,6 +29,8 @@ export class ProductsListComponent implements OnInit {
   private snackBar         = inject(MatSnackBar);
   authService              = inject(AuthService);
 
+  readonly PAGE_SIZE = 20;
+
   private allProducts = signal<Product[]>([]);
   private taxRatesMap = signal<Record<number, TaxRate>>({});
   loading        = signal(true);
@@ -38,6 +40,7 @@ export class ProductsListComponent implements OnInit {
   supplierFilter = signal<string | null>(null);
   statusFilter   = signal<'ACTIVE' | 'INACTIVE' | null>(null);
   openDropdown   = signal<'supplier' | 'status' | null>(null);
+  currentPage    = signal(0);
 
   private searchQuery = toSignal(
     this.searchCtrl.valueChanges.pipe(startWith('')),
@@ -79,7 +82,25 @@ export class ProductsListComponent implements OnInit {
     return list;
   });
 
-  ngOnInit(): void { this.load(); }
+  totalPages = computed(() => Math.ceil(this.filteredProducts().length / this.PAGE_SIZE));
+
+  pageNumbers = computed(() => Array.from({ length: this.totalPages() }, (_, i) => i));
+
+  pagedProducts = computed(() => {
+    const start = this.currentPage() * this.PAGE_SIZE;
+    return this.filteredProducts().slice(start, start + this.PAGE_SIZE);
+  });
+
+  pageRangeLabel = computed(() => {
+    const from = this.currentPage() * this.PAGE_SIZE + 1;
+    const to   = Math.min((this.currentPage() + 1) * this.PAGE_SIZE, this.filteredProducts().length);
+    return `${from}–${to} de ${this.filteredProducts().length}`;
+  });
+
+  ngOnInit(): void {
+    this.searchCtrl.valueChanges.subscribe(() => this.currentPage.set(0));
+    this.load();
+  }
 
   load(): void {
     this.loading.set(true);
@@ -162,10 +183,18 @@ export class ProductsListComponent implements OnInit {
     this.openDropdown.update(curr => curr === name ? null : name);
   }
 
+  setPage(n: number): void { this.currentPage.set(n); }
+
+  setTabFilter(tab: 'all' | 'low' | 'out'): void {
+    this.tabFilter.set(tab);
+    this.currentPage.set(0);
+  }
+
   clearFilters(): void {
     this.supplierFilter.set(null);
     this.statusFilter.set(null);
     this.searchCtrl.setValue('');
+    this.currentPage.set(0);
   }
 
   openProductPopup(product: Product, event: MouseEvent): void {
@@ -182,6 +211,33 @@ export class ProductsListComponent implements OnInit {
       maxHeight: '90vh',
     });
     ref.afterClosed().subscribe(result => { if (result) this.load(); });
+  }
+
+  exportCsv(): void {
+    const rows = this.filteredProducts();
+    const headers = ['SKU', 'Nombre', 'Precio', 'Costo', 'Stock', 'Stock mínimo', 'Estado', 'IVA', 'Proveedor'];
+    const lines = rows.map(p => [
+      p.sku ?? '',
+      p.name,
+      (+p.sale_price).toFixed(2),
+      p.purchase_price != null ? (+p.purchase_price).toFixed(2) : '',
+      p.stock,
+      p.min_stock,
+      p.status === 'ACTIVE' ? 'Activo' : 'Inactivo',
+      this.taxLabel(p),
+      p.supplier?.name ?? '',
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+    this.downloadCsv([headers.join(','), ...lines].join('\n'), 'productos');
+  }
+
+  private downloadCsv(content: string, name: string): void {
+    const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `${name}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   canEdit(): boolean        { return this.authService.isSystemUser() || this.authService.isStoreAdmin(); }

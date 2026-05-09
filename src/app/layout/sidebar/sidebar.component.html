@@ -25,7 +25,7 @@
   <div class="sidebar-scroll">
 
     <!-- Dashboard -->
-    <a routerLink="/dashboard" routerLinkActive="active" class="nav-item"
+    <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="linkActiveOptions" class="nav-item"
        [title]="collapsed() ? 'Dashboard' : ''">
       <app-icon name="dashboard" [size]="17" class="icon" />
       <span class="label">Dashboard</span>
@@ -56,6 +56,7 @@
             <a [routerLink]="item.route"
                [queryParams]="item.queryParams ?? null"
                routerLinkActive="active"
+               [routerLinkActiveOptions]="linkActiveOptions"
                class="nav-item"
                [title]="collapsed() ? item.label : ''">
               <app-icon [name]="item.icon" [size]="17" class="icon" />

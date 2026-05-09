@@ -7,7 +7,7 @@
       <div class="page-sub-en">Customers · {{ totalCount() }} registrados</div>
     </div>
     <div class="page-actions">
-      <button class="btn secondary" type="button">
+      <button class="btn secondary" type="button" (click)="exportCsv()">
         <app-icon name="download" [size]="14"/>Exportar
       </button>
       <button class="btn primary" type="button" (click)="openNew()">

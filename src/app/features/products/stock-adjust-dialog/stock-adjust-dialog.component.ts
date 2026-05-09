@@ -1,13 +1,18 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, Observable, of } from 'rxjs';
+import { startWith } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ProductsService } from '../../../core/services/products.service';
+import { ExpensesService } from '../../../core/services/expenses.service';
+import { ExpenseCategoriesService } from '../../../core/services/expense-categories.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Product } from '../../../core/models/product.model';
+import { ExpenseCategory } from '../../../core/models/expense-category.model';
 
 @Component({
   selector: 'app-stock-adjust-dialog',
@@ -78,8 +83,7 @@ import { Product } from '../../../core/models/product.model';
             {{ form.get('movement_type')?.value === 'ADJUSTMENT' ? 'Nuevo total de stock' : 'Cantidad' }}
             <span class="req">*</span>
           </label>
-          <input class="field-input" type="number" step="1" min="1" formControlName="quantity"
-                 placeholder="0">
+          <input class="field-input" type="number" step="1" min="1" formControlName="quantity" placeholder="0">
           @if (form.get('quantity')?.touched && form.get('quantity')?.invalid) {
             <span class="field-hint" style="color:var(--danger)">Ingresa un número entero mayor a 0</span>
           }
@@ -107,14 +111,12 @@ import { Product } from '../../../core/models/product.model';
 
         @if (!isWarehouse) {
           <hr style="border:none;border-top:1px solid var(--border-ds);margin:16px 0 18px">
-
           <p style="font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:4px">
             Alerta de reabastecimiento
           </p>
           <p style="font-size:12px;color:var(--text-subtle);margin-bottom:12px">
             Se muestra una alerta cuando el stock llegue a este nivel.
           </p>
-
           <div class="field">
             <label class="field-label">Stock mínimo para alertar</label>
             <input class="field-input" type="number" step="1" min="0" formControlName="min_stock">
@@ -126,6 +128,30 @@ import { Product } from '../../../core/models/product.model';
         }
 
       </form>
+
+      <!-- ── Aviso de egreso automático ────────────────────────────── -->
+      @if (!isWarehouse && form.get('movement_type')?.value === 'IN' && product.purchase_price > 0) {
+        <hr style="border:none;border-top:1px solid var(--border-ds);margin:16px 0 14px">
+        @if (inventarioCategory()) {
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--accent-soft);border:1px solid var(--accent-soft-strong);border-radius:var(--radius-sm-ds)">
+            <app-icon name="receipt" [size]="15" style="color:var(--accent);flex-shrink:0"/>
+            <span style="font-size:12.5px;color:var(--text-ds)">
+              Se registrará automáticamente un egreso de
+              <strong>{{ fmtCost(expenseAmount()) }}</strong>
+              en la categoría <strong>Inventario</strong>.
+            </span>
+          </div>
+        } @else {
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--radius-sm-ds);opacity:.8">
+            <app-icon name="alert_triangle" [size]="15" style="color:var(--warn);flex-shrink:0"/>
+            <span style="font-size:12px;color:var(--text-muted-ds)">
+              Sin categoría <strong>INVENTARIO</strong> activa — el egreso no se registrará.
+              Créala en <strong>Finanzas → Cat. egresos</strong>.
+            </span>
+          </div>
+        }
+      }
+
     </div>
 
     <!-- Footer -->
@@ -142,43 +168,68 @@ import { Product } from '../../../core/models/product.model';
 export class StockAdjustDialogComponent implements OnInit {
   product: Product = inject(MAT_DIALOG_DATA);
   ref = inject(MatDialogRef<StockAdjustDialogComponent>);
-  private svc = inject(ProductsService);
+  private svc         = inject(ProductsService);
+  private expenseSvc  = inject(ExpensesService);
+  private catSvc      = inject(ExpenseCategoriesService);
   private authService = inject(AuthService);
-  private snackBar = inject(MatSnackBar);
-  private fb = inject(FormBuilder);
+  private snackBar    = inject(MatSnackBar);
+  private fb          = inject(FormBuilder);
 
   saving = false;
   isWarehouse = this.authService.isStoreWarehouse();
+
+  private allCategories    = signal<ExpenseCategory[]>([]);
+  inventarioCategory       = computed(() =>
+    this.allCategories().find(c => c.is_active && c.category_type === 'INVENTARIO') ?? null,
+  );
 
   private static integerOnly(c: AbstractControl): ValidationErrors | null {
     const v = c.value;
     return v !== null && v !== '' && !Number.isInteger(Number(v)) ? { integer: true } : null;
   }
 
-  ngOnInit(): void {
-    this.form.get('movement_type')!.valueChanges.subscribe(type => {
-      const notesCtrl = this.form.get('notes')!;
-      if (type === 'OUT') {
-        notesCtrl.addValidators(Validators.required);
-      } else {
-        notesCtrl.removeValidators(Validators.required);
-      }
-      notesCtrl.updateValueAndValidity();
-    });
-  }
-
   form = this.fb.group({
     movement_type: ['IN', Validators.required],
-    quantity: [null as number | null, [Validators.required, Validators.min(1), StockAdjustDialogComponent.integerOnly]],
-    notes: [''],
+    quantity:  [null as number | null, [Validators.required, Validators.min(1), StockAdjustDialogComponent.integerOnly]],
+    notes:     [''],
     min_stock: [this.product.min_stock, [Validators.required, Validators.min(0), StockAdjustDialogComponent.integerOnly]],
   });
 
+  private qtySignal = toSignal(
+    this.form.get('quantity')!.valueChanges.pipe(startWith(null as number | null)),
+    { initialValue: null as number | null },
+  );
+
+  expenseAmount = computed(() => {
+    const qty = this.qtySignal() ?? 0;
+    return +(this.product.purchase_price * qty).toFixed(2);
+  });
+
+  ngOnInit(): void {
+    this.form.get('movement_type')!.valueChanges.subscribe(type => {
+      const notesCtrl = this.form.get('notes')!;
+      if (type === 'OUT') notesCtrl.addValidators(Validators.required);
+      else notesCtrl.removeValidators(Validators.required);
+      notesCtrl.updateValueAndValidity();
+    });
+
+    if (!this.isWarehouse) {
+      this.catSvc.list({ limit: 500 }).subscribe({
+        next: data => this.allCategories.set(data),
+        error: ()   => {},
+      });
+    }
+  }
+
+  fmtCost(n: number): string {
+    return '$' + (+n).toFixed(2);
+  }
+
   newStock(): number {
-    const v = this.form.value;
+    const v   = this.form.value;
     const qty = +(v.quantity ?? 0);
-    if (v.movement_type === 'IN') return this.product.stock + qty;
-    if (v.movement_type === 'OUT') return Math.max(0, this.product.stock - qty);
+    if (v.movement_type === 'IN')         return this.product.stock + qty;
+    if (v.movement_type === 'OUT')        return Math.max(0, this.product.stock - qty);
     if (v.movement_type === 'ADJUSTMENT') return qty;
     return this.product.stock;
   }
@@ -189,10 +240,10 @@ export class StockAdjustDialogComponent implements OnInit {
     const v = this.form.value;
 
     const stockCall$ = this.svc.adjustStock(this.product.id, {
-      quantity: v.quantity!,
-      movement_type: v.movement_type as 'IN' | 'OUT' | 'ADJUSTMENT',
+      quantity:       v.quantity!,
+      movement_type:  v.movement_type as 'IN' | 'OUT' | 'ADJUSTMENT',
       reference_type: 'MANUAL',
-      notes: v.notes || undefined,
+      notes:          v.notes || undefined,
     });
 
     const minStockChanged = !this.isWarehouse && v.min_stock !== this.product.min_stock;
@@ -200,9 +251,25 @@ export class StockAdjustDialogComponent implements OnInit {
       ? this.svc.update(this.product.id, { min_stock: v.min_stock! })
       : of(null);
 
-    forkJoin([stockCall$, updateCall$]).subscribe({
-      next: () => {
-        this.snackBar.open('Cambios guardados', 'OK', { duration: 3000 });
+    let expenseCall$: Observable<unknown> = of(null);
+    const cat = this.inventarioCategory();
+    if (v.movement_type === 'IN' && cat && this.product.purchase_price > 0) {
+      const amount = this.expenseAmount();
+      if (amount > 0) {
+        expenseCall$ = this.expenseSvc.create({
+          category_id:        cat.id,
+          description:        `Entrada de inventario: ${this.product.name}`,
+          amount,
+          supplier_name_free: this.product.supplier?.name || 'Sin proveedor',
+          expense_date:       new Date().toISOString().slice(0, 10),
+        });
+      }
+    }
+
+    forkJoin([stockCall$, updateCall$, expenseCall$]).subscribe({
+      next: ([, , expense]) => {
+        const msg = expense ? 'Stock actualizado y egreso registrado' : 'Cambios guardados';
+        this.snackBar.open(msg, 'OK', { duration: 3000 });
         this.ref.close(true);
       },
       error: (err) => {

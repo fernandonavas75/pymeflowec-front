@@ -573,9 +573,19 @@ a { color: inherit; }
   .nav-group-label {
     display: block !important;
     height: 1px;
+    overflow: hidden;
     background: var(--border-ds);
     margin: 12px 8px;
     padding: 0;
+  }
+  .sidebar-brand {
+    justify-content: center;
+    padding: 0;
+  }
+  .sidebar-foot {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 }
 
@@ -744,6 +754,7 @@ a { color: inherit; }
   border: 1px solid var(--border-ds);
   border-radius: var(--radius-ds);
   box-shadow: var(--shadow-sm-ds);
+  overflow: hidden;
 }
 .card-head {
   padding: 16px 20px;
@@ -989,12 +1000,15 @@ a { color: inherit; }
 
 // ── Stock bar ─────────────────────────────────────────────────────
 .stock-bar {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  max-width: 100%;
   .bar {
-    width: 60px; height: 5px;
+    flex-shrink: 0;
+    width: 48px; height: 5px;
     background: var(--surface-3);
     border-radius: 99px;
     overflow: hidden;
@@ -1484,4 +1498,184 @@ a { color: inherit; }
   height: 36px; padding: 0 12px; border: 1px solid var(--border-strong-ds); border-radius: var(--radius-sm-ds);
   background: var(--surface); font-size: 14px; color: var(--text-ds); outline: none; width: 100%; font-family: inherit;
   &:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// RESPONSIVE — Mobile, Tablet y Large screen
+// ══════════════════════════════════════════════════════════════════
+
+// Backdrop del sidebar móvil (siempre en DOM, visible solo en mobile vía CSS)
+.mobile-sidebar-backdrop {
+  display: none;
+}
+
+// ── Mobile (< 768px) ──────────────────────────────────────────────
+@media (max-width: 767px) {
+
+  // Backdrop: cubre el contenido detrás del sidebar overlay
+  .mobile-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: oklch(0.22 0.012 258 / 0.45);
+    z-index: 299;
+    animation: ds-fade 0.15s ease;
+  }
+
+  // App shell: una sola columna, sidebar fuera del flujo
+  .app {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: var(--topbar-h) 1fr;
+  }
+  .ds-topbar {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0 12px;
+  }
+  .ds-content {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  // Sidebar: drawer/overlay desde la izquierda
+  .ds-sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 300;
+    width: 280px;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: var(--shadow-lg-ds);
+  }
+  .app[data-sidebar="labels"] .ds-sidebar {
+    transform: translateX(0);
+  }
+
+  // En mobile, el sidebar siempre muestra labels (no icon-only) sin importar el estado
+  .app[data-sidebar="icons"] .ds-sidebar {
+    .nav-group-label {
+      display: block !important;
+      height: auto !important;
+      overflow: visible;
+      background: none;
+      margin: 0;
+      padding: 0 10px 6px;
+    }
+    .nav-item .label { display: block !important; }
+    .nav-item .pill  { display: inline-flex !important; }
+    .brand-wordmark  { display: block !important; }
+    .sidebar-foot-meta { display: flex !important; }
+    .nav-item { justify-content: flex-start; padding: 7px 10px; }
+    .sidebar-brand { justify-content: flex-start; padding: 0 18px; }
+    .sidebar-foot  { flex-wrap: nowrap; gap: 10px; }
+  }
+
+  // Página: menos padding y título más pequeño
+  .page {
+    padding: 16px 16px 40px;
+  }
+  .page-title {
+    font-size: 22px;
+  }
+  .page-head {
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .page-actions {
+    flex-wrap: wrap;
+  }
+
+  // Tarjetas con tabla: scroll horizontal en lugar de overflow oculto
+  .card {
+    overflow-x: auto;
+  }
+
+  // Filtros: buscador ocupa el ancho completo
+  .filter-search {
+    max-width: none;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  // Grids de formulario: una columna en mobile
+  .mfield-row { grid-template-columns: 1fr; }
+  .field-row  { grid-template-columns: 1fr; }
+
+  // Grids utilitarios: una columna
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+
+  // Info-rows (detalles en drawer): apila label arriba del valor
+  .info-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 8px 0;
+  }
+
+  // POS layout: apila columnas verticalmente
+  .pos-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: unset;
+  }
+
+  // Tabs: scroll horizontal sin cortar el contenido
+  .ds-tabs,
+  .page-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    &::-webkit-scrollbar { display: none; }
+    .ds-tab { white-space: nowrap; }
+    .page-tab { white-space: nowrap; }
+  }
+
+  // KPI: valor ligeramente más pequeño
+  .kpi-value { font-size: 26px; }
+
+  // Drawer: ancho casi completo en mobile
+  .drawer {
+    width: 100%;
+    max-width: 96vw;
+  }
+
+  // Modal backdrop: menos padding para aprovechar pantalla
+  .modal-backdrop { padding: 12px; }
+
+  // Audit rows: dos columnas en vez de cuatro
+  .audit-row {
+    grid-template-columns: 1fr 1fr;
+    font-size: 12px;
+    .target { display: none; }
+  }
+}
+
+// ── Tablet (768px – 1023px) ───────────────────────────────────────
+@media (min-width: 768px) and (max-width: 1023px) {
+  .page {
+    padding: 20px 24px 40px;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  .pos-layout {
+    grid-template-columns: 1fr 360px;
+  }
+  .mfield-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+// ── Pantallas grandes (≥ 1600px) ──────────────────────────────────
+@media (min-width: 1600px) {
+  .page {
+    max-width: 1600px;
+    padding: 32px 48px 56px;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
 }
