@@ -25,7 +25,10 @@
       <div class="pos-products scrollbar-ds">
         @for (p of filteredProducts(); track p.id) {
           <button class="prod-tile" [class.in-cart]="isInCart(p.id)"
-                  [disabled]="p.stock === 0" (click)="addToCart(p)" type="button">
+                  [disabled]="p.stock === 0" type="button"
+                  (click)="handleTileClick(p)"
+                  (mousedown)="startHold(p)" (mouseup)="stopHold()" (mouseleave)="stopHold()"
+                  (touchstart)="startHold(p); $event.preventDefault()" (touchend)="stopHold()" (touchcancel)="stopHold()">
             <div class="swatch">{{ (p.sku ?? p.name).split('-')[0] }}</div>
             <div class="sku">{{ p.sku ?? '—' }}</div>
             <div class="n">{{ p.name }}</div>

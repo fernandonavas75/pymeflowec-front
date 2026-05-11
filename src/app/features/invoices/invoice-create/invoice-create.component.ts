@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -23,7 +23,7 @@ interface CartItem { product: Product; qty: number; discount: number; }
   templateUrl: './invoice-create.component.html',
   styleUrls: ['./invoice-create.component.scss'],
 })
-export class InvoiceCreateComponent implements OnInit {
+export class InvoiceCreateComponent implements OnInit, OnDestroy {
   private router           = inject(Router);
   private invoicesService  = inject(InvoicesService);
   private customersService = inject(CustomersService);
@@ -39,6 +39,10 @@ export class InvoiceCreateComponent implements OnInit {
   selectedTaxRateId  = signal<number | null>(null);
   cart               = signal<CartItem[]>([]);
   saving             = signal(false);
+
+  private holdTimeout: ReturnType<typeof setTimeout> | null = null;
+  private holdInterval: ReturnType<typeof setInterval> | null = null;
+  private holdActive = false;
 
   queryCtrl         = new FormControl('');
   customerQueryCtrl = new FormControl('');
@@ -106,6 +110,26 @@ export class InvoiceCreateComponent implements OnInit {
         if (def) this.selectedTaxRateId.set(def.id);
       },
     });
+  }
+
+  ngOnDestroy(): void { this.stopHold(); }
+
+  startHold(p: Product): void {
+    this.holdTimeout = setTimeout(() => {
+      this.holdActive = true;
+      this.addToCart(p);
+      this.holdInterval = setInterval(() => this.addToCart(p), 150);
+    }, 400);
+  }
+
+  stopHold(): void {
+    if (this.holdTimeout) { clearTimeout(this.holdTimeout); this.holdTimeout = null; }
+    if (this.holdInterval) { clearInterval(this.holdInterval); this.holdInterval = null; }
+  }
+
+  handleTileClick(p: Product): void {
+    if (this.holdActive) { this.holdActive = false; return; }
+    this.addToCart(p);
   }
 
   addToCart(p: Product): void {

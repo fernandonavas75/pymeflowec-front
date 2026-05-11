@@ -36,7 +36,8 @@ export class InvoicesListComponent implements OnInit {
 
   readonly PAYMENT_METHOD_LABELS = PAYMENT_METHOD_LABELS;
 
-  hasPaymentsModule = computed(() => this.modulesSvc.approvedCodes().has('MOD_PAYMENTS'));
+  hasPaymentsModule   = computed(() => this.modulesSvc.approvedCodes().has('MOD_PAYMENTS'));
+  hasInventoryModule  = computed(() => this.modulesSvc.approvedCodes().has('MOD_INVENTORY'));
 
   private allInvoices = signal<Invoice[]>([]);
   loading         = signal(true);
@@ -534,12 +535,24 @@ export class InvoicesListComponent implements OnInit {
   cancelInvoice(): void {
     const inv = this.selectedInvoice();
     if (!inv) return;
+
+    const amountPaid = +(inv.amount_paid ?? 0);
+
+    const warnParts: string[] = [];
+    if (amountPaid > 0) {
+      warnParts.push(`Se registrará un egreso imprevisto de $${amountPaid.toFixed(2)} por el monto ya cobrado.`);
+    }
+    if (this.hasInventoryModule()) {
+      warnParts.push('El stock de los productos se restaurará automáticamente.');
+    }
+
     this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Cancelar factura',
-        message: '¿Cancelar esta factura? Esta acción no se puede deshacer.',
+        message: `¿Cancelar la factura ${inv.invoice_number}? Esta acción no se puede deshacer.`,
         confirmText: 'Cancelar factura',
         danger: true,
+        warning: warnParts.length > 0 ? warnParts.join(' ') : undefined,
       },
     }).afterClosed().subscribe(ok => {
       if (!ok) return;
@@ -548,8 +561,12 @@ export class InvoicesListComponent implements OnInit {
         next: updated => {
           this.selectedInvoice.set(updated);
           this.allInvoices.update(list => list.map(i => i.id === updated.id ? updated : i));
+          this.loadPayments(updated.id);
           this.actionLoading.set(false);
-          this.snackBar.open('Factura cancelada', 'OK', { duration: 3000 });
+          const msg = amountPaid > 0
+            ? `Factura cancelada · Egreso imprevisto de $${amountPaid.toFixed(2)} registrado`
+            : 'Factura cancelada';
+          this.snackBar.open(msg, 'OK', { duration: 5000 });
         },
         error: () => this.actionLoading.set(false),
       });

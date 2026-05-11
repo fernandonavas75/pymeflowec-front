@@ -865,38 +865,202 @@ export class FinanceDashboardComponent {
     return pct > 0 ? Math.min((pct / 100) * DONUT_CIRC, DONUT_CIRC) : 0;
   });
 
+  // ── Sub-tabs dentro de Reportes ───────────────────────────────────
+  reportesSubTab = signal<'resumen' | 'liquidos'>('resumen');
+
+  // Ingresos reales (cobrados) en el período seleccionado
+  reportesIngresosReales = computed(() =>
+    this.reportesPeriodInvoices().reduce((s, i) => s + +(i.amount_paid ?? 0), 0)
+  );
+
+  reportesGananciaReal = computed(() => this.reportesIngresosReales() - this.reportesTotalGastos());
+
+  // Mes anterior para variación %
+  private reportesPrevFrom = computed(() => {
+    let m = this.reportesMonth() - 1, y = this.reportesYear();
+    if (m === 0) { m = 12; y--; }
+    return `${y}-${String(m).padStart(2, '0')}-01`;
+  });
+
+  private reportesPrevTo = computed(() => {
+    let m = this.reportesMonth() - 1, y = this.reportesYear();
+    if (m === 0) { m = 12; y--; }
+    const lastDay = new Date(y, m, 0).getDate();
+    return `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  });
+
+  private reportesPrevInvoices = computed(() => {
+    const from = this.reportesPrevFrom(), to = this.reportesPrevTo();
+    return this.allIngresosInvoices().filter(inv =>
+      inv.status === 'ISSUED' &&
+      (inv.issue_date ?? '').slice(0, 10) >= from &&
+      (inv.issue_date ?? '').slice(0, 10) <= to
+    );
+  });
+
+  private reportesPrevExpenses = computed(() => {
+    const from = this.reportesPrevFrom(), to = this.reportesPrevTo();
+    return this.allEgresos().filter(e =>
+      e.payment_status !== 'ANULADO' &&
+      (e.expense_date ?? e.created_at.slice(0, 10)) >= from &&
+      (e.expense_date ?? e.created_at.slice(0, 10)) <= to
+    );
+  });
+
+  reportesPrevTotalVentas = computed(() => this.reportesPrevInvoices().reduce((s, i) => s + +i.total, 0));
+  reportesPrevTotalGastos = computed(() => this.reportesPrevExpenses().reduce((s, e) => s + +e.amount, 0));
+
+  reportesVariacionIngresos = computed(() => {
+    const curr = this.reportesTotalVentas(), prev = this.reportesPrevTotalVentas();
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return ((curr - prev) / prev) * 100;
+  });
+
+  reportesVariacionGastos = computed(() => {
+    const curr = this.reportesTotalGastos(), prev = this.reportesPrevTotalGastos();
+    if (prev === 0) return curr > 0 ? 100 : 0;
+    return ((curr - prev) / prev) * 100;
+  });
+
+  // Cantidad de unidades vendidas en el período
+  reportesCantidadVendida = computed(() => {
+    const from = this.reportesFrom(), to = this.reportesTo();
+    let total = 0;
+    for (const inv of this.ventasDetailMap().values()) {
+      const d = (inv.issue_date ?? '').slice(0, 10);
+      if (d < from || d > to) continue;
+      for (const det of inv.details ?? []) {
+        total += +det.quantity;
+      }
+    }
+    return total;
+  });
+
+  // Comparación del mismo mes en distintos años
+  reportesComparacionAnual = computed<{ year: number; ventas: number; gastos: number }[]>(() => {
+    const targetMonth = this.reportesMonth();
+    const yearMap = new Map<number, { ventas: number; gastos: number }>();
+    for (const inv of this.allIngresosInvoices()) {
+      if (inv.status !== 'ISSUED' || !inv.issue_date) continue;
+      const d = new Date(inv.issue_date);
+      if (d.getMonth() + 1 !== targetMonth) continue;
+      const y = d.getFullYear();
+      const cur = yearMap.get(y) ?? { ventas: 0, gastos: 0 };
+      yearMap.set(y, { ...cur, ventas: cur.ventas + +inv.total });
+    }
+    for (const exp of this.allEgresos()) {
+      if (exp.payment_status === 'ANULADO') continue;
+      const d = new Date(exp.expense_date ?? exp.created_at);
+      if (d.getMonth() + 1 !== targetMonth) continue;
+      const y = d.getFullYear();
+      const cur = yearMap.get(y) ?? { ventas: 0, gastos: 0 };
+      yearMap.set(y, { ...cur, gastos: cur.gastos + +exp.amount });
+    }
+    return Array.from(yearMap.entries())
+      .map(([year, v]) => ({ year, ...v }))
+      .sort((a, b) => a.year - b.year);
+  });
+
+  reportesComparacionAnualMax = computed(() =>
+    Math.max(...this.reportesComparacionAnual().flatMap(d => [d.ventas, d.gastos]), 0.01)
+  );
+
+  // Ventas por método de pago en el período
+  reportesVentasPorMetodo = computed<{ method: string; label: string; amount: number; pct: number }[]>(() => {
+    const from = this.reportesFrom(), to = this.reportesTo();
+    const methodMap = new Map<string, number>();
+    for (const pay of this.allIngresosPayments()) {
+      if (pay.status === 'ANULADO') continue;
+      const date = pay.payment_date.slice(0, 10);
+      if (date < from || date > to) continue;
+      methodMap.set(pay.payment_method, (methodMap.get(pay.payment_method) ?? 0) + +pay.amount);
+    }
+    const total = Array.from(methodMap.values()).reduce((s, v) => s + v, 0);
+    return Array.from(methodMap.entries())
+      .map(([method, amount]) => ({
+        method,
+        label: PAYMENT_METHOD_LABELS[method as keyof typeof PAYMENT_METHOD_LABELS] ?? method,
+        amount,
+        pct: total > 0 ? (amount / total) * 100 : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  });
+
+  readonly METODO_COLORS: Record<string, string> = {
+    EFECTIVO:        'var(--success)',
+    TRANSFERENCIA:   'var(--accent)',
+    TARJETA_DEBITO:  'var(--warn)',
+    TARJETA_CREDITO: '#a855f7',
+    CHEQUE:          'var(--text-muted)',
+    OTRO:            'var(--border-strong-ds)',
+  };
+
+  // Pre-computed bar data for variación % chart (avoid @let in template)
+  reportesVariacionChartData = computed(() => {
+    const prevV = this.reportesPrevTotalVentas(), currV = this.reportesTotalVentas();
+    const prevG = this.reportesPrevTotalGastos(), currG = this.reportesTotalGastos();
+    const maxV  = Math.max(prevV, currV, 0.01);
+    const maxG  = Math.max(prevG, currG, 0.01);
+    return {
+      ingresos: { prev: prevV, curr: currV, hPrev: (prevV / maxV) * 56, hCurr: (currV / maxV) * 56 },
+      gastos:   { prev: prevG, curr: currG, hPrev: (prevG / maxG) * 56, hCurr: (currG / maxG) * 56 },
+    };
+  });
+
+  // Pre-computed bars for annual comparison chart
+  reportesComparacionAnualBars = computed(() => {
+    const data = this.reportesComparacionAnual();
+    const max  = this.reportesComparacionAnualMax();
+    return data.map((d, i) => {
+      const gx  = 50 + i * 110;
+      const bw  = 36;
+      const hV  = (d.ventas / max) * 100;
+      const hG  = (d.gastos / max) * 100;
+      const gan = d.ventas - d.gastos;
+      return { ...d, gx, bw, hV, hG, yV: 100 - hV, yG: 100 - hG, gan };
+    });
+  });
+
+  reportesComparacionAnualViewBox = computed(() => {
+    const n = this.reportesComparacionAnual().length;
+    return `0 0 ${80 + n * 110} 140`;
+  });
+
+  reportesTopProductsMaxQty = computed(() => this.reportesTopProducts()[0]?.qty || 1);
+
   constructor() {
+    const opts = { allowSignalWrites: true };
     effect(() => {
       if (this.activeTab() === 'ingresos' && !this.ingresosLoaded) {
         this.loadIngresos();
       }
-    });
+    }, opts);
     effect(() => {
       if (this.activeTab() === 'ventas' && !this.ventasLoaded) {
         this.loadVentas();
       }
-    });
+    }, opts);
     effect(() => {
       if (this.activeTab() === 'cxc' && !this.cxcLoaded) {
         this.loadCxc();
       }
-    });
+    }, opts);
     effect(() => {
       if (this.activeTab() === 'cxp' && !this.cxpLoaded) {
         this.loadCxp();
       }
-    });
+    }, opts);
     effect(() => {
       const tab = this.activeTab();
       if ((tab === 'egresos' || tab === 'compras') && !this.egresosLoaded) {
         this.loadEgresos();
       }
-    });
+    }, opts);
     effect(() => {
       if (this.activeTab() === 'reportes' && !this.reportesLoaded) {
         this.loadReportes();
       }
-    });
+    }, opts);
   }
 
   // ── Ingresos methods ─────────────────────────────────────────────

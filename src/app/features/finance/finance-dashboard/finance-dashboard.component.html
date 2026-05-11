@@ -1338,10 +1338,23 @@
         }
       </div>
 
+      <!-- Sub-tabs dentro de Reportes -->
+      <div class="ds-tabs" style="margin-bottom:16px">
+        <button class="ds-tab" [class.active]="reportesSubTab() === 'resumen'" (click)="reportesSubTab.set('resumen')">Resumen General</button>
+        <button class="ds-tab" [class.active]="reportesSubTab() === 'liquidos'" (click)="reportesSubTab.set('liquidos')">Ingresos Líquidos</button>
+      </div>
+
+      @if (reportesSubTab() === 'resumen') {
+
       <!-- KPI strip principal -->
-      <div class="cxc-kpi-strip" style="margin-bottom:16px">
+      <div class="cxc-kpi-strip" style="margin-bottom:16px;grid-template-columns:repeat(5,1fr)">
         <div class="cxc-kpi">
-          <div class="cxc-kpi-label">Total Ventas</div>
+          <div class="cxc-kpi-label">Ventas sin IVA</div>
+          <div class="cxc-kpi-value" style="color:var(--success)">${{ reportesSubtotalVentas() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">ingreso bruto</div>
+        </div>
+        <div class="cxc-kpi">
+          <div class="cxc-kpi-label">Ventas con IVA</div>
           <div class="cxc-kpi-value" style="color:var(--success)">${{ reportesTotalVentas() | number:'1.2-2' }}</div>
           <div class="cxc-kpi-sub">{{ reportesNumFacturas() }} facturas emitidas</div>
         </div>
@@ -1750,6 +1763,325 @@
           </div>
         }
       </div>
+
+      } <!-- end @if resumen -->
+
+      <!-- ══════════════════════════════════════════════════════════════
+           SUB-TAB: Ingresos Líquidos
+      ═══════════════════════════════════════════════════════════════ -->
+      @if (reportesSubTab() === 'liquidos') {
+
+        <!-- ── 1. Ganancia Bruta vs Ganancia Real ───────────────────── -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+          <!-- Ganancia Bruta (ventas con IVA - gastos) -->
+          <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:22px 24px">
+            <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle);margin-bottom:12px">
+              Ganancia Bruta (ventas totales)
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+              <div style="font-size:2rem;font-weight:700;line-height:1"
+                [style.color]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                ${{ reportesGanancia() | number:'1.2-2' }}
+              </div>
+              <span style="font-size:0.8rem;font-weight:500"
+                [style.color]="reportesGanancia() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                {{ reportesGananciaPct() }}%
+              </span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;color:var(--text-muted)">
+              <div style="display:flex;justify-content:space-between">
+                <span>Ingresos (con IVA)</span>
+                <span style="font-weight:600;color:var(--success)">${{ reportesTotalVentas() | number:'1.2-2' }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span>Gastos operacionales</span>
+                <span style="font-weight:600;color:var(--danger)">−${{ reportesTotalGastos() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-ds);font-size:0.72rem;color:var(--text-subtle)">
+              Incluye todas las facturas emitidas (cobradas y pendientes)
+            </div>
+          </div>
+
+          <!-- Ganancia Real (solo cobros efectivos - gastos) -->
+          <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:22px 24px">
+            <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle);margin-bottom:12px">
+              Ganancia Real (solo ingresos cobrados)
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+              <div style="font-size:2rem;font-weight:700;line-height:1"
+                [style.color]="reportesGananciaReal() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                ${{ reportesGananciaReal() | number:'1.2-2' }}
+              </div>
+              @if (reportesTotalVentas() > 0) {
+                <span style="font-size:0.8rem;font-weight:500"
+                  [style.color]="reportesGananciaReal() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                  {{ (reportesGananciaReal() / reportesTotalVentas() * 100) | number:'1.0-0' }}%
+                </span>
+              }
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;color:var(--text-muted)">
+              <div style="display:flex;justify-content:space-between">
+                <span>Ingresos cobrados</span>
+                <span style="font-weight:600;color:var(--accent)">${{ reportesIngresosReales() | number:'1.2-2' }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between">
+                <span>Gastos operacionales</span>
+                <span style="font-weight:600;color:var(--danger)">−${{ reportesTotalGastos() | number:'1.2-2' }}</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-ds);font-size:0.72rem;color:var(--text-subtle)">
+              Pendiente de cobro: ${{ (reportesTotalVentas() - reportesIngresosReales()) | number:'1.2-2' }}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ── 2. Variación % vs mes anterior ────────────────────────── -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:20px 24px;margin-bottom:16px">
+          <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:16px">
+            Variación porcentual vs mes anterior
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:16px">
+
+            <!-- Ingresos variación -->
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:0.8rem;color:var(--text-muted)">Ingresos</span>
+                <span style="font-size:1rem;font-weight:700"
+                  [style.color]="reportesVariacionIngresos() >= 0 ? 'var(--success)' : 'var(--danger)'">
+                  {{ reportesVariacionIngresos() >= 0 ? '+' : '' }}{{ reportesVariacionIngresos() | number:'1.1-1' }}%
+                </span>
+              </div>
+              <div style="display:flex;gap:6px;align-items:flex-end;height:60px">
+                @if (reportesVariacionChartData().ingresos.prev > 0 || reportesVariacionChartData().ingresos.curr > 0) {
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:100%;background:var(--surface-3);border-radius:4px 4px 0 0;position:relative;transition:height 0.4s"
+                      [style.height.px]="reportesVariacionChartData().ingresos.hPrev">
+                      <div style="position:absolute;inset:0;background:var(--border-strong-ds);border-radius:4px 4px 0 0;opacity:0.5"></div>
+                    </div>
+                    <span style="font-size:0.65rem;color:var(--text-subtle)">Ant.</span>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:100%;border-radius:4px 4px 0 0;transition:height 0.4s"
+                      [style.height.px]="reportesVariacionChartData().ingresos.hCurr"
+                      [style.background]="reportesVariacionIngresos() >= 0 ? 'var(--success)' : 'var(--danger)'"
+                      style="opacity:0.85">
+                    </div>
+                    <span style="font-size:0.65rem;color:var(--text-subtle)">Act.</span>
+                  </div>
+                }
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.72rem;color:var(--text-muted)">
+                <span>${{ reportesPrevTotalVentas() | number:'1.0-0' }}</span>
+                <span>${{ reportesTotalVentas() | number:'1.0-0' }}</span>
+              </div>
+            </div>
+
+            <!-- Gastos variación -->
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:0.8rem;color:var(--text-muted)">Gastos</span>
+                <span style="font-size:1rem;font-weight:700"
+                  [style.color]="reportesVariacionGastos() <= 0 ? 'var(--success)' : 'var(--danger)'">
+                  {{ reportesVariacionGastos() >= 0 ? '+' : '' }}{{ reportesVariacionGastos() | number:'1.1-1' }}%
+                </span>
+              </div>
+              <div style="display:flex;gap:6px;align-items:flex-end;height:60px">
+                @if (reportesVariacionChartData().gastos.prev > 0 || reportesVariacionChartData().gastos.curr > 0) {
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:100%;background:var(--surface-3);border-radius:4px 4px 0 0;position:relative;transition:height 0.4s"
+                      [style.height.px]="reportesVariacionChartData().gastos.hPrev">
+                      <div style="position:absolute;inset:0;background:var(--border-strong-ds);border-radius:4px 4px 0 0;opacity:0.5"></div>
+                    </div>
+                    <span style="font-size:0.65rem;color:var(--text-subtle)">Ant.</span>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <div style="width:100%;border-radius:4px 4px 0 0;transition:height 0.4s"
+                      [style.height.px]="reportesVariacionChartData().gastos.hCurr"
+                      [style.background]="reportesVariacionGastos() <= 0 ? 'var(--success)' : 'var(--danger)'"
+                      style="opacity:0.85">
+                    </div>
+                    <span style="font-size:0.65rem;color:var(--text-subtle)">Act.</span>
+                  </div>
+                }
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:0.72rem;color:var(--text-muted)">
+                <span>${{ reportesPrevTotalGastos() | number:'1.0-0' }}</span>
+                <span>${{ reportesTotalGastos() | number:'1.0-0' }}</span>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="font-size:0.72rem;color:var(--text-subtle);text-align:center">
+            Comparando {{ MONTH_NAMES[reportesMonth() - 1] }} {{ reportesYear() }} vs mes anterior
+          </div>
+        </div>
+
+        <!-- ── 3+4. Cantidad vendida + Top del mes ──────────────────── -->
+        <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;margin-bottom:16px;align-items:start">
+
+          <!-- Cantidad vendida -->
+          <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:22px 20px;text-align:center">
+            <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle);margin-bottom:12px">
+              Unidades vendidas
+            </div>
+            @if (reportesCantidadVendida() > 0) {
+              <div style="font-size:2.6rem;font-weight:800;color:var(--accent);line-height:1">
+                {{ reportesCantidadVendida() | number:'1.0-0' }}
+              </div>
+              <div style="font-size:0.78rem;color:var(--text-muted);margin-top:6px">unidades en el período</div>
+            } @else {
+              <div style="font-size:0.8rem;color:var(--text-subtle);padding:8px 0;line-height:1.5">
+                Sin datos de detalle.<br>
+                <span style="color:var(--text-muted)">Visita el tab <strong>Ventas</strong> primero.</span>
+              </div>
+            }
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-ds)">
+              <div style="font-size:0.72rem;color:var(--text-subtle)">Facturas emitidas</div>
+              <div style="font-size:1.1rem;font-weight:700;color:var(--text)">{{ reportesNumFacturas() }}</div>
+            </div>
+          </div>
+
+          <!-- Top productos del mes -->
+          <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:20px">
+            <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:12px">
+              Top productos — {{ MONTH_NAMES[reportesMonth() - 1] }} {{ reportesYear() }}
+            </div>
+            @if (reportesTopProducts().length === 0) {
+              <div style="text-align:center;padding:24px 0;color:var(--text-subtle);font-size:0.8rem;line-height:1.5">
+                Sin datos de productos.<br>
+                <span style="color:var(--text-muted)">Visita el tab <strong>Ventas</strong> para cargarlos.</span>
+              </div>
+            } @else {
+              <div style="display:flex;flex-direction:column;gap:8px">
+                @for (p of reportesTopProducts(); track p.name; let idx = $index) {
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:0.7rem;color:var(--text-subtle);width:16px;text-align:right;flex-shrink:0">{{ idx + 1 }}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:0.8rem;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px">{{ p.name }}</div>
+                      <div style="height:6px;border-radius:999px;background:var(--surface-3)">
+                        <div style="height:100%;border-radius:999px;background:var(--accent);opacity:0.8;transition:width 0.4s"
+                          [style.width.%]="(p.qty / reportesTopProductsMaxQty()) * 100"></div>
+                      </div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                      <div style="font-size:0.8rem;font-weight:700;color:var(--text)">{{ p.qty }}</div>
+                      <div style="font-size:0.68rem;color:var(--text-muted)">${{ p.total | number:'1.0-0' }}</div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+        </div>
+
+        <!-- ── 5. Comparación anual del mismo mes ──────────────────── -->
+        @if (reportesComparacionAnual().length >= 1) {
+          <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:20px 24px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
+                {{ MONTH_NAMES[reportesMonth() - 1] }} — Comparación anual
+              </span>
+              <div style="display:flex;align-items:center;gap:14px;font-size:0.72rem;color:var(--text-muted)">
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span>Ventas
+                </span>
+                <span style="display:flex;align-items:center;gap:5px">
+                  <span style="width:10px;height:10px;border-radius:2px;background:var(--danger);display:inline-block;opacity:0.7"></span>Gastos
+                </span>
+              </div>
+            </div>
+
+            @if (reportesComparacionAnual().length < 2) {
+              <div style="text-align:center;padding:18px 0;color:var(--text-subtle);font-size:0.8rem">
+                Solo hay datos de {{ reportesComparacionAnual().length === 1 ? reportesComparacionAnual()[0].year : '' }}.
+                Con más años de datos se mostrará la comparación aquí.
+              </div>
+            } @else {
+              <div style="overflow-x:auto">
+                <svg [attr.viewBox]="reportesComparacionAnualViewBox()"
+                  style="width:100%;min-width:300px;height:140px;overflow:visible">
+                  <!-- grid lines -->
+                  <line x1="50" y1="0"   [attr.x2]="50 + reportesComparacionAnual().length * 110" y2="0"   stroke="var(--border-ds)" stroke-width="0.5"/>
+                  <line x1="50" y1="33"  [attr.x2]="50 + reportesComparacionAnual().length * 110" y2="33"  stroke="var(--border-ds)" stroke-width="0.5"/>
+                  <line x1="50" y1="67"  [attr.x2]="50 + reportesComparacionAnual().length * 110" y2="67"  stroke="var(--border-ds)" stroke-width="0.5"/>
+                  <line x1="50" y1="100" [attr.x2]="50 + reportesComparacionAnual().length * 110" y2="100" stroke="var(--border-ds)" stroke-width="0.5"/>
+                  @for (bar of reportesComparacionAnualBars(); track bar.year) {
+                    <!-- Ventas bar -->
+                    @if (bar.hV > 0) {
+                      <rect [attr.x]="bar.gx + 4" [attr.y]="bar.yV" [attr.width]="bar.bw" [attr.height]="bar.hV"
+                        fill="var(--accent)" rx="3" opacity="0.85">
+                        <title>${{ bar.ventas | number:'1.2-2' }}</title>
+                      </rect>
+                    }
+                    <!-- Gastos bar -->
+                    @if (bar.hG > 0) {
+                      <rect [attr.x]="bar.gx + bar.bw + 8" [attr.y]="bar.yG" [attr.width]="bar.bw" [attr.height]="bar.hG"
+                        fill="var(--danger)" rx="3" opacity="0.65">
+                        <title>${{ bar.gastos | number:'1.2-2' }}</title>
+                      </rect>
+                    }
+                    <!-- Year label -->
+                    <text [attr.x]="bar.gx + 55" y="118" text-anchor="middle"
+                      style="font-size:9px;fill:var(--text-muted);font-family:var(--font-ui);font-weight:600">
+                      {{ bar.year }}
+                    </text>
+                    <!-- Ganancia neta -->
+                    <text [attr.x]="bar.gx + 55" y="133" text-anchor="middle"
+                      [attr.fill]="bar.gan >= 0 ? 'var(--success)' : 'var(--danger)'"
+                      style="font-size:7px;font-family:var(--font-ui)">
+                      {{ bar.gan >= 0 ? '+' : '' }}${{ bar.gan | number:'1.0-0' }}
+                    </text>
+                  }
+                </svg>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ── 6. Ventas por método de pago ────────────────────────── -->
+        <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:20px 24px;margin-bottom:16px">
+          <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:16px">
+            Cobros por método de pago — {{ MONTH_NAMES[reportesMonth() - 1] }} {{ reportesYear() }}
+          </div>
+          @if (reportesVentasPorMetodo().length === 0) {
+            <div style="text-align:center;padding:20px 0;color:var(--text-subtle);font-size:0.8rem">
+              Sin cobros registrados en este período
+            </div>
+          } @else {
+            <div style="display:flex;flex-direction:column;gap:10px">
+              @for (m of reportesVentasPorMetodo(); track m.method) {
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div style="width:130px;font-size:0.8rem;color:var(--text-muted);flex-shrink:0;text-align:right">{{ m.label }}</div>
+                  <div style="flex:1;height:22px;background:var(--surface-3);border-radius:4px;overflow:hidden;position:relative">
+                    <div style="height:100%;border-radius:4px;transition:width 0.5s;opacity:0.85"
+                      [style.width.%]="m.pct"
+                      [style.background]="METODO_COLORS[m.method] ?? 'var(--accent)'">
+                    </div>
+                  </div>
+                  <div style="width:100px;text-align:right;flex-shrink:0">
+                    <span style="font-size:0.82rem;font-weight:700;color:var(--text)">${{ m.amount | number:'1.2-2' }}</span>
+                    <span style="font-size:0.7rem;color:var(--text-muted);margin-left:5px">{{ m.pct | number:'1.0-0' }}%</span>
+                  </div>
+                </div>
+              }
+            </div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border-ds);display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:0.78rem;color:var(--text-subtle)">Método predominante</span>
+              <span style="font-size:0.85rem;font-weight:700;color:var(--accent)">
+                {{ reportesVentasPorMetodo()[0].label }}
+                ({{ reportesVentasPorMetodo()[0].pct | number:'1.0-0' }}%)
+              </span>
+            </div>
+          }
+        </div>
+
+      } <!-- end @if liquidos -->
 
     }
   }

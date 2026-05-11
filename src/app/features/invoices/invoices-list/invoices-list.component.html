@@ -554,6 +554,12 @@
           PDF
         </button>
         @if (selectedInvoice()!.status === 'ISSUED') {
+          @if ((selectedInvoice()!.amount_paid ?? 0) > 0) {
+            <div style="display:flex;align-items:flex-start;gap:6px;padding:7px 10px;background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--radius-sm-ds);font-size:11.5px;color:var(--warn);line-height:1.45;flex:1">
+              <app-icon name="alert_triangle" [size]="13" style="flex-shrink:0;margin-top:1px"/>
+              Al cancelar se registrará un egreso imprevisto de <strong class="mono">${{ selectedInvoice()!.amount_paid | number:'1.2-2' }}</strong>
+            </div>
+          }
           <button class="btn danger" type="button" (click)="cancelInvoice()" [disabled]="actionLoading()">
             @if (actionLoading()) {
               <span class="btn-spinner"></span>

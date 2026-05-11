@@ -1,7 +1,7 @@
 import { Component, inject, OnInit, signal, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ModuleRequestService } from '../../core/services/module-request.service';
+import { ModuleRequestRegisterService } from '../../core/services/module-request-register.service';
 import { PlatformModule } from '../../core/models/module-request.model';
 
 interface Feature {
@@ -26,7 +26,7 @@ interface Step {
   styleUrls: ['./landing.component.scss'],
 })
 export class LandingComponent implements OnInit {
-  private moduleService = inject(ModuleRequestService);
+  private moduleService = inject(ModuleRequestRegisterService);
 
   modules = signal<PlatformModule[]>([]);
 

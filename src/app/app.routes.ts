@@ -168,16 +168,20 @@ export const routes: Routes = [
         loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
       },
 
-      // Finanzas — Caja Chica
+      // Finanzas — Caja Chica (admin + seller, no warehouse)
       {
         path: 'finance/petty-cash',
         loadComponent: () => import('./features/finance/petty-cash/petty-cash.component').then(m => m.PettyCashComponent),
+        canActivate: [permissionGuard],
+        data: { roles: ['STORE_ADMIN', 'STORE_SELLER'] },
       },
 
-      // Finanzas — Egresos operacionales
+      // Finanzas — Egresos operacionales (solo admin)
       {
         path: 'finance/expenses',
         loadComponent: () => import('./features/finance/expenses/expenses-list/expenses-list.component').then(m => m.ExpensesListComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
       },
 
       // Finanzas — Categorías de egreso (solo admin)
@@ -204,10 +208,12 @@ export const routes: Routes = [
         data: { adminOnly: true },
       },
 
-      // Finanzas — Dashboard financiero
+      // Finanzas — Dashboard financiero (solo admin)
       {
         path: 'finance/dashboard',
         loadComponent: () => import('./features/finance/finance-dashboard/finance-dashboard.component').then(m => m.FinanceDashboardComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
       },
 
       // Módulos de plataforma

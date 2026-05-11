@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { ModuleRequestService } from '../../../core/services/module-request.service';
+import { ModuleRequestRegisterService } from '../../../core/services/module-request-register.service';
 import { PlatformModule } from '../../../core/models/module-request.model';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 
@@ -24,7 +24,7 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
 export class RegisterComponent implements OnInit {
   private fb            = inject(FormBuilder);
   private authService   = inject(AuthService);
-  private moduleService = inject(ModuleRequestService);
+  private moduleService = inject(ModuleRequestRegisterService);
   private router        = inject(Router);
 
   step             = signal(1);
