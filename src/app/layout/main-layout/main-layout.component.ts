@@ -4,6 +4,9 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { TopbarComponent } from '../topbar/topbar.component';
+import { AuthService } from '../../core/services/auth.service';
+import { InvoiceSettingsService } from '../../core/services/invoice-settings.service';
+import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -13,13 +16,14 @@ import { TopbarComponent } from '../topbar/topbar.component';
   styleUrls: ['./main-layout.component.scss'],
 })
 export class MainLayoutComponent implements OnInit {
-  private router = inject(Router);
+  private router         = inject(Router);
+  private auth           = inject(AuthService);
+  private invoiceSetSvc  = inject(InvoiceSettingsService);
+  private pdfSvc         = inject(InvoicePdfService);
 
-  // En mobile (< 768px) el sidebar arranca cerrado
   sidebarCollapsed = signal(typeof window !== 'undefined' && window.innerWidth < 768);
 
   ngOnInit(): void {
-    // Cierra el sidebar al navegar (solo en mobile)
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd)
     ).subscribe(() => {
@@ -27,6 +31,14 @@ export class MainLayoutComponent implements OnInit {
         this.sidebarCollapsed.set(true);
       }
     });
+
+    // Carga la configuración de factura al arrancar (solo STORE_ADMIN)
+    if (this.auth.isStoreAdmin()) {
+      this.invoiceSetSvc.get().subscribe({
+        next: (s) => this.pdfSvc.updateSettings(s),
+        error: () => { /* silencioso — se usarán defaults */ },
+      });
+    }
   }
 
   toggleSidebar(): void {

@@ -902,7 +902,7 @@
   ═══════════════════════════════════════════════════════════════════ -->
   @if (activeTab() === 'compras') {
 
-    @if (egresosLoading()) {
+    @if (egresosLoading() || inMovementsLoading()) {
       <div style="display:flex;align-items:center;justify-content:center;min-height:40vh;gap:10px;color:var(--text-muted)">
         <app-icon name="loader" [size]="20"/>Cargando compras…
       </div>
@@ -912,7 +912,7 @@
       <div class="cxc-kpi-strip" style="margin-top:16px">
 
         <div class="cxc-kpi">
-          <div class="cxc-kpi-label">Total compras</div>
+          <div class="cxc-kpi-label">Total compras (facturas)</div>
           <div class="cxc-kpi-value" style="color:var(--danger)">${{ comprasTotal() | number:'1.2-2' }}</div>
           <div class="cxc-kpi-sub">facturas de compra · sin anuladas</div>
         </div>
@@ -930,9 +930,9 @@
         </div>
 
         <div class="cxc-kpi">
-          <div class="cxc-kpi-label">N° compras · proveedores</div>
-          <div class="cxc-kpi-value">{{ comprasNumCompras() }}</div>
-          <div class="cxc-kpi-sub">{{ comprasUniqueProviders() }} proveedor{{ comprasUniqueProviders() !== 1 ? 'es' : '' }} distintos</div>
+          <div class="cxc-kpi-label">Entradas inventario</div>
+          <div class="cxc-kpi-value" style="color:var(--warn)">${{ inMovementsTotal() | number:'1.2-2' }}</div>
+          <div class="cxc-kpi-sub">{{ inMovementsFiltered().length }} mov. · precio compra × qty</div>
         </div>
 
       </div>
@@ -941,7 +941,7 @@
       <div class="filters" style="margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar por proveedor, descripción o N° factura…" [formControl]="comprasSearchCtrl"/>
+          <input placeholder="Buscar por proveedor, producto, descripción o N° factura…" [formControl]="comprasSearchCtrl"/>
         </div>
         <input class="m-input" type="date" [formControl]="comprasDateFromCtrl" title="Desde" style="max-width:140px"/>
         <input class="m-input" type="date" [formControl]="comprasDateToCtrl"   title="Hasta" style="max-width:140px"/>
@@ -954,15 +954,19 @@
           <app-icon name="refresh_cw" [size]="13"/>Actualizar
         </button>
         <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
-          {{ comprasFiltered().length }} resultado{{ comprasFiltered().length !== 1 ? 's' : '' }}
+          {{ comprasFiltered().length + inMovementsFiltered().length }} resultado{{ (comprasFiltered().length + inMovementsFiltered().length) !== 1 ? 's' : '' }}
         </span>
       </div>
 
-      <!-- ── Table ──────────────────────────────────────────────────── -->
+      <!-- ── Tabla 1: Facturas de compra (egresos) ──────────────────── -->
+      <div style="margin-top:16px;font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);display:flex;align-items:center;gap:8px">
+        <app-icon name="receipt" [size]="14"/>Facturas de compra registradas
+        <span style="font-weight:400;text-transform:none;letter-spacing:0">({{ comprasFiltered().length }})</span>
+      </div>
+
       @if (comprasFiltered().length === 0) {
-        <div style="text-align:center;padding:48px 24px;color:var(--text-muted);font-size:0.875rem">
-          <app-icon name="local_shipping" [size]="36" style="display:block;margin:0 auto 12px;color:var(--text-subtle)"/>
-          Sin compras con factura de proveedor para los filtros seleccionados.
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:0.875rem;background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);margin-top:8px">
+          Sin facturas de compra con proveedor para los filtros seleccionados.
         </div>
       } @else {
         <table class="ds-table" style="margin-top:8px">
@@ -1033,6 +1037,88 @@
               <td style="text-align:right;font-weight:700;color:var(--accent)">${{ comprasTotalIva() | number:'1.2-2' }}</td>
               <td style="text-align:right;font-weight:700;color:var(--danger)">${{ comprasTotal() | number:'1.2-2' }}</td>
               <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      }
+
+      <!-- ── Tabla 2: Entradas de inventario (movimientos IN) ───────── -->
+      <div style="margin-top:24px;font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);display:flex;align-items:center;gap:8px">
+        <app-icon name="package" [size]="14"/>Entradas de inventario / Restock
+        <span style="font-weight:400;text-transform:none;letter-spacing:0">({{ inMovementsFiltered().length }})</span>
+        <span style="font-size:0.72rem;font-weight:400;color:var(--text-subtle);margin-left:4px">
+          · valor estimado = qty × precio compra
+        </span>
+      </div>
+
+      @if (inMovementsFiltered().length === 0) {
+        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:0.875rem;background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);margin-top:8px">
+          Sin entradas de inventario para los filtros seleccionados.
+        </div>
+      } @else {
+        <table class="ds-table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>SKU</th>
+              <th>Proveedor</th>
+              <th>Tipo</th>
+              <th style="text-align:right">Cantidad</th>
+              <th style="text-align:right">P. Compra</th>
+              <th style="text-align:right">Total est.</th>
+              <th>Fecha</th>
+              <th>Notas</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (mv of inMovementsFiltered(); track mv.id) {
+              <tr>
+                <td>
+                  <span style="font-weight:500;color:var(--text)">
+                    {{ mv.product?.name ?? '—' }}
+                  </span>
+                </td>
+                <td style="font-family:var(--font-mono);font-size:0.8rem;color:var(--text-muted)">
+                  {{ mv.product?.sku ?? '—' }}
+                </td>
+                <td style="color:var(--text-muted)">
+                  {{ mv.product?.supplier?.name ?? '—' }}
+                </td>
+                <td>
+                  @if (mv.reference_type === 'PURCHASE') {
+                    <span class="badge accent">Compra</span>
+                  } @else if (mv.reference_type === 'MANUAL') {
+                    <span class="badge">Manual</span>
+                  } @else {
+                    <span class="badge">{{ mv.reference_type }}</span>
+                  }
+                </td>
+                <td style="text-align:right;font-weight:600;color:var(--success)">
+                  +{{ mv.quantity | number:'1.0-2' }}
+                </td>
+                <td style="text-align:right;color:var(--text-muted)">
+                  ${{ (mv.product?.purchase_price ?? 0) | number:'1.2-2' }}
+                </td>
+                <td style="text-align:right;font-weight:700;color:var(--warn)">
+                  ${{ inMovementValue(mv) | number:'1.2-2' }}
+                </td>
+                <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap">
+                  {{ formatDate(mv.created_at.slice(0, 10)) }}
+                </td>
+                <td style="max-width:180px;color:var(--text-muted);font-size:0.8rem">
+                  <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                        [title]="mv.notes ?? ''">
+                    {{ mv.notes ?? '—' }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr style="background:var(--surface-2)">
+              <td colspan="6" style="font-weight:600;color:var(--text-muted);font-size:0.82rem">Total entradas período</td>
+              <td style="text-align:right;font-weight:700;color:var(--warn)">${{ inMovementsTotal() | number:'1.2-2' }}</td>
+              <td colspan="2"></td>
             </tr>
           </tfoot>
         </table>
@@ -1342,6 +1428,7 @@
       <div class="ds-tabs" style="margin-bottom:16px">
         <button class="ds-tab" [class.active]="reportesSubTab() === 'resumen'" (click)="reportesSubTab.set('resumen')">Resumen General</button>
         <button class="ds-tab" [class.active]="reportesSubTab() === 'liquidos'" (click)="reportesSubTab.set('liquidos')">Ingresos Líquidos</button>
+        <button class="ds-tab" [class.active]="reportesSubTab() === 'productos'" (click)="reportesSubTab.set('productos')">Rentabilidad</button>
       </div>
 
       @if (reportesSubTab() === 'resumen') {
@@ -2082,6 +2169,294 @@
         </div>
 
       } <!-- end @if liquidos -->
+
+      <!-- ══════════════════════════════════════════════════════════════
+           SUB-TAB: Rentabilidad de Productos
+      ═══════════════════════════════════════════════════════════════ -->
+      @if (reportesSubTab() === 'productos') {
+
+        @if (productProfitLoading()) {
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;padding:48px;color:var(--text-muted)">
+            <app-icon name="loader" [size]="18"/>
+            Cargando datos de {{ reportesYear() }}…
+          </div>
+        } @else {
+
+          <!-- KPI strip -->
+          <div class="cxc-kpi-strip" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px">
+            <div class="cxc-kpi">
+              <div class="cxc-kpi-label">Productos</div>
+              <div class="cxc-kpi-value">{{ reportesProducts().length }}</div>
+              <div class="cxc-kpi-sub">{{ productProfitTotals().withSalesCount }} con ventas</div>
+            </div>
+            <div class="cxc-kpi">
+              <div class="cxc-kpi-label">Valor Inventario</div>
+              <div class="cxc-kpi-value">${{ productProfitTotals().totalInv | number:'1.2-2' }}</div>
+              <div class="cxc-kpi-sub">costo × stock actual</div>
+            </div>
+            <div class="cxc-kpi">
+              <div class="cxc-kpi-label">Ingresos {{ reportesYear() }}</div>
+              <div class="cxc-kpi-value" style="color:var(--success)">${{ productProfitTotals().totalRev | number:'1.2-2' }}</div>
+              <div class="cxc-kpi-sub">sin IVA</div>
+            </div>
+            <div class="cxc-kpi">
+              <div class="cxc-kpi-label">Ganancia Bruta</div>
+              <div class="cxc-kpi-value" [style.color]="productProfitTotals().totalProfit >= 0 ? 'var(--success)' : 'var(--danger)'">${{ productProfitTotals().totalProfit | number:'1.2-2' }}</div>
+              <div class="cxc-kpi-sub">ingresos − costo ventas</div>
+            </div>
+            <div class="cxc-kpi">
+              <div class="cxc-kpi-label">Margen Promedio</div>
+              <div class="cxc-kpi-value"
+                [style.color]="productProfitTotals().avgMargin >= 30 ? 'var(--success)' : productProfitTotals().avgMargin >= 15 ? 'var(--accent)' : 'var(--warn)'">
+                {{ productProfitTotals().avgMargin | number:'1.1-1' }}%
+              </div>
+              <div class="cxc-kpi-sub">productos con ventas</div>
+            </div>
+          </div>
+
+          <!-- Search + export bar -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="position:relative;flex:1;max-width:340px">
+              <app-icon name="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-muted);pointer-events:none"/>
+              <input [formControl]="reportesProductProfitSearchCtrl" placeholder="Buscar producto…"
+                style="width:100%;padding:7px 12px 7px 32px;border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);background:var(--surface);color:var(--text);font-size:0.82rem;box-sizing:border-box">
+            </div>
+            <button (click)="exportCsvProductProfits()" class="cxc-row-btn" style="border-color:var(--border-ds);color:var(--text-muted);display:flex;align-items:center;gap:5px">
+              <app-icon name="download" style="width:13px;height:13px"/>Exportar CSV
+            </button>
+          </div>
+
+          <!-- Table -->
+          <div style="overflow-x:auto">
+            <table class="ds-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th style="text-align:right">P.Compra</th>
+                  <th style="text-align:right">P.Venta</th>
+                  <th style="text-align:right">Stock</th>
+                  <th style="text-align:right">Val.Inventario</th>
+                  <th style="text-align:right">Vendidas {{ reportesYear() }}</th>
+                  <th style="text-align:right">Ingresos</th>
+                  <th style="text-align:right">Costo Ventas</th>
+                  <th style="text-align:right">Ganancia</th>
+                  <th style="text-align:right;min-width:100px">Margen</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of filteredProductProfits(); track $index) {
+                  <tr style="cursor:pointer" (click)="selectedProductProfit.set(row)">
+                    <td><span style="font-weight:500;color:var(--text)">{{ row.productName }}</span></td>
+                    <td style="text-align:right;color:var(--text-muted)">${{ row.purchasePrice | number:'1.2-2' }}</td>
+                    <td style="text-align:right">${{ row.salePrice | number:'1.2-2' }}</td>
+                    <td style="text-align:right">{{ row.stock }}</td>
+                    <td style="text-align:right;color:var(--text-muted)">${{ row.inventoryValue | number:'1.2-2' }}</td>
+                    <td style="text-align:right">
+                      @if (row.unitsSold > 0) {
+                        <span style="font-weight:600">{{ row.unitsSold }}</span>
+                      } @else {
+                        <span style="color:var(--text-subtle)">—</span>
+                      }
+                    </td>
+                    <td style="text-align:right">
+                      @if (row.revenue > 0) {
+                        <span style="color:var(--success);font-weight:600">${{ row.revenue | number:'1.2-2' }}</span>
+                      } @else {
+                        <span style="color:var(--text-subtle)">—</span>
+                      }
+                    </td>
+                    <td style="text-align:right">
+                      @if (row.costOfSales > 0) {
+                        <span style="color:var(--danger)">${{ row.costOfSales | number:'1.2-2' }}</span>
+                      } @else {
+                        <span style="color:var(--text-subtle)">—</span>
+                      }
+                    </td>
+                    <td style="text-align:right">
+                      @if (row.unitsSold > 0) {
+                        <span [style.color]="row.grossProfit >= 0 ? 'var(--success)' : 'var(--danger)'" style="font-weight:600">
+                          {{ row.grossProfit >= 0 ? '+' : '' }}${{ row.grossProfit | number:'1.2-2' }}
+                        </span>
+                      } @else {
+                        <span style="color:var(--text-subtle)">—</span>
+                      }
+                    </td>
+                    <td style="text-align:right">
+                      @if (row.unitsSold > 0) {
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">
+                          <div style="width:44px;height:5px;background:var(--surface-3);border-radius:99px;overflow:hidden">
+                            <div
+                              [style.width.%]="row.marginPct > 0 ? (row.marginPct > 100 ? 100 : row.marginPct) : 0"
+                              [style.background]="row.marginPct >= 30 ? 'var(--success)' : row.marginPct >= 15 ? 'var(--accent)' : 'var(--warn)'"
+                              style="height:100%;border-radius:99px"></div>
+                          </div>
+                          <span style="font-weight:600;font-size:0.8rem"
+                            [style.color]="row.marginPct >= 30 ? 'var(--success)' : row.marginPct >= 15 ? 'var(--accent)' : 'var(--warn)'">
+                            {{ row.marginPct | number:'1.1-1' }}%
+                          </span>
+                        </div>
+                      } @else {
+                        <span style="color:var(--text-subtle)">—</span>
+                      }
+                    </td>
+                  </tr>
+                }
+                @if (!filteredProductProfits().length) {
+                  <tr><td colspan="10" style="text-align:center;color:var(--text-subtle);padding:32px">
+                    @if (reportesProductProfits().length === 0) {
+                      Sin productos cargados. Visita el tab Reportes para cargar los datos.
+                    } @else {
+                      Sin resultados para la búsqueda.
+                    }
+                  </td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        } <!-- end @else not loading -->
+
+        <!-- ── Drawer detalle de producto ──────────────────────────── -->
+        @if (selectedProductProfit()) {
+          <div class="drawer-backdrop" (click)="selectedProductProfit.set(null)"></div>
+          <div class="drawer">
+            <div class="drawer-head">
+              <div>
+                <div style="font-size:1rem;font-weight:700;color:var(--text)">{{ selectedProductProfit()!.productName }}</div>
+                <div style="font-size:0.75rem;color:var(--text-muted)">Análisis año {{ reportesYear() }}</div>
+              </div>
+              <button (click)="selectedProductProfit.set(null)"
+                style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:4px;display:flex;align-items:center">
+                <app-icon name="x" style="width:18px;height:18px"/>
+              </button>
+            </div>
+            <div class="drawer-body">
+
+              <!-- Precios -->
+              <div class="drawer-kpi-strip" style="grid-template-columns:repeat(3,1fr)">
+                <div class="drawer-kpi">
+                  <div class="drawer-kpi-label">Precio Compra</div>
+                  <div class="drawer-kpi-val" style="color:var(--danger)">${{ selectedProductProfit()!.purchasePrice | number:'1.2-2' }}</div>
+                </div>
+                <div class="drawer-kpi">
+                  <div class="drawer-kpi-label">Precio Venta</div>
+                  <div class="drawer-kpi-val" style="color:var(--success)">${{ selectedProductProfit()!.salePrice | number:'1.2-2' }}</div>
+                </div>
+                <div class="drawer-kpi">
+                  <div class="drawer-kpi-label">Margen Teórico</div>
+                  <div class="drawer-kpi-val"
+                    [style.color]="selectedProductProfit()!.salePrice > 0 && (selectedProductProfit()!.salePrice - selectedProductProfit()!.purchasePrice) / selectedProductProfit()!.salePrice * 100 >= 30 ? 'var(--success)' : 'var(--accent)'">
+                    {{ selectedProductProfit()!.salePrice > 0 ? ((selectedProductProfit()!.salePrice - selectedProductProfit()!.purchasePrice) / selectedProductProfit()!.salePrice * 100 | number:'1.1-1') : '0' }}%
+                  </div>
+                </div>
+              </div>
+
+              <!-- Inventario + ventas -->
+              <div class="drawer-kpi-strip" style="grid-template-columns:repeat(3,1fr)">
+                <div class="drawer-kpi">
+                  <div class="drawer-kpi-label">Stock Actual</div>
+                  <div class="drawer-kpi-val">{{ selectedProductProfit()!.stock }}</div>
+                </div>
+                <div class="drawer-kpi">
+                  <div class="drawer-kpi-label">Valor Inventario</div>
+                  <div class="drawer-kpi-val">${{ selectedProductProfit()!.inventoryValue | number:'1.2-2' }}</div>
+                </div>
+                <div class="drawer-kpi">
+                  <div class="drawer-kpi-label">Unidades Vendidas</div>
+                  <div class="drawer-kpi-val" style="color:var(--accent)">{{ selectedProductProfit()!.unitsSold }}</div>
+                </div>
+              </div>
+
+              <!-- Desglose año -->
+              <div style="margin:16px 0">
+                <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:10px">
+                  Desglose año {{ reportesYear() }}
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+                    <span style="font-size:0.82rem;color:var(--text-muted)">Ingresos de venta (sin IVA)</span>
+                    <span style="font-size:0.88rem;font-weight:600;color:var(--success)">${{ selectedProductProfit()!.revenue | number:'1.2-2' }}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-sm-ds)">
+                    <span style="font-size:0.82rem;color:var(--text-muted)">Costo de ventas</span>
+                    <span style="font-size:0.88rem;font-weight:600;color:var(--danger)">−${{ selectedProductProfit()!.costOfSales | number:'1.2-2' }}</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;padding:10px 10px;background:var(--surface-3);border-radius:var(--radius-sm-ds)">
+                    <span style="font-size:0.85rem;font-weight:600;color:var(--text)">Ganancia Bruta</span>
+                    <span style="font-size:1rem;font-weight:700"
+                      [style.color]="selectedProductProfit()!.grossProfit >= 0 ? 'var(--success)' : 'var(--danger)'">
+                      {{ selectedProductProfit()!.grossProfit >= 0 ? '+' : '' }}${{ selectedProductProfit()!.grossProfit | number:'1.2-2' }}
+                    </span>
+                  </div>
+                </div>
+
+                @if (selectedProductProfit()!.unitsSold > 0) {
+                  <div style="margin-top:14px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+                      <span style="font-size:0.75rem;color:var(--text-muted)">Margen real</span>
+                      <span style="font-size:0.8rem;font-weight:700"
+                        [style.color]="selectedProductProfit()!.marginPct >= 30 ? 'var(--success)' : selectedProductProfit()!.marginPct >= 15 ? 'var(--accent)' : 'var(--warn)'">
+                        {{ selectedProductProfit()!.marginPct | number:'1.1-1' }}%
+                      </span>
+                    </div>
+                    <div style="height:8px;background:var(--surface-3);border-radius:99px;overflow:hidden">
+                      <div
+                        [style.width.%]="selectedProductProfit()!.marginPct > 0 ? (selectedProductProfit()!.marginPct > 100 ? 100 : selectedProductProfit()!.marginPct) : 0"
+                        [style.background]="selectedProductProfit()!.marginPct >= 30 ? 'var(--success)' : selectedProductProfit()!.marginPct >= 15 ? 'var(--accent)' : 'var(--warn)'"
+                        style="height:100%;border-radius:99px;transition:width 0.3s"></div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Ventas individuales -->
+              <div style="border-top:1px solid var(--border-ds);padding-top:14px">
+                <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:10px">
+                  Ventas del año ({{ selectedProductProfit()!.sales.length }})
+                </div>
+                @if (selectedProductProfit()!.sales.length) {
+                  <div style="overflow-x:auto">
+                    <table class="ds-table" style="font-size:0.78rem">
+                      <thead>
+                        <tr>
+                          <th>Factura</th>
+                          <th>Fecha</th>
+                          <th>Cliente</th>
+                          <th style="text-align:right">Cant.</th>
+                          <th style="text-align:right">P.Unit</th>
+                          <th style="text-align:right">Desc.</th>
+                          <th style="text-align:right">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (s of selectedProductProfit()!.sales; track $index) {
+                          <tr>
+                            <td style="white-space:nowrap">{{ s.invoiceNumber }}</td>
+                            <td style="white-space:nowrap">{{ formatDate(s.date) }}</td>
+                            <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.customerName }}</td>
+                            <td style="text-align:right;font-weight:600">{{ s.qty }}</td>
+                            <td style="text-align:right">${{ s.unitPrice | number:'1.2-2' }}</td>
+                            <td style="text-align:right;color:var(--danger)">
+                              @if (s.discount > 0) { −${{ s.discount | number:'1.2-2' }} } @else { — }
+                            </td>
+                            <td style="text-align:right;font-weight:600;color:var(--success)">${{ s.lineSubtotal | number:'1.2-2' }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <div style="text-align:center;color:var(--text-subtle);padding:20px;font-size:0.82rem">
+                    Sin ventas registradas en {{ reportesYear() }}
+                  </div>
+                }
+              </div>
+
+            </div>
+          </div>
+        } <!-- end drawer -->
+
+      } <!-- end @if productos -->
 
     }
   }

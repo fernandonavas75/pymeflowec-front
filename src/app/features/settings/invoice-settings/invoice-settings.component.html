@@ -1,0 +1,282 @@
+<div class="page-wrap">
+
+  <!-- Encabezado -->
+  <div class="page-head">
+    <div class="page-head-left">
+      <h1 class="page-title">Personalización de Factura</h1>
+      <p class="page-subtitle">Configura cómo se genera el PDF de tus facturas</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <app-icon name="loader" [size]="20" />
+      <span>Cargando configuración…</span>
+    </div>
+  } @else {
+    <div class="settings-layout">
+
+      <!-- ── Panel de formulario ── -->
+      <div class="settings-panel">
+
+        <!-- Nombre en factura -->
+        <section class="settings-section">
+          <h2 class="section-title">Nombre de empresa</h2>
+          <p class="section-desc">
+            Por defecto se usa <strong>{{ companyName }}</strong>. Puedes reemplazarlo
+            con un nombre comercial o abreviado.
+          </p>
+          <div class="mfield">
+            <label>Nombre en factura</label>
+            <input class="m-input" type="text"
+                   placeholder="{{ companyName }}"
+                   [formControl]="$any(form.get('display_name'))" />
+            <span class="field-hint">Dejar vacío para usar el nombre registrado.</span>
+          </div>
+        </section>
+
+        <!-- Numeración de factura -->
+        <section class="settings-section">
+          <h2 class="section-title">Numeración de factura</h2>
+          <p class="section-desc">
+            Formato SRI: <strong>Establecimiento — Punto de emisión — Secuencial</strong>.
+            El secuencial es automático y correlativo.
+          </p>
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div class="mfield" style="flex:1">
+              <label>Establecimiento (1–999)</label>
+              <input class="m-input" type="number" min="1" max="999"
+                     placeholder="1"
+                     [formControl]="$any(form.get('establishment'))" />
+              <span class="field-hint">Ej: 1 → se guarda como 001</span>
+            </div>
+            <div class="mfield" style="flex:1">
+              <label>Punto de emisión (1–999)</label>
+              <input class="m-input" type="number" min="1" max="999"
+                     placeholder="1"
+                     [formControl]="$any(form.get('emission_point'))" />
+              <span class="field-hint">Ej: 1 → se guarda como 001</span>
+            </div>
+          </div>
+          <div style="margin-top:10px;padding:10px 14px;background:var(--surface-2);border-radius:var(--radius-sm);display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Preview próxima factura:</span>
+            <span class="mono" style="font-size:13px;color:var(--accent);font-weight:600">{{ previewInvoiceNumber }}</span>
+          </div>
+        </section>
+
+        <!-- Plantilla -->
+        <section class="settings-section">
+          <h2 class="section-title">Plantilla</h2>
+          <p class="section-desc">Elige el diseño general del PDF.</p>
+          <div class="template-grid">
+            @for (tpl of templates; track tpl.id) {
+              <button type="button" class="template-card"
+                      [class.selected]="form.value.template_id === tpl.id"
+                      (click)="selectTemplate(tpl.id)">
+                <div class="template-thumb" [attr.data-tpl]="tpl.id"
+                     [style.--tpl-color]="previewColor">
+                  <!-- Mini preview SVG -->
+                  @if (tpl.id === 'classic') {
+                    <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="56" rx="3" fill="#f8fafc"/>
+                      <rect width="80" height="14" fill="#0f172a"/>
+                      <rect x="4" y="3" width="28" height="4" rx="1" fill="white" opacity=".8"/>
+                      <rect x="4" y="8" width="18" height="2" rx="1" fill="white" opacity=".4"/>
+                      <rect x="52" y="3" width="24" height="6" rx="1" [attr.fill]="previewColor"/>
+                      <rect x="52" y="10" width="16" height="2" rx="1" fill="white" opacity=".4"/>
+                      <rect x="4" y="18" width="32" height="1.5" rx=".75" [attr.fill]="previewColor"/>
+                      <rect x="4" y="23" width="20" height="1.5" rx=".75" fill="#94a3b8"/>
+                      <rect x="4" y="27" width="14" height="1.5" rx=".75" fill="#e2e8f0"/>
+                      <rect x="4" y="32" width="72" height="1" fill="#e2e8f0"/>
+                      <rect x="4" y="35" width="72" height="6" rx="1" fill="#1e293b"/>
+                      <rect x="4" y="43" width="72" height="1.5" rx=".75" fill="#f1f5f9"/>
+                      <rect x="4" y="46" width="72" height="1.5" rx=".75" fill="#f8fafc"/>
+                    </svg>
+                  }
+                  @if (tpl.id === 'modern') {
+                    <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="56" rx="3" fill="#f8fafc"/>
+                      <rect width="4" height="56" rx="2" [attr.fill]="previewColor"/>
+                      <rect x="8" y="4" width="26" height="5" rx="1" [attr.fill]="previewColor" opacity=".9"/>
+                      <rect x="8" y="10" width="18" height="2" rx="1" fill="#94a3b8"/>
+                      <rect x="48" y="4" width="28" height="7" rx="1" fill="#0f172a"/>
+                      <rect x="48" y="13" width="20" height="2" rx="1" fill="#94a3b8"/>
+                      <rect x="8" y="18" width="64" height="1" rx=".5" fill="#e2e8f0"/>
+                      <rect x="8" y="22" width="20" height="1.5" rx=".75" fill="#94a3b8"/>
+                      <rect x="8" y="26" width="14" height="1.5" rx=".75" fill="#e2e8f0"/>
+                      <rect x="8" y="32" width="64" height="6" rx="1" [attr.fill]="previewColor" opacity=".12"/>
+                      <rect x="8" y="40" width="64" height="1.5" rx=".75" fill="#f1f5f9"/>
+                      <rect x="8" y="43" width="64" height="1.5" rx=".75" fill="#f8fafc"/>
+                    </svg>
+                  }
+                  @if (tpl.id === 'minimal') {
+                    <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="56" rx="3" fill="white"/>
+                      <rect x="4" y="4" width="30" height="4" rx="1" fill="#0f172a"/>
+                      <rect x="4" y="10" width="20" height="2" rx="1" fill="#94a3b8"/>
+                      <rect x="50" y="4" width="26" height="5" rx="1" fill="#334155"/>
+                      <rect x="50" y="10" width="18" height="2" rx="1" fill="#94a3b8"/>
+                      <rect x="4" y="17" width="72" height=".75" fill="#cbd5e1"/>
+                      <rect x="4" y="21" width="18" height="1.5" rx=".75" fill="#94a3b8"/>
+                      <rect x="4" y="25" width="14" height="1.5" rx=".75" fill="#e2e8f0"/>
+                      <rect x="4" y="30" width="72" height=".75" fill="#e2e8f0"/>
+                      <rect x="4" y="33" width="72" height="1.5" rx=".75" fill="#334155"/>
+                      <rect x="4" y="37" width="72" height="1.5" rx=".75" fill="#e2e8f0"/>
+                      <rect x="4" y="41" width="72" height="1.5" rx=".75" fill="#e2e8f0"/>
+                      <rect x="4" y="48" width="72" height=".75" fill="#cbd5e1"/>
+                    </svg>
+                  }
+                </div>
+                <div class="template-info">
+                  <span class="template-name">{{ tpl.label }}</span>
+                  <span class="template-desc">{{ tpl.description }}</span>
+                </div>
+                @if (form.value.template_id === tpl.id) {
+                  <app-icon name="check_circle" [size]="16" class="template-check" />
+                }
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Color de acento -->
+        <section class="settings-section">
+          <h2 class="section-title">Color de acento</h2>
+          <p class="section-desc">Afecta el título, líneas y resaltados del PDF.</p>
+          <div class="color-row">
+            <div class="color-presets">
+              @for (color of ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#0f172a']; track color) {
+                <button type="button" class="color-swatch"
+                        [style.background]="color"
+                        [class.active]="form.value.accent_color === color"
+                        (click)="form.patchValue({ accent_color: color })">
+                </button>
+              }
+            </div>
+            <div class="color-custom">
+              <input type="color" class="color-picker"
+                     [formControl]="$any(form.get('accent_color'))" />
+              <input class="m-input color-hex" type="text" maxlength="7"
+                     placeholder="#4f46e5"
+                     [formControl]="$any(form.get('accent_color'))" />
+            </div>
+          </div>
+        </section>
+
+        <!-- Pie de página -->
+        <section class="settings-section">
+          <h2 class="section-title">Texto de pie de página</h2>
+          <div class="mfield">
+            <label>Mensaje al pie</label>
+            <input class="m-input" type="text" maxlength="120"
+                   placeholder="Gracias por su preferencia"
+                   [formControl]="$any(form.get('footer_text'))" />
+            <span class="field-hint">Opcional. Se muestra en la parte inferior del PDF.</span>
+          </div>
+        </section>
+
+        <!-- Guardar -->
+        <div class="actions-row">
+          <button class="btn-primary" (click)="save()" [disabled]="saving()">
+            @if (saving()) {
+              <app-icon name="loader" [size]="15" />
+              Guardando…
+            } @else {
+              <app-icon name="check" [size]="15" />
+              Guardar cambios
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Vista previa del PDF ── -->
+      <div class="preview-panel">
+        <h3 class="preview-title">Vista previa</h3>
+        <div class="pdf-preview" [attr.data-tpl]="previewTemplate"
+             [style.--accent]="previewColor">
+
+          @if (previewTemplate === 'classic') {
+            <!-- CLASSIC -->
+            <div class="pv-header classic-header">
+              <div>
+                <div class="pv-company">{{ previewName }}</div>
+                <div class="pv-detail">RUC: 1234567890001</div>
+                <div class="pv-detail">contacto&#64;empresa.com</div>
+              </div>
+              <div class="pv-invoice-block">
+                <div class="pv-invoice-title" [style.color]="previewColor">FACTURA</div>
+                <div class="pv-invoice-num">{{ previewInvoiceNumber }}</div>
+                <div class="pv-detail">Fecha: 12 de mayo de 2026</div>
+              </div>
+            </div>
+            <div class="pv-divider" [style.background]="previewColor"></div>
+          }
+
+          @if (previewTemplate === 'modern') {
+            <!-- MODERN -->
+            <div class="pv-accent-bar" [style.background]="previewColor"></div>
+            <div class="pv-header modern-header">
+              <div class="pv-company modern" [style.color]="previewColor">{{ previewName }}</div>
+              <div>
+                <div class="pv-invoice-title modern">FACTURA</div>
+                <div class="pv-invoice-num">{{ previewInvoiceNumber }}</div>
+              </div>
+            </div>
+            <div class="pv-divider light"></div>
+          }
+
+          @if (previewTemplate === 'minimal') {
+            <!-- MINIMAL -->
+            <div class="pv-header minimal-header">
+              <div>
+                <div class="pv-company minimal">{{ previewName }}</div>
+                <div class="pv-detail">RUC: 1234567890001</div>
+              </div>
+              <div class="pv-invoice-block">
+                <div class="pv-invoice-title minimal">FACTURA</div>
+                <div class="pv-invoice-num">{{ previewInvoiceNumber }}</div>
+              </div>
+            </div>
+            <div class="pv-divider minimal-div"></div>
+          }
+
+          <!-- Tabla demo -->
+          <table class="pv-table">
+            <thead [class.dark-head]="previewTemplate === 'classic'"
+                   [class.accent-head]="previewTemplate === 'modern'"
+                   [class.light-head]="previewTemplate === 'minimal'"
+                   [style.--accent]="previewColor">
+              <tr>
+                <th>Cant.</th>
+                <th>Descripción</th>
+                <th>P. Unit.</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr [class.alt-row]="previewTemplate === 'classic'">
+                <td>2</td><td>Producto ejemplo</td><td>$15.00</td><td>$30.00</td>
+              </tr>
+              <tr>
+                <td>1</td><td>Servicio demo</td><td>$50.00</td><td>$50.00</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Totales -->
+          <div class="pv-totals">
+            <div class="pv-total-row"><span>Subtotal</span><span>$69.57</span></div>
+            <div class="pv-total-row"><span>IVA (15%)</span><span>$10.43</span></div>
+            <div class="pv-total-row bold"><span>TOTAL</span>
+              <span [style.color]="previewTemplate !== 'minimal' ? previewColor : '#0f172a'">$80.00</span>
+            </div>
+          </div>
+
+          <!-- Pie -->
+          <div class="pv-footer">{{ previewFooter }}</div>
+        </div>
+      </div>
+
+    </div>
+  }
+</div>

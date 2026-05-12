@@ -140,6 +140,14 @@ export const routes: Routes = [
         data: { adminOnly: true },
       },
 
+      // Configuración de factura
+      {
+        path: 'settings/invoice',
+        loadComponent: () => import('./features/settings/invoice-settings/invoice-settings.component').then(m => m.InvoiceSettingsComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
+      },
+
       // Solicitudes de módulos
       {
         path: 'module-requests',

@@ -18,10 +18,37 @@ import { ExpenseCategoriesService } from '../../../core/services/expense-categor
 import { ExpenseCategory } from '../../../core/models/expense-category.model';
 import { ProductsService } from '../../../core/services/products.service';
 import { PettyCashService } from '../../../core/services/petty-cash.service';
+import { InventoryMovementsService } from '../../../core/services/inventory-movements.service';
 import { Product } from '../../../core/models/product.model';
+import { InventoryMovement } from '../../../core/models/inventory-movement.model';
 import { PettyCash, PettyCashMovement, MOVEMENT_TYPE_LABELS } from '../../../core/models/petty-cash.model';
 
 type FinanceTab = 'ingresos' | 'egresos' | 'compras' | 'ventas' | 'cxc' | 'cxp' | 'reportes';
+
+interface ProductSaleEntry {
+  invoiceNumber: string;
+  date: string;
+  customerName: string;
+  qty: number;
+  unitPrice: number;
+  discount: number;
+  lineSubtotal: number;
+}
+
+interface ProductProfitRow {
+  productId: number | null;
+  productName: string;
+  purchasePrice: number;
+  salePrice: number;
+  stock: number;
+  inventoryValue: number;
+  unitsSold: number;
+  revenue: number;
+  costOfSales: number;
+  grossProfit: number;
+  marginPct: number;
+  sales: ProductSaleEntry[];
+}
 
 interface TabDef {
   id: FinanceTab;
@@ -180,6 +207,7 @@ export class FinanceDashboardComponent {
   private categoriesSvc          = inject(ExpenseCategoriesService);
   private productsService        = inject(ProductsService);
   private pettyCashService       = inject(PettyCashService);
+  private inventoryMovementsSvc  = inject(InventoryMovementsService);
   private snackBar               = inject(MatSnackBar);
   authService                    = inject(AuthService);
 
@@ -585,7 +613,7 @@ export class FinanceDashboardComponent {
     card_contrapartida: new FormControl(''),
   });
 
-  // ── Compras data (subconjunto de allEgresos) ─────────────────────
+  // ── Compras data (egresos FACTURA + movimientos de inventario IN) ──
   comprasSearchCtrl   = new FormControl('');
   comprasDateFromCtrl = new FormControl('');
   comprasDateToCtrl   = new FormControl('');
@@ -593,6 +621,11 @@ export class FinanceDashboardComponent {
   private comprasSearch   = toSignal(this.comprasSearchCtrl.valueChanges.pipe(startWith('')),   { initialValue: '' });
   private comprasDateFrom = toSignal(this.comprasDateFromCtrl.valueChanges.pipe(startWith('')), { initialValue: '' });
   private comprasDateTo   = toSignal(this.comprasDateToCtrl.valueChanges.pipe(startWith('')),   { initialValue: '' });
+
+  // Movimientos de inventario tipo IN (entradas/restock)
+  allInMovements       = signal<InventoryMovement[]>([]);
+  inMovementsLoading   = signal(false);
+  private inMovementsLoaded = false;
 
   comprasFiltered = computed(() => {
     let list = this.allEgresos().filter(e =>
@@ -613,6 +646,26 @@ export class FinanceDashboardComponent {
     return list;
   });
 
+  inMovementsFiltered = computed(() => {
+    let list = this.allInMovements();
+    const from = this.comprasDateFrom();
+    const to   = this.comprasDateTo();
+    if (from) list = list.filter(m => m.created_at.slice(0, 10) >= from);
+    if (to)   list = list.filter(m => m.created_at.slice(0, 10) <= to);
+    const q = (this.comprasSearch() ?? '').toLowerCase().trim();
+    if (q) list = list.filter(m =>
+      (m.product?.name ?? '').toLowerCase().includes(q) ||
+      (m.product?.sku  ?? '').toLowerCase().includes(q) ||
+      (m.notes         ?? '').toLowerCase().includes(q) ||
+      (m.product?.supplier?.name ?? '').toLowerCase().includes(q)
+    );
+    return list;
+  });
+
+  inMovementValue(m: InventoryMovement): number {
+    return m.quantity * +(m.product?.purchase_price ?? 0);
+  }
+
   private comprasActive   = computed(() => this.comprasFiltered().filter(e => e.payment_status !== 'ANULADO'));
   comprasTotal            = computed(() => this.comprasActive().reduce((s, e) => s + +e.amount, 0));
   comprasTotalSubtotal    = computed(() => this.comprasTotal() / 1.15);
@@ -626,6 +679,10 @@ export class FinanceDashboardComponent {
     ).size
   );
 
+  inMovementsTotal        = computed(() =>
+    this.inMovementsFiltered().reduce((s, m) => s + this.inMovementValue(m), 0)
+  );
+
   comprasSubtotal(amount: number): number { return +amount / 1.15; }
   comprasIva(amount: number): number { return +amount - +amount / 1.15; }
 
@@ -633,6 +690,20 @@ export class FinanceDashboardComponent {
     this.comprasSearchCtrl.setValue('');
     this.comprasDateFromCtrl.setValue('');
     this.comprasDateToCtrl.setValue('');
+  }
+
+  loadInMovements(): void {
+    if (this.inMovementsLoaded) return;
+    this.inMovementsLoading.set(true);
+    this.inventoryMovementsSvc.list({ movement_type: 'IN', limit: 500 })
+      .pipe(finalize(() => this.inMovementsLoading.set(false)))
+      .subscribe({
+        next: res => {
+          this.allInMovements.set(res.data);
+          this.inMovementsLoaded = true;
+        },
+        error: () => this.allInMovements.set([]),
+      });
   }
 
   // ── Egresos data ──────────────────────────────────────────────────
@@ -866,7 +937,7 @@ export class FinanceDashboardComponent {
   });
 
   // ── Sub-tabs dentro de Reportes ───────────────────────────────────
-  reportesSubTab = signal<'resumen' | 'liquidos'>('resumen');
+  reportesSubTab = signal<'resumen' | 'liquidos' | 'productos'>('resumen');
 
   // Ingresos reales (cobrados) en el período seleccionado
   reportesIngresosReales = computed(() =>
@@ -986,7 +1057,7 @@ export class FinanceDashboardComponent {
       .sort((a, b) => b.amount - a.amount);
   });
 
-  readonly METODO_COLORS: Record<string, string> = {
+  readonly METODO_COLORS: Record<string, string | undefined> = {
     EFECTIVO:        'var(--success)',
     TRANSFERENCIA:   'var(--accent)',
     TARJETA_DEBITO:  'var(--warn)',
@@ -1028,6 +1099,87 @@ export class FinanceDashboardComponent {
 
   reportesTopProductsMaxQty = computed(() => this.reportesTopProducts()[0]?.qty || 1);
 
+  // ── Rentabilidad de Productos ─────────────────────────────────────
+  private productProfitDetailMap  = signal<Map<number, Invoice>>(new Map());
+  productProfitLoading            = signal(false);
+  private productProfitLoadedYear: number | null = null;
+  private productProfitIsLoading  = false;
+
+  reportesProductProfitSearchCtrl = new FormControl('');
+  private productProfitSearchSig  = toSignal(
+    this.reportesProductProfitSearchCtrl.valueChanges.pipe(startWith('')),
+    { initialValue: '' }
+  );
+
+  selectedProductProfit = signal<ProductProfitRow | null>(null);
+
+  reportesProductProfits = computed<ProductProfitRow[]>(() => {
+    const year      = this.reportesYear();
+    const yearFrom  = `${year}-01-01`;
+    const yearTo    = `${year}-12-31`;
+    const products  = this.reportesProducts();
+    const detailMap = this.productProfitDetailMap();
+
+    const salesByName = new Map<string, { qty: number; revenue: number; sales: ProductSaleEntry[] }>();
+    for (const inv of detailMap.values()) {
+      const d = (inv.issue_date ?? '').slice(0, 10);
+      if (d < yearFrom || d > yearTo || inv.status !== 'ISSUED') continue;
+      for (const det of inv.details ?? []) {
+        const cur = salesByName.get(det.product_name) ?? { qty: 0, revenue: 0, sales: [] };
+        cur.qty     += +det.quantity;
+        cur.revenue += +det.line_subtotal;
+        cur.sales.push({
+          invoiceNumber: inv.invoice_number,
+          date:          inv.issue_date ?? '',
+          customerName:  inv.customer?.full_name ?? 'Consumidor Final',
+          qty:           +det.quantity,
+          unitPrice:     +det.unit_price,
+          discount:      +det.discount,
+          lineSubtotal:  +det.line_subtotal,
+        });
+        salesByName.set(det.product_name, cur);
+      }
+    }
+
+    return products.map(p => {
+      const s           = salesByName.get(p.name) ?? { qty: 0, revenue: 0, sales: [] };
+      const costOfSales = s.qty * +p.purchase_price;
+      const grossProfit = s.revenue - costOfSales;
+      const marginPct   = s.revenue > 0 ? (grossProfit / s.revenue) * 100 : 0;
+      return {
+        productId:     p.id,
+        productName:   p.name,
+        purchasePrice: +p.purchase_price,
+        salePrice:     +p.sale_price,
+        stock:         +p.stock,
+        inventoryValue: +p.stock * +p.purchase_price,
+        unitsSold:     s.qty,
+        revenue:       s.revenue,
+        costOfSales,
+        grossProfit,
+        marginPct,
+        sales:         [...s.sales].sort((a, b) => b.date.localeCompare(a.date)),
+      };
+    }).sort((a, b) => b.grossProfit - a.grossProfit);
+  });
+
+  filteredProductProfits = computed(() => {
+    const q   = (this.productProfitSearchSig() ?? '').toLowerCase().trim();
+    const all = this.reportesProductProfits();
+    return q ? all.filter(p => p.productName.toLowerCase().includes(q)) : all;
+  });
+
+  productProfitTotals = computed(() => {
+    const rows       = this.reportesProductProfits();
+    const withSales  = rows.filter(r => r.unitsSold > 0);
+    const totalRev   = withSales.reduce((s, r) => s + r.revenue, 0);
+    const totalCost  = withSales.reduce((s, r) => s + r.costOfSales, 0);
+    const totalProfit = totalRev - totalCost;
+    const avgMargin  = totalRev > 0 ? (totalProfit / totalRev) * 100 : 0;
+    const totalInv   = rows.reduce((s, r) => s + r.inventoryValue, 0);
+    return { withSalesCount: withSales.length, totalRev, totalCost, totalProfit, avgMargin, totalInv };
+  });
+
   constructor() {
     const opts = { allowSignalWrites: true };
     effect(() => {
@@ -1055,10 +1207,25 @@ export class FinanceDashboardComponent {
       if ((tab === 'egresos' || tab === 'compras') && !this.egresosLoaded) {
         this.loadEgresos();
       }
+      if (tab === 'compras') {
+        this.loadInMovements();
+      }
     }, opts);
     effect(() => {
       if (this.activeTab() === 'reportes' && !this.reportesLoaded) {
         this.loadReportes();
+      }
+    }, opts);
+    effect(() => {
+      this.allIngresosInvoices(); // track reactively — fires when data arrives
+      const year = this.reportesYear();
+      if (
+        this.activeTab() === 'reportes' &&
+        this.reportesSubTab() === 'productos' &&
+        this.productProfitLoadedYear !== year &&
+        !this.productProfitIsLoading
+      ) {
+        this.loadProductProfitData();
       }
     }, opts);
   }
@@ -1152,7 +1319,8 @@ export class FinanceDashboardComponent {
       next: res => {
         this.allCxcInvoices.set(
           (res.data ?? []).filter(i =>
-            i.payment_status === 'PENDIENTE' || i.payment_status === 'PARCIAL'
+            i.status === 'ISSUED' &&
+            (i.payment_status === 'PENDIENTE' || i.payment_status === 'PARCIAL')
           )
         );
         this.cxcLoaded = true;
@@ -1561,12 +1729,71 @@ export class FinanceDashboardComponent {
   }
 
   reloadReportes(): void {
-    this.reportesLoaded = false;
-    this.ingresosLoaded = false;
-    this.egresosLoaded  = false;
-    this.cxcLoaded      = false;
-    this.cxpLoaded      = false;
+    this.reportesLoaded          = false;
+    this.ingresosLoaded          = false;
+    this.egresosLoaded           = false;
+    this.cxcLoaded               = false;
+    this.cxpLoaded               = false;
+    this.productProfitLoadedYear = null;
+    this.productProfitDetailMap.set(new Map());
     this.loadReportes();
+  }
+
+  private loadProductProfitData(): void {
+    const year     = this.reportesYear();
+    const yearFrom = `${year}-01-01`;
+    const yearTo   = `${year}-12-31`;
+
+    const ids = this.allIngresosInvoices()
+      .filter(i =>
+        i.status === 'ISSUED' &&
+        (i.issue_date ?? '').slice(0, 10) >= yearFrom &&
+        (i.issue_date ?? '').slice(0, 10) <= yearTo
+      )
+      .slice(0, 200)
+      .map(i => i.id);
+
+    if (!ids.length) return;
+
+    this.productProfitLoadedYear = year;
+    this.productProfitIsLoading  = true;
+    this.productProfitLoading.set(true);
+    this.productProfitDetailMap.set(new Map());
+
+    from(ids).pipe(
+      concatMap(id => this.invoicesService.getById(id)),
+      toArray(),
+      finalize(() => {
+        this.productProfitLoading.set(false);
+        this.productProfitIsLoading = false;
+      })
+    ).subscribe({
+      next: invoices => {
+        const map = new Map<number, Invoice>();
+        invoices.forEach(inv => map.set(inv.id, inv));
+        this.productProfitDetailMap.set(map);
+      },
+      error: () => this.productProfitDetailMap.set(new Map()),
+    });
+  }
+
+  exportCsvProductProfits(): void {
+    const rows: string[][] = [
+      ['Producto', 'P.Compra', 'P.Venta', 'Stock', 'Valor Inventario', 'Unidades Vendidas', 'Ingresos Venta', 'Costo Ventas', 'Ganancia Bruta', 'Margen %'],
+      ...this.reportesProductProfits().map(p => [
+        p.productName,
+        p.purchasePrice.toFixed(2),
+        p.salePrice.toFixed(2),
+        String(p.stock),
+        p.inventoryValue.toFixed(2),
+        String(p.unitsSold),
+        p.revenue.toFixed(2),
+        p.costOfSales.toFixed(2),
+        p.grossProfit.toFixed(2),
+        p.marginPct.toFixed(1) + '%',
+      ]),
+    ];
+    this.downloadCsv(rows, `rentabilidad-productos-${this.reportesYear()}.csv`);
   }
 
   reportesPrevMonth(): void {
