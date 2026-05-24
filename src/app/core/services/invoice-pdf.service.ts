@@ -1,5 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
+import { InvoiceSettingsService } from './invoice-settings.service';
 import { Invoice } from '../models/invoice.model';
 import {
   InvoiceSettings,
@@ -9,7 +11,8 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class InvoicePdfService {
-  private auth = inject(AuthService);
+  private auth        = inject(AuthService);
+  private settingsSvc = inject(InvoiceSettingsService);
 
   private settings: InvoiceSettings = { ...DEFAULT_INVOICE_SETTINGS };
 
@@ -18,10 +21,15 @@ export class InvoicePdfService {
   }
 
   async download(invoice: Invoice): Promise<void> {
-    const [pdfMakeModule, vfsModule] = await Promise.all([
+    const [pdfMakeModule, vfsModule, freshSettings] = await Promise.all([
       import('pdfmake/build/pdfmake'),
       import('pdfmake/build/vfs_fonts'),
+      firstValueFrom(this.settingsSvc.get()).catch(() => null),
     ]);
+
+    if (freshSettings) {
+      this.updateSettings(freshSettings);
+    }
 
     const pdfMake = ((pdfMakeModule as any).default ?? pdfMakeModule) as any;
     const vfs     = ((vfsModule     as any).default ?? vfsModule)     as any;
@@ -156,29 +164,43 @@ export class InvoicePdfService {
       const companyStack: any[] = [
         { text: displayName, style: 'companyName', color: '#ffffff' },
       ];
-      if (businessName) companyStack.push({ text: businessName, style: 'detail', color: 'rgba(255,255,255,0.6)' });
-      if (ruc)          companyStack.push({ text: `RUC: ${ruc}`, style: 'detail', color: 'rgba(255,255,255,0.6)' });
-      if (companyEmail) companyStack.push({ text: companyEmail,  style: 'detail', color: 'rgba(255,255,255,0.6)' });
+      if (businessName) companyStack.push({ text: businessName, style: 'detail', color: '#94a3b8' });
+      if (ruc)          companyStack.push({ text: `RUC: ${ruc}`, style: 'detail', color: '#94a3b8' });
+      if (companyEmail) companyStack.push({ text: companyEmail,  style: 'detail', color: '#94a3b8' });
 
       const invoiceStack: any[] = [
         { text: 'FACTURA',             style: 'invoiceTitle', color: ACCENT },
         { text: invoice.invoice_number, style: 'invoiceNumber', color: '#ffffff', margin: [0, 2, 0, 0] },
-        { text: `Fecha: ${this.fmtDate(invoice.issue_date)}`, style: 'detail', color: 'rgba(255,255,255,0.5)', margin: [0, 4, 0, 0] },
+        { text: `Fecha: ${this.fmtDate(invoice.issue_date)}`, style: 'detail', color: '#94a3b8', margin: [0, 4, 0, 0] },
         ...cancelledBadge,
       ];
 
+      // fillColor no funciona en elementos columns de pdfmake — usar tabla
       headerBlock = [
         {
-          columns: [
-            { stack: companyStack },
-            { stack: invoiceStack, alignment: 'right' },
-          ],
-          fillColor: DARK,
+          table: {
+            widths: ['*', 'auto'],
+            body: [[
+              {
+                stack: companyStack,
+                fillColor: DARK,
+                border: [false, false, false, false],
+                margin: [0, 12, 8, 12],
+              },
+              {
+                stack: invoiceStack,
+                alignment: 'right',
+                fillColor: DARK,
+                border: [false, false, false, false],
+                margin: [8, 12, 0, 12],
+              },
+            ]],
+          },
+          layout: { hLineWidth: () => 0, vLineWidth: () => 0 },
           margin: [-41, -41, -41, 0],
-          padding: [41, 16, 41, 16],
-        } as any,
+        },
         {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 505, y2: 0, lineWidth: 2, lineColor: ACCENT }],
+          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: ACCENT }],
           margin: [0, 0, 0, 16],
         },
       ];

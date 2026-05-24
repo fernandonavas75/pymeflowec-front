@@ -54,6 +54,7 @@ export class InvoiceSettingsComponent implements OnInit {
           establishment:  merged.establishment  ?? '001',
           emission_point: merged.emission_point ?? '001',
         });
+        this.pdfSvc.updateSettings(merged);
         this.loading.set(false);
       },
       error: () => {

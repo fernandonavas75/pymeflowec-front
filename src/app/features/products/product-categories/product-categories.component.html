@@ -14,134 +14,143 @@
   </div>
 
   <!-- ── Two-column layout ──────────────────────────────────────── -->
-  <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start">
+  <div class="cat-grid">
 
     <!-- ── LEFT: categories list ──────────────────────────────── -->
-    <div class="card" style="overflow:hidden">
+    <div class="cat-panel card">
 
       <!-- Search -->
-      <div style="padding:12px 16px;border-bottom:1px solid var(--border-ds)">
-        <div class="filter-search" style="margin:0">
+      <div class="cat-panel-search">
+        <div class="filter-search" style="margin:0;flex:1">
           <app-icon name="search" [size]="13"/>
           <input placeholder="Buscar categoría…" [formControl]="searchCtrl"/>
         </div>
+        <span class="cat-count-pill">{{ totalCount() }}</span>
       </div>
 
       @if (loading()) {
-        <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
-          @for (i of [1,2,3,4]; track i) {
-            <div class="skel" style="height:44px;border-radius:var(--radius-sm-ds)"></div>
+        <div class="cat-skeleton-list">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="skel" style="height:56px;border-radius:var(--radius-ds)"></div>
           }
         </div>
 
       } @else if (filteredCategories().length === 0 && !searchCtrl.value) {
-        <div class="empty" style="padding:48px 24px">
-          <app-icon name="tag" [size]="36" style="opacity:.25"/>
+        <div class="empty" style="padding:64px 24px">
+          <app-icon name="tag" [size]="40" style="opacity:.18"/>
           <p>Sin categorías aún</p>
+          <button class="btn ghost sm" type="button" (click)="openCreate()">
+            <app-icon name="plus" [size]="13"/>Crear primera
+          </button>
         </div>
 
       } @else {
-        <div style="overflow:hidden">
-          <table class="ds-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th class="num" style="width:60px">Prods.</th>
-                <th style="width:72px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (cat of filteredCategories(); track cat.id) {
-                <tr style="cursor:pointer"
-                    [style.background]="selectedId() === cat.id ? 'var(--accent-soft)' : ''"
-                    (click)="selectCategory(cat.id)">
-                  <td>
-                    <div style="display:flex;align-items:center;gap:8px">
-                      <app-icon name="tag" [size]="13" style="color:var(--text-subtle);flex-shrink:0"/>
-                      <div>
-                        <strong>{{ cat.name }}</strong>
-                        @if (cat.parent_id) {
-                          <div style="font-size:11px;color:var(--text-subtle)">{{ parentName(cat) }}</div>
-                        }
-                      </div>
-                    </div>
-                  </td>
-                  <td class="num">
-                    <span style="font-size:12px;color:var(--text-muted-ds)">
-                      {{ productCountByCategory().get(cat.id) ?? 0 }}
-                    </span>
-                  </td>
-                  <td>
-                    <div style="display:flex;align-items:center;gap:2px;justify-content:flex-end" (click)="$event.stopPropagation()">
-                      <button class="btn ghost sm" type="button" title="Editar" (click)="openEdit(cat)">
-                        <app-icon name="edit" [size]="13"/>
-                      </button>
-                      <button class="btn ghost sm" type="button" title="Eliminar"
-                              style="color:var(--danger)" (click)="deleteCategory(cat)">
-                        <app-icon name="trash" [size]="13"/>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+        <div class="cat-list">
+
+          @for (cat of filteredCategories(); track cat.id) {
+            <div class="cat-item" [class.selected]="selectedId() === cat.id"
+                 (click)="selectCategory(cat.id)">
+              <div class="cat-icon-wrap">
+                <app-icon name="tag" [size]="14"/>
+              </div>
+              <div class="cat-item-body">
+                <span class="cat-item-name">{{ cat.name }}</span>
+                @if (cat.parent_id) {
+                  <span class="cat-item-parent">
+                    <app-icon name="corner_down_right" [size]="10"/>{{ parentName(cat) }}
+                  </span>
+                }
+              </div>
+              <div class="cat-item-meta" (click)="$event.stopPropagation()">
+                <span class="cat-prod-badge"
+                      [class.has-prods]="(productCountByCategory().get(cat.id) ?? 0) > 0">
+                  {{ productCountByCategory().get(cat.id) ?? 0 }}
+                </span>
+                <div class="cat-item-actions">
+                  <button class="btn ghost sm" type="button" title="Editar" (click)="openEdit(cat)">
+                    <app-icon name="edit" [size]="13"/>
+                  </button>
+                  <button class="btn ghost sm" type="button" title="Eliminar"
+                          style="color:var(--danger)" (click)="deleteCategory(cat)">
+                    <app-icon name="trash" [size]="13"/>
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
 
           <!-- Sin categoría row -->
-          <div style="border-top:1px solid var(--border-ds);padding:10px 16px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:space-between"
-               [style.background]="selectedId() === 'unassigned' ? 'var(--accent-soft)' : ''"
+          <div class="cat-item unassigned" [class.selected]="selectedId() === 'unassigned'"
                (click)="selectCategory('unassigned')">
-            <div style="display:flex;align-items:center;gap:8px">
-              <app-icon name="tag" [size]="13" style="color:var(--text-subtle)"/>
-              <span style="font-size:13px;color:var(--text-muted-ds);font-style:italic">Sin categoría</span>
+            <div class="cat-icon-wrap muted">
+              <app-icon name="circle_dashed" [size]="14"/>
             </div>
-            <span style="font-size:12px;color:var(--text-muted-ds)">{{ unassignedCount() }}</span>
+            <div class="cat-item-body">
+              <span class="cat-item-name muted">Sin categoría</span>
+            </div>
+            <div class="cat-item-meta">
+              <span class="cat-prod-badge" [class.has-prods]="unassignedCount() > 0">
+                {{ unassignedCount() }}
+              </span>
+            </div>
           </div>
+
         </div>
       }
     </div>
 
     <!-- ── RIGHT: products panel ──────────────────────────────── -->
-    <div class="card" style="overflow:hidden">
+    <div class="cat-panel card">
 
       @if (selectedId() === null) {
-        <!-- Empty state -->
-        <div class="empty" style="padding:64px 24px">
-          <app-icon name="arrow_left" [size]="32" style="opacity:.2"/>
-          <p style="color:var(--text-subtle)">Selecciona una categoría<br>para ver y asignar productos</p>
+        <div class="empty" style="padding:80px 32px;gap:12px">
+          <div class="cat-empty-icon">
+            <app-icon name="layers" [size]="28"/>
+          </div>
+          <strong style="font-size:14px;color:var(--text-ds)">Selecciona una categoría</strong>
+          <p style="color:var(--text-subtle);text-align:center;font-size:13px;max-width:220px;line-height:1.5">
+            Haz clic en una categoría para ver y reasignar sus productos
+          </p>
         </div>
 
       } @else {
         <!-- Panel header -->
-        <div style="padding:12px 16px;border-bottom:1px solid var(--border-ds);display:flex;align-items:center;justify-content:space-between;gap:12px">
-          <div>
-            <div style="font-size:13px;font-weight:600">{{ selectedCategoryName() }}</div>
-            <div style="font-size:11px;color:var(--text-subtle)">{{ panelProducts().length }} producto(s)</div>
+        <div class="cat-panel-header">
+          <div class="cat-panel-title-wrap">
+            <div class="cat-panel-icon">
+              <app-icon name="tag" [size]="14"/>
+            </div>
+            <div>
+              <div class="cat-panel-title">{{ selectedCategoryName() }}</div>
+              <div class="cat-panel-sub">{{ panelProducts().length }} producto(s)</div>
+            </div>
           </div>
-          <div class="filter-search" style="margin:0;flex:1;max-width:220px">
-            <app-icon name="search" [size]="13"/>
-            <input placeholder="Buscar…" [formControl]="productSearchCtrl"/>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="filter-search" style="margin:0;width:200px">
+              <app-icon name="search" [size]="13"/>
+              <input placeholder="Buscar producto…" [formControl]="productSearchCtrl"/>
+            </div>
+            <button class="btn ghost sm" type="button" title="Cerrar panel" (click)="selectedId.set(null)">
+              <app-icon name="x" [size]="14"/>
+            </button>
           </div>
-          <button class="btn ghost sm" type="button" title="Cerrar panel" (click)="selectedId.set(null)">
-            <app-icon name="x" [size]="14"/>
-          </button>
         </div>
 
         @if (loadingProducts()) {
-          <div style="padding:20px;display:flex;flex-direction:column;gap:10px">
+          <div class="cat-skeleton-list" style="padding:16px">
             @for (i of [1,2,3]; track i) {
-              <div class="skel" style="height:44px;border-radius:var(--radius-sm-ds)"></div>
+              <div class="skel" style="height:60px;border-radius:var(--radius-ds)"></div>
             }
           </div>
 
         } @else if (panelProducts().length === 0) {
-          <div class="empty" style="padding:48px 24px">
-            <app-icon name="inventory_2" [size]="32" style="opacity:.2"/>
+          <div class="empty" style="padding:60px 24px">
+            <app-icon name="package" [size]="36" style="opacity:.18"/>
             @if (productSearchCtrl.value) {
               <p style="color:var(--text-subtle)">Sin coincidencias</p>
-              <button class="btn ghost sm" type="button" (click)="productSearchCtrl.setValue('')">Limpiar</button>
+              <button class="btn ghost sm" type="button" (click)="productSearchCtrl.setValue('')">Limpiar búsqueda</button>
             } @else {
-              <p style="color:var(--text-subtle)">
+              <p style="color:var(--text-subtle);text-align:center;font-size:13px">
                 @if (selectedId() === 'unassigned') {
                   Todos los productos tienen categoría asignada
                 } @else {
@@ -152,46 +161,38 @@
           </div>
 
         } @else {
-          <table class="ds-table">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th class="num" style="width:70px">Stock</th>
-                <th style="width:180px">Mover a</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (product of panelProducts(); track product.id) {
-                <tr>
-                  <td>
-                    <div>
-                      <strong style="font-size:13px">{{ product.name }}</strong>
-                      @if (product.sku) {
-                        <div style="font-size:11px;color:var(--text-subtle)">{{ product.sku }}</div>
+          <div class="prod-card-list">
+            @for (product of panelProducts(); track product.id) {
+              <div class="prod-card">
+                <div class="prod-avatar">{{ product.name.charAt(0).toUpperCase() }}</div>
+                <div class="prod-info">
+                  <span class="prod-name">{{ product.name }}</span>
+                  @if (product.sku) {
+                    <span class="prod-sku">SKU: {{ product.sku }}</span>
+                  }
+                </div>
+                <div class="prod-stock-badge" [class.low]="product.stock <= 5">
+                  {{ product.stock }} uds.
+                </div>
+                <div class="prod-assign" (click)="$event.stopPropagation()">
+                  @if (savingProductId() === product.id) {
+                    <span class="prod-saving">
+                      <app-icon name="loader" [size]="12"/>Guardando…
+                    </span>
+                  } @else {
+                    <select class="m-input prod-select"
+                            [value]="product.category_id ?? ''"
+                            (change)="assignCategory(product, $event)">
+                      <option value="">Sin categoría</option>
+                      @for (cat of allCategories(); track cat.id) {
+                        <option [value]="cat.id">{{ cat.name }}</option>
                       }
-                    </div>
-                  </td>
-                  <td class="num">
-                    <span style="font-size:12px">{{ product.stock }}</span>
-                  </td>
-                  <td>
-                    @if (savingProductId() === product.id) {
-                      <span style="font-size:12px;color:var(--text-subtle)">Guardando…</span>
-                    } @else {
-                      <select class="m-input" style="font-size:12px;padding:4px 8px;height:auto"
-                              [value]="product.category_id ?? ''"
-                              (change)="assignCategory(product, $event)">
-                        <option value="">Sin categoría</option>
-                        @for (cat of allCategories(); track cat.id) {
-                          <option [value]="cat.id">{{ cat.name }}</option>
-                        }
-                      </select>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                    </select>
+                  }
+                </div>
+              </div>
+            }
+          </div>
         }
       }
     </div>
@@ -203,12 +204,17 @@
 <!-- ── Modal crear / editar ────────────────────────────────────── -->
 @if (modalOpen()) {
   <div class="modal-backdrop" (click)="closeModal()">
-    <div class="modal-box" style="width:440px" (click)="$event.stopPropagation()">
+    <div class="modal-box" style="width:460px" (click)="$event.stopPropagation()">
 
       <div class="ds-modal-head">
-        <div>
-          <div class="t">{{ editingId() ? 'Editar categoría' : 'Nueva categoría' }}</div>
-          <div class="d">Categorías de productos</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="modal-head-icon">
+            <app-icon name="tag" [size]="16"/>
+          </div>
+          <div>
+            <div class="t">{{ editingId() ? 'Editar categoría' : 'Nueva categoría' }}</div>
+            <div class="d">Categorías de productos</div>
+          </div>
         </div>
         <button class="topbar-btn" type="button" (click)="closeModal()">
           <app-icon name="x" [size]="16"/>
@@ -216,11 +222,12 @@
       </div>
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="ds-modal-body" style="display:flex;flex-direction:column;gap:16px">
+        <div class="ds-modal-body" style="display:flex;flex-direction:column;gap:20px">
 
           <div class="mfield">
             <label>Nombre <span style="color:var(--danger)">*</span></label>
-            <input class="m-input" formControlName="name" placeholder="Ej: Electrónica, Ropa, Alimentos…"
+            <input class="m-input" formControlName="name"
+                   placeholder="Ej: Electrónica, Ropa, Alimentos…"
                    [class.error]="form.get('name')?.invalid && form.get('name')?.touched"/>
             @if (form.get('name')?.errors?.['required'] && form.get('name')?.touched) {
               <span class="field-error">El nombre es requerido</span>
@@ -228,7 +235,7 @@
           </div>
 
           <div class="mfield">
-            <label>Categoría padre <span style="color:var(--text-subtle);font-weight:400">(opcional)</span></label>
+            <label>Categoría padre <span class="label-opt">(opcional)</span></label>
             <select class="m-input" formControlName="parent_id">
               <option [ngValue]="null">Sin categoría padre</option>
               @for (p of parentOptions(); track p.id) {
@@ -239,15 +246,19 @@
 
           <div class="mfield">
             <label>Orden de visualización</label>
-            <input class="m-input" type="number" formControlName="sort_order" min="0"/>
-            <span style="font-size:11px;color:var(--text-subtle)">Número menor aparece primero</span>
+            <input class="m-input" type="number" formControlName="sort_order" min="0" style="width:120px"/>
+            <span class="field-hint">Número menor aparece primero en la lista</span>
           </div>
 
         </div>
 
         <div class="ds-modal-foot">
           <button type="submit" class="btn primary" [disabled]="saving()">
-            @if (saving()) { Guardando… } @else { {{ editingId() ? 'Guardar cambios' : 'Crear categoría' }} }
+            @if (saving()) {
+              <app-icon name="loader" [size]="13"/>Guardando…
+            } @else {
+              {{ editingId() ? 'Guardar cambios' : 'Crear categoría' }}
+            }
           </button>
           <button type="button" class="btn ghost" (click)="closeModal()">Cancelar</button>
         </div>
@@ -256,3 +267,270 @@
     </div>
   </div>
 }
+
+<style>
+/* ── Layout ── */
+.cat-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Panel shell ── */
+.cat-panel { overflow: hidden; }
+
+.cat-panel-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-ds);
+}
+
+.cat-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-muted-ds);
+  border-radius: 20px;
+  padding: 2px 8px;
+  min-width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cat-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+/* ── Category list ── */
+.cat-list {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 2px;
+}
+
+.cat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 10px;
+  border-radius: var(--radius-ds);
+  cursor: pointer;
+  transition: background 0.12s;
+  border: 1px solid transparent;
+}
+.cat-item:hover { background: var(--surface-2); }
+.cat-item.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-strong);
+}
+
+.cat-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm-ds);
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cat-icon-wrap.muted {
+  background: var(--surface-2);
+  color: var(--text-subtle);
+}
+
+.cat-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cat-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-ds);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cat-item-name.muted { color: var(--text-subtle); font-style: italic; }
+.cat-item-parent {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-subtle);
+}
+
+.cat-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cat-prod-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  color: var(--text-muted-ds);
+  min-width: 22px;
+  text-align: center;
+}
+.cat-prod-badge.has-prods {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.cat-item-actions {
+  display: none;
+  gap: 2px;
+}
+.cat-item:hover .cat-item-actions { display: flex; }
+
+/* ── Right panel header ── */
+.cat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-ds);
+}
+.cat-panel-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cat-panel-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm-ds);
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cat-panel-title { font-size: 13px; font-weight: 600; color: var(--text-ds); }
+.cat-panel-sub { font-size: 11px; color: var(--text-subtle); }
+
+/* ── Empty state icon ── */
+.cat-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg-ds);
+  background: var(--surface-2);
+  color: var(--text-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Product cards ── */
+.prod-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.prod-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-ds);
+  transition: background 0.1s;
+}
+.prod-card:last-child { border-bottom: none; }
+.prod-card:hover { background: var(--surface-2); }
+
+.prod-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-ds);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prod-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.prod-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.prod-sku {
+  font-size: 11px;
+  color: var(--text-subtle);
+  font-family: var(--font-mono);
+}
+
+.prod-stock-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 20px;
+  background: var(--success-soft);
+  color: var(--success);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.prod-stock-badge.low {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.prod-assign { flex-shrink: 0; }
+.prod-select { font-size: 12px; padding: 5px 8px; height: auto; width: 160px; }
+
+.prod-saving {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-subtle);
+}
+
+/* ── Modal head icon ── */
+.modal-head-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-ds);
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Form helpers ── */
+.label-opt { font-weight: 400; color: var(--text-subtle); font-size: 11px; }
+.field-hint { font-size: 11px; color: var(--text-subtle); margin-top: 4px; }
+</style>
