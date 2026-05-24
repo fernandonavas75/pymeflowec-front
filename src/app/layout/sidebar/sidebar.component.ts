@@ -30,6 +30,8 @@ interface NavItem {
   moduleCode?: string;
   /** Oculto para STORE_WAREHOUSE (bodeguero no factura ni atiende clientes). */
   warehouseHidden?: boolean;
+  /** Usa matching exacto de ruta (evita que rutas padre queden activas en sub-rutas). */
+  exactMatch?: boolean;
 }
 
 interface NavGroup {
@@ -78,20 +80,30 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Facturación',
       items: [
-        { label: 'Clientes',    icon: 'people',        route: '/customers',          moduleCode: 'MOD_INVOICING', warehouseHidden: true },
-        { label: 'Facturas',    icon: 'receipt_long',  route: '/invoices',           moduleCode: 'MOD_INVOICING', warehouseHidden: true },
-        { label: 'Caja chica',  icon: 'wallet',        route: '/finance/petty-cash',         moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
-        { label: 'Egresos',     icon: 'trending_down', route: '/finance/expenses',            moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
-        { label: 'Fin. Dashboard', icon: 'banknote',   route: '/finance/dashboard',           moduleCode: 'MOD_FINANCE',   warehouseHidden: true },
-        { label: 'Reportes',    icon: 'bar_chart',     route: '/reports',                    moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Clientes',    icon: 'people',        route: '/customers',  moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Facturas',    icon: 'receipt_long',  route: '/invoices',   moduleCode: 'MOD_INVOICING', warehouseHidden: true },
+        { label: 'Reportes',    icon: 'bar_chart',     route: '/reports',    moduleCode: 'MOD_INVOICING', warehouseHidden: true },
       ],
     },
-    // ── Catálogo (productos requiere MOD_PRODUCTS, prov. MOD_SUPPLIERS) ─
+    // ── Contabilidad (requiere MOD_FINANCE) ───────────────────────────
+    {
+      label: 'Contabilidad',
+      items: [
+        { label: 'Dashboard',      icon: 'banknote',      route: '/finance/dashboard',           moduleCode: 'MOD_FINANCE', warehouseHidden: true },
+        { label: 'Egresos',        icon: 'trending_down', route: '/finance/expenses',            moduleCode: 'MOD_FINANCE', warehouseHidden: true },
+        { label: 'Caja chica',     icon: 'wallet',        route: '/finance/petty-cash',          moduleCode: 'MOD_FINANCE', warehouseHidden: true },
+        { label: 'Cat. egresos',   icon: 'tag',           route: '/finance/expense-categories',  moduleCode: 'MOD_FINANCE', adminOnly: true },
+        { label: 'Presupuestos',   icon: 'target',        route: '/finance/expense-budgets',     moduleCode: 'MOD_FINANCE', adminOnly: true },
+        { label: 'Recurrentes',    icon: 'repeat',        route: '/finance/expense-recurring',   moduleCode: 'MOD_FINANCE', adminOnly: true },
+      ],
+    },
+    // ── Catálogo (productos requiere MOD_PRODUCTS, prov. MOD_PARAMS) ──
     {
       label: 'Catálogo',
       items: [
-        { label: 'Productos',   icon: 'inventory_2',    route: '/products',  moduleCode: 'MOD_PRODUCTS' },
-        { label: 'Proveedores', icon: 'local_shipping', route: '/suppliers', moduleCode: 'MOD_SUPPLIERS' },
+        { label: 'Productos',       icon: 'inventory_2', route: '/products',            moduleCode: 'MOD_PRODUCTS', exactMatch: true },
+        { label: 'Cat. productos',  icon: 'tag',         route: '/products/categories', moduleCode: 'MOD_PRODUCTS', adminOnly: true },
+        { label: 'Proveedores', icon: 'local_shipping', route: '/suppliers', moduleCode: 'MOD_PARAMS' },
       ],
     },
     // ── Administración: sólo STORE_ADMIN ────────────────────────────
@@ -103,14 +115,11 @@ export class SidebarComponent implements OnInit {
           icon:  'percent',
           route: '/tax-rates',
           adminOnly: true,
-          moduleCode: 'MOD_TAX',
+          moduleCode: 'MOD_PARAMS',
         },
-        { label: 'Cat. egresos',   icon: 'tag',    route: '/finance/expense-categories', adminOnly: true, moduleCode: 'MOD_FINANCE' },
-        { label: 'Presupuestos',   icon: 'target', route: '/finance/expense-budgets',     adminOnly: true, moduleCode: 'MOD_FINANCE' },
-        { label: 'Recurrentes',    icon: 'repeat', route: '/finance/expense-recurring',   adminOnly: true, moduleCode: 'MOD_FINANCE' },
-        { label: 'Factura',   icon: 'palette',         route: '/settings/invoice',adminOnly: true },
-        { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',           adminOnly: true },
-        { label: 'Módulos',   icon: 'extension',       route: '/module-requests', adminOnly: true },
+        { label: 'Factura',   icon: 'palette',         route: '/settings/invoice', adminOnly: true },
+        { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',            adminOnly: true },
+        { label: 'Módulos',   icon: 'extension',       route: '/module-requests',  adminOnly: true },
         { label: 'Actividad', icon: 'manage_search',   route: '/reports', queryParams: { view: 'activity' }, adminOnly: true, moduleCode: 'MOD_INVOICING' },
       ],
     },
@@ -223,6 +232,13 @@ export class SidebarComponent implements OnInit {
   readonly linkActiveOptions = {
     paths: 'subset' as const,
     queryParams: 'exact' as const,
+    fragment: 'ignored' as const,
+    matrixParams: 'ignored' as const,
+  };
+
+  readonly exactLinkActiveOptions = {
+    paths: 'exact' as const,
+    queryParams: 'ignored' as const,
     fragment: 'ignored' as const,
     matrixParams: 'ignored' as const,
   };

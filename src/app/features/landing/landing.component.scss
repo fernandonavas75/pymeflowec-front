@@ -1101,3 +1101,218 @@ $border:        #e2e8f0;
     &:hover { color: $primary-light; }
   }
 }
+
+// ── Finance Showcase ──────────────────────────────────────────
+.finance-showcase {
+  padding: 100px 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
+  border-top: 1px solid $border;
+}
+
+.finance-badge {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.finance-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 80px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+.finance-intro {
+  position: sticky;
+  top: 100px;
+
+  @media (max-width: 900px) { position: static; }
+}
+
+.finance-heading {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 16px 0 16px;
+  color: $text;
+}
+
+.finance-sub {
+  font-size: 1.0625rem;
+  color: $text-muted;
+  line-height: 1.7;
+  margin: 0 0 28px;
+}
+
+.finance-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.8125rem;
+  color: #059669;
+
+  .material-icons-round { font-size: 16px; }
+
+  strong { font-weight: 700; }
+}
+
+.finance-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.finance-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 22px 0;
+  border-bottom: 1px solid $border;
+  transition: background 0.2s;
+
+  &:last-child { border-bottom: none; padding-bottom: 0; }
+  &:first-child { padding-top: 0; }
+
+  &:hover .fi-icon {
+    background: $primary;
+    color: white;
+    transform: scale(1.05);
+  }
+}
+
+.fi-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.08);
+  color: $primary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+
+  .material-icons-round { font-size: 22px; }
+}
+
+.fi-body {
+  strong {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: $text;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 0.8125rem;
+    color: $text-muted;
+    line-height: 1.6;
+    margin: 0;
+  }
+}
+
+// ── Roles ─────────────────────────────────────────────────────
+.roles-section {
+  padding: 100px 0;
+  background: #f8fafc;
+  border-top: 1px solid $border;
+}
+
+.roles-badge {
+  background: rgba(99, 102, 241, 0.08);
+  color: $primary-dark;
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+
+  @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 580px) { grid-template-columns: 1fr; }
+}
+
+.role-card {
+  background: white;
+  border: 1.5px solid $border;
+  border-radius: 18px;
+  padding: 32px 28px;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(99, 102, 241, 0.1);
+    border-color: rgba(99, 102, 241, 0.25);
+  }
+
+  &.role-indigo .role-icon-wrap { background: rgba(99, 102, 241, 0.1); color: $primary; }
+  &.role-blue   .role-icon-wrap { background: rgba(59, 130, 246, 0.1);  color: #3b82f6; }
+  &.role-amber  .role-icon-wrap { background: rgba(245, 158, 11, 0.1);  color: #d97706; }
+
+  &.role-indigo:hover .role-icon-wrap { background: $primary;  color: white; }
+  &.role-blue:hover   .role-icon-wrap { background: #3b82f6;   color: white; }
+  &.role-amber:hover  .role-icon-wrap { background: #d97706;   color: white; }
+}
+
+.role-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  transition: all 0.25s;
+
+  .material-icons-round { font-size: 26px; }
+}
+
+.role-label {
+  font-size: 1rem;
+  font-weight: 700;
+  color: $text;
+  margin: 0 0 4px;
+}
+
+.role-desc {
+  font-size: 0.8125rem;
+  color: $text-muted;
+  margin: 0 0 20px;
+}
+
+.role-perms {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: $text;
+    line-height: 1.4;
+
+    &::before {
+      content: '';
+      flex-shrink: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $primary;
+    }
+  }
+}

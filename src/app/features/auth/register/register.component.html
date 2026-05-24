@@ -1,14 +1,40 @@
 <div class="auth-wrap">
   <aside class="aside">
+    <div class="aside-grid"></div>
+    <div class="aside-glow"></div>
+
     <div class="brand">
-      <div class="mark"><app-icon name="sparkles" [size]="20"/></div>
-      <div class="wordmark">pymeflow<span class="tld">.ec</span></div>
+      <div class="mark"><app-icon name="sparkles" [size]="18"/></div>
+      <span class="wordmark">pymeflow<span class="tld">.ec</span></span>
     </div>
-    <div class="main">
+
+    <div class="aside-center">
+      <div class="aside-badge">14 días gratis · Sin tarjeta</div>
       <h2>Crea tu empresa en PymeFlowEc.</h2>
-      <p>14 días de prueba, sin tarjeta. Factura electrónica desde el primer día.</p>
-      <div class="quote">
-        <div class="q">"Configurar facturación electrónica me tomó una tarde. La emisión al SRI funciona sola."</div>
+      <p>Factura electrónica, inventario y finanzas en un solo lugar.</p>
+
+      <div class="features-list">
+        <div class="feat-item">
+          <div class="feat-ico"><app-icon name="check" [size]="12"/></div>
+          <span>Facturación electrónica integrada con SRI</span>
+        </div>
+        <div class="feat-item">
+          <div class="feat-ico"><app-icon name="check" [size]="12"/></div>
+          <span>Control de inventario en tiempo real</span>
+        </div>
+        <div class="feat-item">
+          <div class="feat-ico"><app-icon name="check" [size]="12"/></div>
+          <span>Módulo financiero completo</span>
+        </div>
+        <div class="feat-item">
+          <div class="feat-ico"><app-icon name="check" [size]="12"/></div>
+          <span>Multi-usuario con control de roles</span>
+        </div>
+      </div>
+
+      <div class="quote-card">
+        <div class="quote-icon">"</div>
+        <div class="q">Configurar facturación electrónica me tomó una tarde. La emisión al SRI funciona sola.</div>
         <div class="a">
           <div class="av">AC</div>
           <div>
@@ -18,6 +44,7 @@
         </div>
       </div>
     </div>
+
     <div class="foot">
       <span>© 2026 PymeFlowEc</span>
       <a>Privacidad</a>
@@ -27,175 +54,222 @@
 
   <main class="main-col">
     <nav class="topnav">
-      <a routerLink="/" class="btn ghost sm">
-        <app-icon name="chevron_left" [size]="12"/>Inicio
+      <a routerLink="/" class="back-link">
+        <app-icon name="chevron_left" [size]="14"/>Volver
       </a>
-      <span>¿Ya tienes cuenta?</span>
-      <a routerLink="/login">Ingresar</a>
+      <div class="topnav-right">
+        <span>¿Ya tienes cuenta?</span>
+        <a routerLink="/login" class="topnav-cta">Ingresar</a>
+      </div>
     </nav>
 
-    <div class="card">
-      <!-- Step indicator -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;
-                  font-family:var(--font-mono);font-size:11px;color:var(--text-subtle);letter-spacing:0.08em">
-        <span [style.color]="step() >= 1 ? 'var(--accent)' : ''" [style.font-weight]="step() >= 1 ? '700' : ''">01 EMPRESA</span>
-        <span>—</span>
-        <span [style.color]="step() >= 2 ? 'var(--accent)' : ''" [style.font-weight]="step() >= 2 ? '700' : ''">02 ADMIN</span>
-        <span>—</span>
-        <span [style.color]="step() >= 3 ? 'var(--accent)' : ''" [style.font-weight]="step() >= 3 ? '700' : ''">03 MÓDULOS</span>
+    <div class="form-wrap">
+      <div class="step-indicator">
+        <div class="step-track">
+          <div class="step-fill" [style.width]="step() === 1 ? '33%' : step() === 2 ? '66%' : '100%'"></div>
+        </div>
+        <div class="step-labels">
+          <div class="step-lbl" [class.active]="step() >= 1" [class.done]="step() > 1">
+            <div class="step-dot">@if (step() > 1) { <app-icon name="check" [size]="10"/> } @else { 1 }</div>
+            <span>Empresa</span>
+          </div>
+          <div class="step-lbl" [class.active]="step() >= 2" [class.done]="step() > 2">
+            <div class="step-dot">@if (step() > 2) { <app-icon name="check" [size]="10"/> } @else { 2 }</div>
+            <span>Cuenta</span>
+          </div>
+          <div class="step-lbl" [class.active]="step() >= 3">
+            <div class="step-dot">3</div>
+            <span>Módulos</span>
+          </div>
+        </div>
       </div>
 
       @if (error()) {
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);
-                    background:var(--danger-soft);color:var(--danger);font-size:13px;margin-bottom:16px">
-          <app-icon name="alert_circle" [size]="16"/>
+        <div class="error-banner">
+          <app-icon name="alert_circle" [size]="15"/>
           <span>{{ error() }}</span>
         </div>
       }
 
-      <!-- Step 1: Empresa -->
       @if (step() === 1) {
-        <h1>Tu empresa</h1>
-        <div class="sub">Esta información aparece en tus facturas.</div>
+        <div class="form-header">
+          <div class="form-icon"><app-icon name="business" [size]="20"/></div>
+          <h1>Tu empresa</h1>
+          <p>Esta información aparece en tus facturas.</p>
+        </div>
 
         <form [formGroup]="orgForm" (ngSubmit)="goStep(2)">
           <div class="field">
-            <label>Nombre comercial <span style="color:var(--danger)">*</span></label>
-            <input class="input" formControlName="company_name" placeholder="Tienda Don Pepe S.A."/>
+            <label>Nombre comercial <span class="req">*</span></label>
+            <div class="input-wrap">
+              <app-icon name="business" [size]="15" class="input-ico"/>
+              <input formControlName="company_name" placeholder="Tienda Don Pepe S.A."/>
+            </div>
             @if (getOrgError('company_name')) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ getOrgError('company_name') }}</div>
+              <div class="field-err">{{ getOrgError('company_name') }}</div>
             }
           </div>
 
           <div class="field">
-            <label>RUC <span style="color:var(--danger)">*</span></label>
-            <input class="input mono" formControlName="company_ruc" placeholder="1790012345001" maxlength="13"/>
+            <label>RUC <span class="req">*</span></label>
+            <div class="input-wrap">
+              <app-icon name="receipt_long" [size]="15" class="input-ico"/>
+              <input class="mono" formControlName="company_ruc" placeholder="1790012345001" maxlength="13"/>
+            </div>
             @if (getOrgError('company_ruc')) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ getOrgError('company_ruc') }}</div>
+              <div class="field-err">{{ getOrgError('company_ruc') }}</div>
             }
           </div>
 
           <div class="field">
             <label>Email de la empresa</label>
-            <input class="input" type="email" formControlName="company_email" placeholder="info@miempresa.ec"/>
+            <div class="input-wrap">
+              <app-icon name="mail" [size]="15" class="input-ico"/>
+              <input type="email" formControlName="company_email" placeholder="info@miempresa.ec"/>
+            </div>
             @if (getOrgError('company_email')) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ getOrgError('company_email') }}</div>
+              <div class="field-err">{{ getOrgError('company_email') }}</div>
             }
           </div>
 
           <div class="field">
             <label>Teléfono</label>
-            <input class="input" formControlName="company_phone" placeholder="0998765432"/>
+            <div class="input-wrap">
+              <app-icon name="phone" [size]="15" class="input-ico"/>
+              <input formControlName="company_phone" placeholder="0998765432"/>
+            </div>
           </div>
 
-          <button class="btn primary lg" style="width:100%" type="submit">
-            Continuar <app-icon name="chevron_right" [size]="14"/>
+          <button class="submit-btn" type="submit">
+            Continuar
+            <app-icon name="chevron_right" [size]="16"/>
           </button>
         </form>
       }
 
-      <!-- Step 2: Admin -->
       @if (step() === 2) {
-        <h1>Tu cuenta</h1>
-        <div class="sub">Serás el administrador principal.</div>
+        <div class="form-header">
+          <div class="form-icon"><app-icon name="manage_accounts" [size]="20"/></div>
+          <h1>Tu cuenta</h1>
+          <p>Serás el administrador principal.</p>
+        </div>
 
         <form [formGroup]="userForm" (ngSubmit)="goStep(3)">
           <div class="field">
-            <label>Nombre completo <span style="color:var(--danger)">*</span></label>
-            <input class="input" formControlName="full_name" placeholder="Juan Pérez"/>
+            <label>Nombre completo <span class="req">*</span></label>
+            <div class="input-wrap">
+              <app-icon name="people" [size]="15" class="input-ico"/>
+              <input formControlName="full_name" placeholder="Juan Pérez"/>
+            </div>
             @if (getUserError('full_name')) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ getUserError('full_name') }}</div>
+              <div class="field-err">{{ getUserError('full_name') }}</div>
             }
           </div>
 
           <div class="field">
-            <label>Email <span style="color:var(--danger)">*</span></label>
-            <input class="input" type="email" formControlName="email" placeholder="admin@miempresa.ec"/>
+            <label>Email <span class="req">*</span></label>
+            <div class="input-wrap">
+              <app-icon name="mail" [size]="15" class="input-ico"/>
+              <input type="email" formControlName="email" placeholder="admin@miempresa.ec"/>
+            </div>
             @if (getUserError('email')) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ getUserError('email') }}</div>
+              <div class="field-err">{{ getUserError('email') }}</div>
             }
           </div>
 
           <div class="field">
-            <label>Contraseña <span style="color:var(--danger)">*</span></label>
-            <input class="input" [type]="showPassword() ? 'text' : 'password'"
-                   formControlName="password" placeholder="Mínimo 8 caracteres"/>
+            <label>Contraseña <span class="req">*</span></label>
+            <div class="input-wrap">
+              <app-icon name="lock" [size]="15" class="input-ico"/>
+              <input [type]="showPassword() ? 'text' : 'password'" formControlName="password" placeholder="Mínimo 8 caracteres"/>
+              <button type="button" class="eye-btn" (click)="showPassword.set(!showPassword())">
+                <app-icon [name]="showPassword() ? 'eye_off' : 'eye'" [size]="15"/>
+              </button>
+            </div>
             @if (userForm.get('password')?.value) {
               <div class="meter">
                 <div class="bar" [class.on-weak]="pwLen >= 1" [class.on-ok]="pwLen >= 6" [class.on-good]="pwLen >= 10"></div>
                 <div class="bar" [class.on-ok]="pwLen >= 6" [class.on-good]="pwLen >= 10"></div>
                 <div class="bar" [class.on-good]="pwLen >= 10"></div>
               </div>
-              <div style="font-size:11.5px;margin-top:2px"
+              <div class="pw-strength"
                    [style.color]="pwStrength === 'good' ? 'var(--success)' : pwStrength === 'ok' ? 'var(--warn)' : 'var(--danger)'">
                 {{ pwStrength === 'good' ? 'Contraseña fuerte' : pwStrength === 'ok' ? 'Contraseña aceptable' : 'Muy corta' }}
               </div>
             }
             @if (getUserError('password')) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ getUserError('password') }}</div>
+              <div class="field-err">{{ getUserError('password') }}</div>
             }
           </div>
 
           <div class="field">
-            <label>Confirmar contraseña <span style="color:var(--danger)">*</span></label>
-            <input class="input" [type]="showConfirm() ? 'text' : 'password'"
-                   formControlName="confirm_password" placeholder="••••••••"/>
+            <label>Confirmar contraseña <span class="req">*</span></label>
+            <div class="input-wrap">
+              <app-icon name="lock" [size]="15" class="input-ico"/>
+              <input [type]="showConfirm() ? 'text' : 'password'" formControlName="confirm_password" placeholder="••••••••"/>
+              <button type="button" class="eye-btn" (click)="showConfirm.set(!showConfirm())">
+                <app-icon [name]="showConfirm() ? 'eye_off' : 'eye'" [size]="15"/>
+              </button>
+            </div>
             @if (passwordMismatch) {
-              <div style="font-size:11.5px;color:var(--danger);margin-top:2px">Las contraseñas no coinciden</div>
+              <div class="field-err">Las contraseñas no coinciden</div>
             }
           </div>
 
-          <div style="display:flex;gap:10px">
-            <button class="btn secondary lg" type="button" (click)="goStep(1)">Atrás</button>
-            <button class="btn primary lg" style="flex:1" type="submit">
-              Continuar <app-icon name="chevron_right" [size]="14"/>
+          <div class="btn-row">
+            <button class="back-btn" type="button" (click)="goStep(1)">
+              <app-icon name="chevron_left" [size]="14"/>Atrás
+            </button>
+            <button class="submit-btn" style="flex:1" type="submit">
+              Continuar
+              <app-icon name="chevron_right" [size]="16"/>
             </button>
           </div>
         </form>
       }
 
-      <!-- Step 3: Módulos -->
       @if (step() === 3) {
-        <h1>Módulos</h1>
-        <div class="sub">Elige los módulos que quieres probar — activos por 15 días gratis.</div>
+        <div class="form-header">
+          <div class="form-icon"><app-icon name="extension" [size]="20"/></div>
+          <h1>Módulos</h1>
+          <p>Elige los módulos que quieres probar — 15 días gratis.</p>
+        </div>
 
         @if (availableModules().length > 0) {
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+          <div class="modules-grid">
             @for (mod of availableModules(); track mod.id) {
-              <button class="role-opt" [class.active]="isModuleSelected(mod.id)" (click)="toggleModule(mod.id)"
-                      style="text-align:left;padding:12px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);
-                             background:var(--surface);font-family:inherit;cursor:pointer">
-                <div class="ico" style="width:28px;height:28px;border-radius:6px;background:var(--accent-soft);color:var(--accent);
-                                        display:grid;place-items:center;margin-bottom:6px">
+              <button class="module-opt" [class.active]="isModuleSelected(mod.id)" (click)="toggleModule(mod.id)">
+                <div class="mod-ico">
                   <app-icon name="puzzle" [size]="14"/>
                 </div>
-                <div style="font-weight:700;font-size:13px;margin-bottom:2px">{{ mod.name }}</div>
+                <div class="mod-name">{{ mod.name }}</div>
                 @if (isModuleSelected(mod.id)) {
-                  <div style="font-size:11px;color:var(--accent)">Seleccionado</div>
+                  <div class="mod-check"><app-icon name="check" [size]="11"/></div>
                 }
               </button>
             }
           </div>
         } @else {
-          <p style="color:var(--text-subtle);font-size:13px;text-align:center;padding:24px 0">
+          <div class="modules-empty">
             Los módulos se configurarán desde el panel de administración.
-          </p>
+          </div>
         }
 
         <div class="check">
           <input type="checkbox" id="terms"/>
-          <label for="terms">Acepto los <a style="color:var(--accent);font-weight:600">Términos</a> y la
-            <a style="color:var(--accent);font-weight:600">Política de Privacidad</a>
-          </label>
+          <label for="terms">Acepto los <a class="link">Términos</a> y la <a class="link">Política de Privacidad</a></label>
         </div>
 
-        <div style="display:flex;gap:10px">
-          <button class="btn secondary lg" type="button" (click)="goStep(2)">Atrás</button>
-          <button class="btn primary lg" style="flex:1" [disabled]="loading()" (click)="onSubmit()">
+        <div class="btn-row">
+          <button class="back-btn" type="button" (click)="goStep(2)">
+            <app-icon name="chevron_left" [size]="14"/>Atrás
+          </button>
+          <button class="submit-btn" style="flex:1" [disabled]="loading()" (click)="onSubmit()">
             @if (loading()) {
               <span class="btn-spinner"></span>Creando cuenta...
             } @else {
-              <app-icon name="check" [size]="14"/>Crear empresa
+              Crear empresa
+              <app-icon name="check" [size]="16"/>
             }
           </button>
         </div>

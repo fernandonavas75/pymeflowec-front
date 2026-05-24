@@ -10,9 +10,11 @@ import { SuppliersService } from '../../../core/services/suppliers.service';
 import { TaxRatesService } from '../../../core/services/tax-rates.service';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { ExpenseCategoriesService } from '../../../core/services/expense-categories.service';
+import { ProductCategoriesService } from '../../../core/services/product-categories.service';
 import { Supplier } from '../../../core/models/supplier.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { ExpenseCategory } from '../../../core/models/expense-category.model';
+import { ProductCategory } from '../../../core/models/product-category.model';
 
 interface ParsedRow {
   rowNum: number;
@@ -24,6 +26,7 @@ interface ParsedRow {
   sku: string;
   description: string;
   supplier_name: string;
+  category_name: string;
   errors: string[];
 }
 
@@ -91,11 +94,12 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
           <div>
             <div class="t">Formato esperado del CSV</div>
             <div class="d" style="font-family:var(--font-mono);font-size:11px;margin-top:4px;word-break:break-all">
-              name, unit_price, cost_price, stock, min_stock, sku, description, supplier_name
+              name, unit_price, cost_price, stock, min_stock, sku, description, supplier_name, category_name
             </div>
             <div class="d" style="margin-top:6px">
               La primera fila debe ser el encabezado. Máximo 300 filas. Los campos opcionales pueden dejarse en blanco.
               En <strong>supplier_name</strong> escribe el nombre del proveedor (se vincula automáticamente si existe).
+              En <strong>category_name</strong> escribe el nombre exacto de la categoría de producto (se vincula si existe).
               El <strong>IVA</strong> se asigna automáticamente con la tasa activa de tu empresa.
             </div>
           </div>
@@ -132,6 +136,7 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
                 <th class="num">P. costo</th>
                 <th class="num">Stock</th>
                 <th>SKU</th>
+                <th>Categoría</th>
                 <th>Proveedor</th>
                 <th></th>
               </tr>
@@ -146,6 +151,7 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
                   <td class="num mono">{{ row.cost_price || '—' }}</td>
                   <td class="num mono">{{ row.stock || '0' }}</td>
                   <td style="color:var(--text-subtle)">{{ row.sku || '—' }}</td>
+                  <td style="color:var(--text-subtle)">{{ row.category_name || '—' }}</td>
                   <td style="color:var(--text-muted-ds)">{{ row.supplier_name || '—' }}</td>
                   <td>
                     @if (row.errors.length > 0) {
@@ -235,6 +241,18 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
           </div>
         }
 
+        @if (unresolvedCategories().length > 0) {
+          <div class="ds-alert warn" style="margin-bottom:16px">
+            <app-icon name="tag" [size]="16" style="flex-shrink:0;margin-top:1px"/>
+            <div class="d">
+              <strong>{{ unresolvedCategories().length }} categoría{{ unresolvedCategories().length !== 1 ? 's' : '' }}</strong>
+              del CSV no {{ unresolvedCategories().length !== 1 ? 'existen' : 'existe' }}
+              ({{ unresolvedCategories().join(', ') }}).
+              Los productos con esas categorías se importarán <strong>sin categoría asignada</strong>.
+            </div>
+          </div>
+        }
+
         <!-- Resumen -->
         <div style="background:var(--surface-2);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:16px;margin-bottom:16px">
           <div style="font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-subtle);margin-bottom:12px">
@@ -251,6 +269,10 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
             } @else {
               <span style="color:var(--danger);font-weight:600">Sin tasa activa</span>
             }
+          </div>
+          <div class="summary-row">
+            <span>Con categoría asignada</span>
+            <span style="color:var(--success)">{{ rowsWithCategory() }}</span>
           </div>
           <div class="summary-row">
             <span>Con proveedor asignado</span>
@@ -397,26 +419,29 @@ type DialogStep = 'idle' | 'preview' | 'resolving' | 'resolve' | 'importing' | '
 export class CsvImportDialogComponent {
   ref          = inject(MatDialogRef<CsvImportDialogComponent>);
   private svc  = inject(ProductsService);
-  private supSvc  = inject(SuppliersService);
-  private taxSvc  = inject(TaxRatesService);
-  private expSvc  = inject(ExpensesService);
-  private catSvc  = inject(ExpenseCategoriesService);
-  private snack   = inject(MatSnackBar);
+  private supSvc     = inject(SuppliersService);
+  private taxSvc     = inject(TaxRatesService);
+  private expSvc     = inject(ExpensesService);
+  private catSvc     = inject(ExpenseCategoriesService);
+  private prodCatSvc = inject(ProductCategoriesService);
+  private snack      = inject(MatSnackBar);
 
   step     = signal<DialogStep>('idle');
   rows     = signal<ParsedRow[]>([]);
   dragOver = signal(false);
   result   = signal<BulkCreateResult | null>(null);
 
-  activeTaxRate           = signal<TaxRate | null>(null);
-  inventarioCategory      = signal<ExpenseCategory | null>(null);
-  expenseCreated          = signal(false);
-  expenseError            = signal<string | null>(null);
-  private allSuppliers    = signal<Supplier[]>([]);
-  unresolvedSuppliers     = signal<string[]>([]);
-  private supplierActions = signal<Map<string, 'create' | 'skip'>>(new Map());
+  activeTaxRate            = signal<TaxRate | null>(null);
+  inventarioCategory       = signal<ExpenseCategory | null>(null);
+  expenseCreated           = signal(false);
+  expenseError             = signal<string | null>(null);
+  private allSuppliers     = signal<Supplier[]>([]);
+  private allProductCats   = signal<ProductCategory[]>([]);
+  unresolvedSuppliers      = signal<string[]>([]);
+  unresolvedCategories     = signal<string[]>([]);
+  private supplierActions  = signal<Map<string, 'create' | 'skip'>>(new Map());
   private createdSuppliers = signal<Supplier[]>([]);
-  private preInvalid      = signal<{ row: number; name: string; errors: string[] }[]>([]);
+  private preInvalid       = signal<{ row: number; name: string; errors: string[] }[]>([]);
   private backendIdxToRow: number[] = [];
 
   validRows   = computed(() => this.rows().filter(r => r.errors.length === 0));
@@ -428,6 +453,13 @@ export class CsvImportDialogComponent {
   suppliersToSkip = computed(() =>
     this.unresolvedSuppliers().filter(n => (this.supplierActions().get(n) ?? 'create') === 'skip'),
   );
+  rowsWithCategory = computed(() => {
+    const catNames = new Set(this.allProductCats().map(c => c.name.toLowerCase()));
+    return this.validRows().filter(r => {
+      const n = r.category_name.trim().toLowerCase();
+      return n && catNames.has(n);
+    }).length;
+  });
   rowsWithSupplier = computed(() => {
     const existingNames = new Set(this.allSuppliers().map(s => s.name.toLowerCase()));
     const willCreate    = new Set(this.suppliersToCreate().map(n => n.toLowerCase()));
@@ -522,6 +554,7 @@ export class CsvImportDialogComponent {
       sku:           idx('sku'),
       description:   idx('description', 'descripcion', 'descripción'),
       supplier_name: idx('supplier_name', 'proveedor', 'proveedor_nombre', 'supplier'),
+      category_name: idx('category_name', 'categoria', 'categoría', 'category'),
     };
 
     const get = (parts: string[], i: number) => i >= 0 ? (parts[i] ?? '').trim() : '';
@@ -547,6 +580,7 @@ export class CsvImportDialogComponent {
         sku:           get(parts, col.sku),
         description:   get(parts, col.description),
         supplier_name: get(parts, col.supplier_name),
+        category_name: get(parts, col.category_name),
         errors,
       });
     }
@@ -558,27 +592,34 @@ export class CsvImportDialogComponent {
     this.step.set('resolving');
 
     forkJoin({
-      suppliers:  this.supSvc.list({ page: 1, limit: 500 }),
-      taxRates:   this.taxSvc.list({ page: 1, limit: 100 }),
-      categories: this.catSvc.list({ limit: 500 }),
+      suppliers:    this.supSvc.list({ page: 1, limit: 500 }),
+      taxRates:     this.taxSvc.list({ page: 1, limit: 100 }),
+      expCats:      this.catSvc.list({ limit: 500 }),
+      productCats:  this.prodCatSvc.list(),
     }).subscribe({
-      next: ({ suppliers, taxRates, categories }) => {
+      next: ({ suppliers, taxRates, expCats, productCats }) => {
         this.allSuppliers.set(suppliers.data);
+        this.allProductCats.set(productCats);
         this.activeTaxRate.set(taxRates.data.find(t => t.is_active) ?? null);
         this.inventarioCategory.set(
-          categories.find((c: ExpenseCategory) => c.is_active && c.category_type === 'INVENTARIO') ?? null,
+          expCats.find((c: ExpenseCategory) => c.is_active && c.category_type === 'INVENTARIO') ?? null,
         );
 
         const existingNames = new Set(suppliers.data.map((s: Supplier) => s.name.toLowerCase()));
-        const csvNames = [...new Set(
+        const csvSupplierNames = [...new Set(
           this.validRows().map(r => r.supplier_name.trim()).filter(n => n.length > 0),
         )];
-        const unresolved = csvNames.filter(n => !existingNames.has(n.toLowerCase()));
+        const unresolved = csvSupplierNames.filter(n => !existingNames.has(n.toLowerCase()));
         this.unresolvedSuppliers.set(unresolved);
-
         const map = new Map<string, 'create' | 'skip'>();
         unresolved.forEach(n => map.set(n, 'create'));
         this.supplierActions.set(map);
+
+        const catNames = new Set(productCats.map((c: ProductCategory) => c.name.toLowerCase()));
+        const csvCatNames = [...new Set(
+          this.validRows().map(r => r.category_name.trim()).filter(n => n.length > 0),
+        )];
+        this.unresolvedCategories.set(csvCatNames.filter(n => !catNames.has(n.toLowerCase())));
 
         this.step.set('resolve');
       },
@@ -606,9 +647,12 @@ export class CsvImportDialogComponent {
       switchMap(newSuppliers => {
         this.createdSuppliers.set(newSuppliers);
 
-        const nameToId = new Map<string, number>();
-        this.allSuppliers().forEach(s => nameToId.set(s.name.toLowerCase(), s.id));
-        newSuppliers.forEach(s => nameToId.set(s.name.toLowerCase(), s.id));
+        const supplierNameToId = new Map<string, number>();
+        this.allSuppliers().forEach(s => supplierNameToId.set(s.name.toLowerCase(), s.id));
+        newSuppliers.forEach(s => supplierNameToId.set(s.name.toLowerCase(), s.id));
+
+        const catNameToId = new Map<string, number>();
+        this.allProductCats().forEach(c => catNameToId.set(c.name.toLowerCase(), c.id));
 
         const products = valid.map(r => ({
           name:        r.name,
@@ -618,8 +662,11 @@ export class CsvImportDialogComponent {
           min_stock:   r.min_stock   ? parseInt(r.min_stock, 10) : 0,
           sku:         r.sku         || undefined,
           description: r.description || undefined,
+          category_id: r.category_name
+                         ? (catNameToId.get(r.category_name.trim().toLowerCase()) ?? undefined)
+                         : undefined,
           supplier_id: r.supplier_name
-                         ? nameToId.get(r.supplier_name.trim().toLowerCase())
+                         ? supplierNameToId.get(r.supplier_name.trim().toLowerCase())
                          : undefined,
           tax_rate_id: taxRate.id,
         }));
@@ -671,8 +718,8 @@ export class CsvImportDialogComponent {
   }
 
   downloadTemplate(): void {
-    const header = 'name,unit_price,cost_price,stock,min_stock,sku,description,supplier_name';
-    const sample = '"Producto ejemplo",10.50,8.00,100,10,SKU-001,"Descripción opcional","Distribuidora XYZ"';
+    const header = 'name,unit_price,cost_price,stock,min_stock,sku,description,supplier_name,category_name';
+    const sample = '"Producto ejemplo",10.50,8.00,100,10,SKU-001,"Descripción opcional","Distribuidora XYZ","Electrónica"';
     const blob   = new Blob([header + '\n' + sample], { type: 'text/csv;charset=utf-8;' });
     const url    = URL.createObjectURL(blob);
     const a      = document.createElement('a');

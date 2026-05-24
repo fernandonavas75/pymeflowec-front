@@ -9,6 +9,7 @@
       </a>
       <div class="nav-links">
         <a href="#features" class="nav-link">Características</a>
+        <a href="#finance" class="nav-link">Finanzas</a>
         <a href="#modules" class="nav-link">Módulos</a>
         <a href="#how" class="nav-link">¿Cómo funciona?</a>
       </div>
@@ -47,8 +48,9 @@
         <span class="hero-gradient">sin complicaciones</span>
       </h1>
       <p class="hero-subtitle">
-        PymeFlowEC centraliza tu inventario, facturación, proveedores y clientes
-        en una sola plataforma modular. Activa solo lo que necesitas.
+        PymeFlowEC digitaliza tu negocio con facturación, control de inventario,
+        módulo financiero completo, proveedores y clientes — todo en una plataforma
+        modular adaptada a las PYMEs ecuatorianas.
       </p>
       <div class="hero-actions">
         <a routerLink="/register" class="btn-hero-primary">
@@ -156,6 +158,75 @@
             </div>
             <h3 class="feature-title">{{ f.title }}</h3>
             <p class="feature-desc">{{ f.description }}</p>
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FINANCE MODULE SHOWCASE ──────────────────── -->
+  <section id="finance" class="finance-showcase">
+    <div class="section-inner">
+      <div class="finance-layout">
+        <div class="finance-intro anim fade-left">
+          <span class="section-badge finance-badge">
+            <span class="material-icons-round">account_balance_wallet</span>
+            Módulo Financiero
+          </span>
+          <h2 class="finance-heading">Control total de tus finanzas</h2>
+          <p class="finance-sub">
+            El módulo financiero integra todas las herramientas que tu empresa necesita
+            para controlar el flujo de dinero, planificar gastos y mantener la caja ordenada.
+          </p>
+          <div class="finance-highlight">
+            <span class="material-icons-round">check_circle</span>
+            Requiere activar <strong>MOD_FINANCE</strong> desde la plataforma
+          </div>
+        </div>
+        <div class="finance-items">
+          @for (ff of financeFeatures; track ff.title; let i = $index) {
+            <div class="finance-item anim fade-right d-{{i + 1}}">
+              <div class="fi-icon">
+                <span class="material-icons-round">{{ ff.icon }}</span>
+              </div>
+              <div class="fi-body">
+                <strong>{{ ff.title }}</strong>
+                <p>{{ ff.description }}</p>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ROLES ─────────────────────────────────────── -->
+  <section class="roles-section">
+    <div class="section-inner">
+      <div class="section-header anim fade-up">
+        <span class="section-badge roles-badge">
+          <span class="material-icons-round">manage_accounts</span>
+          Roles y permisos
+        </span>
+        <h2 class="section-title">Acceso adaptado a cada función</h2>
+        <p class="section-subtitle">
+          Cada usuario tiene exactamente los permisos que necesita para su rol.
+          Sin accesos innecesarios, sin bloqueos operativos.
+        </p>
+      </div>
+      <div class="roles-grid">
+        @for (role of roles; track role.name; let i = $index) {
+          <div class="role-card role-{{role.color}} anim fade-up d-{{i + 1}}">
+            <div class="role-icon-wrap">
+              <span class="material-icons-round">{{ role.icon }}</span>
+            </div>
+            <h3 class="role-label">{{ role.label }}</h3>
+            <p class="role-desc">{{ role.description }}</p>
+            <ul class="role-perms">
+              @for (perm of role.permissions; track perm) {
+                <li>{{ perm }}</li>
+              }
+            </ul>
           </div>
         }
       </div>

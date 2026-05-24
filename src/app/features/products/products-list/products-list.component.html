@@ -81,6 +81,37 @@
       }
     </div>
 
+    <!-- Categoría -->
+    @if (categories().length > 0) {
+      <div style="position:relative">
+        <button class="filter-chip" [class.active]="categoryFilter() !== null" type="button"
+                (click)="toggleDropdown('category', $event)">
+          <app-icon name="tag" [size]="13"/>
+          {{ categoryFilter() !== null ? categoryName(categoryFilter()) : 'Categoría' }}
+          @if (categoryFilter() !== null) {
+            <app-icon name="x" [size]="11" (click)="categoryFilter.set(null); $event.stopPropagation()"/>
+          } @else {
+            <app-icon name="chevron_down" [size]="11"/>
+          }
+        </button>
+        @if (openDropdown() === 'category') {
+          <div class="filter-dropdown" (click)="$event.stopPropagation()">
+            <button class="filter-dropdown-item" [class.selected]="categoryFilter() === null" type="button"
+                    (click)="categoryFilter.set(null); currentPage.set(0); openDropdown.set(null)">
+              Todas las categorías
+            </button>
+            <div class="filter-dropdown-sep"></div>
+            @for (cat of categories(); track cat.id) {
+              <button class="filter-dropdown-item" [class.selected]="categoryFilter() === cat.id" type="button"
+                      (click)="categoryFilter.set(cat.id); currentPage.set(0); openDropdown.set(null)">
+                {{ cat.name }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
     <!-- Estado -->
     <div style="position:relative">
       <button class="filter-chip" [class.active]="!!statusFilter()" type="button"
@@ -149,6 +180,7 @@
             <tr>
               <th>SKU</th>
               <th>Producto</th>
+              <th>Categoría</th>
               <th>Proveedor</th>
               <th class="num">P. compra</th>
               <th class="num">P. venta</th>
@@ -168,6 +200,13 @@
                   }
                 </td>
                 <td><strong>{{ p.name }}</strong></td>
+                <td>
+                  @if (p.category_id) {
+                    <span class="badge neutral" style="font-size:11px">{{ categoryName(p.category_id) }}</span>
+                  } @else {
+                    <span style="color:var(--text-subtle)">—</span>
+                  }
+                </td>
                 <td style="color:var(--text-muted-ds)">{{ p.supplier?.name ?? '—' }}</td>
                 <td class="num mono">${{ p.purchase_price | number:'1.2-2' }}</td>
                 <td class="num mono"><strong>${{ p.sale_price | number:'1.2-2' }}</strong></td>
@@ -279,6 +318,14 @@
           <!-- Nombre -->
           <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Nombre</div>
           <div style="font-size:15px;font-weight:700;margin-bottom:16px">{{ p.name }}</div>
+
+          <!-- Categoría -->
+          <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Categoría</div>
+          <div style="font-size:13px;margin-bottom:16px">
+            @if (p.category_id) {
+              <span class="badge neutral">{{ categoryName(p.category_id) }}</span>
+            } @else { — }
+          </div>
 
           <!-- Proveedor -->
           <div style="font-size:10.5px;font-weight:600;color:var(--text-subtle);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">Proveedor</div>

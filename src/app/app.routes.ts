@@ -67,6 +67,12 @@ export const routes: Routes = [
         canActivate: [permissionGuard],
         data: { adminOnly: true },
       },
+      {
+        path: 'products/categories',
+        loadComponent: () => import('./features/products/product-categories/product-categories.component').then(m => m.ProductCategoriesComponent),
+        canActivate: [permissionGuard],
+        data: { adminOnly: true },
+      },
 
       // Proveedores
       {

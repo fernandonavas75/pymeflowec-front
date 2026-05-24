@@ -1,14 +1,38 @@
 <div class="auth-wrap">
   <aside class="aside">
+    <div class="aside-grid"></div>
+    <div class="aside-glow"></div>
+
     <div class="brand">
-      <div class="mark"><app-icon name="sparkles" [size]="20"/></div>
-      <div class="wordmark">pymeflow<span class="tld">.ec</span></div>
+      <div class="mark"><app-icon name="sparkles" [size]="18"/></div>
+      <span class="wordmark">pymeflow<span class="tld">.ec</span></span>
     </div>
-    <div class="main">
+
+    <div class="aside-center">
+      <div class="aside-badge">ERP para PYMEs ecuatorianas</div>
       <h2>Bienvenido de vuelta.</h2>
       <p>Continúa gestionando tu negocio desde donde lo dejaste.</p>
-      <div class="quote">
-        <div class="q">"En dos semanas reemplazamos 3 Excel y un cuaderno. Ahora sé exactamente cuánto vendemos cada día."</div>
+
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-n">+500</div>
+          <div class="stat-l">Empresas activas</div>
+        </div>
+        <div class="stat-div"></div>
+        <div class="stat">
+          <div class="stat-n">99.9%</div>
+          <div class="stat-l">Uptime</div>
+        </div>
+        <div class="stat-div"></div>
+        <div class="stat">
+          <div class="stat-n">SRI</div>
+          <div class="stat-l">Integrado</div>
+        </div>
+      </div>
+
+      <div class="quote-card">
+        <div class="quote-icon">"</div>
+        <div class="q">En dos semanas reemplazamos 3 Excel y un cuaderno. Ahora sé exactamente cuánto vendemos cada día.</div>
         <div class="a">
           <div class="av">JP</div>
           <div>
@@ -18,6 +42,7 @@
         </div>
       </div>
     </div>
+
     <div class="foot">
       <span>© 2026 PymeFlowEc</span>
       <a routerLink="/">Inicio</a>
@@ -28,44 +53,56 @@
 
   <main class="main-col">
     <nav class="topnav">
-      <a routerLink="/" class="btn ghost sm">
-        <app-icon name="chevron_left" [size]="12"/>Inicio
+      <a routerLink="/" class="back-link">
+        <app-icon name="chevron_left" [size]="14"/>Volver
       </a>
-      <span>¿Nuevo aquí?</span>
-      <a routerLink="/register">Crear cuenta</a>
+      <div class="topnav-right">
+        <span>¿Nuevo aquí?</span>
+        <a routerLink="/register" class="topnav-cta">Crear cuenta</a>
+      </div>
     </nav>
 
-    <div class="card">
-      <h1>Ingresar</h1>
-      <div class="sub">Accede con el correo de tu empresa.</div>
+    <div class="form-wrap">
+      <div class="form-header">
+        <div class="form-icon"><app-icon name="lock" [size]="20"/></div>
+        <h1>Ingresar</h1>
+        <p>Accede con el correo de tu empresa.</p>
+      </div>
 
       @if (error()) {
-        <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);
-                    background:var(--danger-soft);color:var(--danger);font-size:13px;margin-bottom:16px">
-          <app-icon name="alert_circle" [size]="16"/>
+        <div class="error-banner">
+          <app-icon name="alert_circle" [size]="15"/>
           <span>{{ error() }}</span>
         </div>
       }
 
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="field">
-          <label>Email</label>
-          <input class="input" type="email" formControlName="email"
-                 placeholder="tu@empresa.ec" autocomplete="email"/>
+          <label>Correo electrónico</label>
+          <div class="input-wrap">
+            <app-icon name="mail" [size]="15" class="input-ico"/>
+            <input type="email" formControlName="email" placeholder="tu@empresa.ec" autocomplete="email"/>
+          </div>
           @if (form.get('email')?.touched && emailError) {
-            <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ emailError }}</div>
+            <div class="field-err">{{ emailError }}</div>
           }
         </div>
 
         <div class="field">
-          <label style="display:flex;justify-content:space-between;align-items:center">
-            Contraseña
-            <a routerLink="/forgot-password" style="color:var(--accent);font-weight:600;font-size:12px">¿Olvidaste?</a>
+          <label>
+            <span>Contraseña</span>
+            <a routerLink="/forgot-password" class="forgot-link">¿Olvidaste?</a>
           </label>
-          <input class="input" [type]="showPassword() ? 'text' : 'password'"
-                 formControlName="password" placeholder="••••••••" autocomplete="current-password"/>
+          <div class="input-wrap">
+            <app-icon name="lock" [size]="15" class="input-ico"/>
+            <input [type]="showPassword() ? 'text' : 'password'" formControlName="password"
+                   placeholder="••••••••" autocomplete="current-password"/>
+            <button type="button" class="eye-btn" (click)="showPassword.set(!showPassword())">
+              <app-icon [name]="showPassword() ? 'eye_off' : 'eye'" [size]="15"/>
+            </button>
+          </div>
           @if (form.get('password')?.touched && passwordError) {
-            <div style="font-size:11.5px;color:var(--danger);margin-top:2px">{{ passwordError }}</div>
+            <div class="field-err">{{ passwordError }}</div>
           }
         </div>
 
@@ -74,14 +111,32 @@
           <label for="rm">Recordarme por 30 días</label>
         </div>
 
-        <button class="btn primary lg" style="width:100%" type="submit" [disabled]="loading()">
+        <button class="submit-btn" type="submit" [disabled]="loading()">
           @if (loading()) {
             <span class="btn-spinner"></span>Ingresando...
           } @else {
-            <app-icon name="check" [size]="14"/>Ingresar
+            Ingresar a mi cuenta
+            <app-icon name="arrow_right" [size]="16"/>
           }
         </button>
       </form>
+
+      <div class="divider"><span>Acceso seguro con SSL</span></div>
+
+      <div class="trust-row">
+        <div class="trust-item">
+          <app-icon name="shield" [size]="13"/>
+          <span>Datos cifrados</span>
+        </div>
+        <div class="trust-item">
+          <app-icon name="check_circle" [size]="13"/>
+          <span>SRI certificado</span>
+        </div>
+        <div class="trust-item">
+          <app-icon name="bolt" [size]="13"/>
+          <span>Siempre disponible</span>
+        </div>
+      </div>
     </div>
   </main>
 </div>

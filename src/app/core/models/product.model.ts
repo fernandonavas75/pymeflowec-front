@@ -5,6 +5,7 @@ export type StockReferenceType = 'PURCHASE' | 'SALE' | 'MANUAL';
 export interface Product {
   id: number;
   company_id: number;
+  category_id?: number | null;
   supplier_id?: number | null;
   tax_rate_id?: number | null;
   sku?: string | null;
@@ -18,6 +19,7 @@ export interface Product {
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
+  category?: { id: number; name: string } | null;
   supplier?: { id: number; name: string } | null;
   tax_rate?: { id: number; tax_name: string; percentage: number } | null;
 }
@@ -30,6 +32,7 @@ export interface CreateProductDto {
   stock?: number;
   min_stock?: number;
   sku?: string;
+  category_id?: number | null;
   supplier_id?: number;
   tax_rate_id?: number;
 }

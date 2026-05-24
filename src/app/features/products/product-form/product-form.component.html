@@ -34,6 +34,23 @@
             }
           </div>
 
+          <!-- Categoría de producto -->
+          <div class="field">
+            <label class="field-label">Categoría</label>
+            @if (isAdmin) {
+              <select class="field-select" formControlName="category_id">
+                <option [ngValue]="null">Sin categoría</option>
+                @for (cat of productCategories(); track cat.id) {
+                  <option [ngValue]="cat.id">{{ cat.name }}</option>
+                }
+              </select>
+            } @else {
+              <div style="font-size:13px;color:var(--text-muted-ds);padding:6px 0">
+                Solo el administrador puede asignar categorías
+              </div>
+            }
+          </div>
+
           <div class="field-row">
             <div class="field">
               <label class="field-label">Proveedor</label>

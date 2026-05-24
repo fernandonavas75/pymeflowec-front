@@ -7,11 +7,14 @@ import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.c
 import { ProductsService } from '../../../core/services/products.service';
 import { SuppliersService } from '../../../core/services/suppliers.service';
 import { TaxRatesService } from '../../../core/services/tax-rates.service';
+import { ProductCategoriesService } from '../../../core/services/product-categories.service';
 import { ExpensesService } from '../../../core/services/expenses.service';
 import { ExpenseCategoriesService } from '../../../core/services/expense-categories.service';
 import { Supplier } from '../../../core/models/supplier.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
+import { ProductCategory } from '../../../core/models/product-category.model';
 import { ExpenseCategory } from '../../../core/models/expense-category.model';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-product-form',
@@ -23,25 +26,29 @@ export class ProductFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private productsService = inject(ProductsService);
-  private suppliersService = inject(SuppliersService);
-  private taxRatesService = inject(TaxRatesService);
-  private snackBar = inject(MatSnackBar);
+  private productsService   = inject(ProductsService);
+  private suppliersService  = inject(SuppliersService);
+  private taxRatesService   = inject(TaxRatesService);
+  private productCatSvc     = inject(ProductCategoriesService);
+  private snackBar          = inject(MatSnackBar);
+  authService               = inject(AuthService);
 
   private expenseSvc = inject(ExpensesService);
   private catSvc     = inject(ExpenseCategoriesService);
 
   loading = signal(false);
-  saving = signal(false);
-  productId = signal<string | null>(null);
-  suppliers = signal<Supplier[]>([]);
-  taxRates  = signal<TaxRate[]>([]);
+  saving  = signal(false);
+  productId         = signal<string | null>(null);
+  suppliers         = signal<Supplier[]>([]);
+  taxRates          = signal<TaxRate[]>([]);
+  productCategories = signal<ProductCategory[]>([]);
   private inventarioCategory = signal<ExpenseCategory | null>(null);
 
   form = this.fb.group({
     name:           ['', [Validators.required, Validators.minLength(2)]],
     description:    [''],
     sku:            [''],
+    category_id:    [null as number | null],
     supplier_id:    [null as number | null],
     tax_rate_id:    [null as number | null],
     purchase_price: [0, [Validators.required, Validators.min(0)]],
@@ -49,6 +56,8 @@ export class ProductFormComponent implements OnInit {
     stock:          [0, [Validators.required, Validators.min(0), ProductFormComponent.integerOnly]],
     min_stock:      [5, [Validators.required, Validators.min(0), ProductFormComponent.integerOnly]],
   });
+
+  get isAdmin(): boolean { return this.authService.isStoreAdmin() || this.authService.isSystemUser(); }
 
   private static integerOnly(c: AbstractControl): ValidationErrors | null {
     const v = c.value;
@@ -60,6 +69,7 @@ export class ProductFormComponent implements OnInit {
   ngOnInit(): void {
     this.suppliersService.list({ limit: 100 }).subscribe(res => this.suppliers.set(res.data));
     this.taxRatesService.list({ limit: 100 }).subscribe(res => this.taxRates.set(res.data));
+    this.productCatSvc.list().subscribe({ next: cats => this.productCategories.set(cats), error: () => {} });
     this.catSvc.list({ limit: 500 }).subscribe({
       next: cats => {
         const cat = cats.find(c => c.is_active && c.category_type === 'INVENTARIO') ?? null;
@@ -78,6 +88,7 @@ export class ProductFormComponent implements OnInit {
             name:           product.name,
             description:    product.description ?? '',
             sku:            product.sku ?? '',
+            category_id:    product.category_id ?? null,
             supplier_id:    product.supplier_id ?? null,
             tax_rate_id:    product.tax_rate_id ?? null,
             purchase_price: product.purchase_price,
@@ -85,6 +96,9 @@ export class ProductFormComponent implements OnInit {
             stock:          product.stock,
             min_stock:      product.min_stock,
           });
+          if (!this.isAdmin) {
+            this.form.get('category_id')?.disable();
+          }
           if (this.isEdit) {
             this.form.get('stock')?.disable();
           }
@@ -107,6 +121,7 @@ export class ProductFormComponent implements OnInit {
       name:           v.name!,
       description:    v.description || undefined,
       sku:            v.sku || undefined,
+      category_id:    this.isAdmin ? (v.category_id ?? null) : undefined,
       supplier_id:    v.supplier_id ?? undefined,
       tax_rate_id:    v.tax_rate_id ?? undefined,
       purchase_price: v.purchase_price ?? 0,

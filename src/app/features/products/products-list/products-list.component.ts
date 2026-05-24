@@ -10,6 +10,8 @@ import { ProductsService } from '../../../core/services/products.service';
 import { Product } from '../../../core/models/product.model';
 import { TaxRate } from '../../../core/models/tax-rate.model';
 import { TaxRatesService } from '../../../core/services/tax-rates.service';
+import { ProductCategoriesService } from '../../../core/services/product-categories.service';
+import { ProductCategory } from '../../../core/models/product-category.model';
 import { AppIconComponent } from '../../../shared/components/app-icon/app-icon.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -23,23 +25,26 @@ import { CsvImportDialogComponent } from '../csv-import-dialog/csv-import-dialog
   templateUrl: './products-list.component.html',
 })
 export class ProductsListComponent implements OnInit {
-  private productsService  = inject(ProductsService);
-  private taxRatesService  = inject(TaxRatesService);
-  private dialog           = inject(MatDialog);
-  private snackBar         = inject(MatSnackBar);
-  authService              = inject(AuthService);
+  private productsService    = inject(ProductsService);
+  private taxRatesService    = inject(TaxRatesService);
+  private categoriesService  = inject(ProductCategoriesService);
+  private dialog             = inject(MatDialog);
+  private snackBar           = inject(MatSnackBar);
+  authService                = inject(AuthService);
 
   readonly PAGE_SIZE = 20;
 
-  private allProducts = signal<Product[]>([]);
-  private taxRatesMap = signal<Record<number, TaxRate>>({});
+  private allProducts   = signal<Product[]>([]);
+  private taxRatesMap   = signal<Record<number, TaxRate>>({});
+  categories            = signal<ProductCategory[]>([]);
   loading        = signal(true);
   tabFilter      = signal<'all' | 'low' | 'out'>('all');
   searchCtrl     = new FormControl('');
   productPopup   = signal<Product | null>(null);
-  supplierFilter = signal<string | null>(null);
-  statusFilter   = signal<'ACTIVE' | 'INACTIVE' | null>(null);
-  openDropdown   = signal<'supplier' | 'status' | null>(null);
+  supplierFilter  = signal<string | null>(null);
+  categoryFilter  = signal<number | null>(null);
+  statusFilter    = signal<'ACTIVE' | 'INACTIVE' | null>(null);
+  openDropdown    = signal<'supplier' | 'status' | 'category' | null>(null);
   currentPage    = signal(0);
 
   private searchQuery = toSignal(
@@ -59,7 +64,7 @@ export class ProductsListComponent implements OnInit {
     return result.sort();
   });
 
-  hasActiveFilters = computed(() => !!this.supplierFilter() || !!this.statusFilter());
+  hasActiveFilters = computed(() => !!this.supplierFilter() || !!this.statusFilter() || this.categoryFilter() !== null);
 
   lowCount  = computed(() => this.allProducts().filter(p => p.stock > 0 && p.stock <= p.min_stock && p.status === 'ACTIVE').length);
   outCount  = computed(() => this.allProducts().filter(p => p.stock === 0 && p.status === 'ACTIVE').length);
@@ -77,6 +82,8 @@ export class ProductsListComponent implements OnInit {
     );
     const supplier = this.supplierFilter();
     if (supplier) list = list.filter(p => p.supplier?.name === supplier);
+    const catId = this.categoryFilter();
+    if (catId !== null) list = list.filter(p => p.category_id === catId);
     const status = this.statusFilter();
     if (status) list = list.filter(p => p.status === status);
     return list;
@@ -105,15 +112,17 @@ export class ProductsListComponent implements OnInit {
   load(): void {
     this.loading.set(true);
     forkJoin({
-      products: this.productsService.list({ page: 1, limit: 1000 }),
-      taxes:    this.taxRatesService.list({ page: 1, limit: 100 }),
+      products:   this.productsService.list({ page: 1, limit: 1000 }),
+      taxes:      this.taxRatesService.list({ page: 1, limit: 100 }),
+      categories: this.categoriesService.list(),
     })
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: ({ products, taxes }) => {
+        next: ({ products, taxes, categories }) => {
           const map: Record<number, TaxRate> = {};
           for (const t of taxes.data ?? []) map[t.id] = t;
           this.taxRatesMap.set(map);
+          this.categories.set(categories);
           this.allProducts.set(products.data ?? []);
         },
         error: () => this.allProducts.set([]),
@@ -178,7 +187,7 @@ export class ProductsListComponent implements OnInit {
   @HostListener('document:click')
   onDocumentClick(): void { this.openDropdown.set(null); }
 
-  toggleDropdown(name: 'supplier' | 'status', event: MouseEvent): void {
+  toggleDropdown(name: 'supplier' | 'status' | 'category', event: MouseEvent): void {
     event.stopPropagation();
     this.openDropdown.update(curr => curr === name ? null : name);
   }
@@ -192,9 +201,15 @@ export class ProductsListComponent implements OnInit {
 
   clearFilters(): void {
     this.supplierFilter.set(null);
+    this.categoryFilter.set(null);
     this.statusFilter.set(null);
     this.searchCtrl.setValue('');
     this.currentPage.set(0);
+  }
+
+  categoryName(id: number | null | undefined): string {
+    if (!id) return '—';
+    return this.categories().find(c => c.id === id)?.name ?? '—';
   }
 
   openProductPopup(product: Product, event: MouseEvent): void {
@@ -215,10 +230,11 @@ export class ProductsListComponent implements OnInit {
 
   exportCsv(): void {
     const rows = this.filteredProducts();
-    const headers = ['SKU', 'Nombre', 'Precio', 'Costo', 'Stock', 'Stock mínimo', 'Estado', 'IVA', 'Proveedor'];
+    const headers = ['SKU', 'Nombre', 'Categoría', 'Precio', 'Costo', 'Stock', 'Stock mínimo', 'Estado', 'IVA', 'Proveedor'];
     const lines = rows.map(p => [
       p.sku ?? '',
       p.name,
+      this.categoryName(p.category_id),
       (+p.sale_price).toFixed(2),
       p.purchase_price != null ? (+p.purchase_price).toFixed(2) : '',
       p.stock,
