@@ -89,8 +89,8 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Contabilidad',
       items: [
-        { label: 'Dashboard',      icon: 'banknote',      route: '/finance/dashboard',           moduleCode: 'MOD_FINANCE', warehouseHidden: true },
-        { label: 'Egresos',        icon: 'trending_down', route: '/finance/expenses',            moduleCode: 'MOD_FINANCE', warehouseHidden: true },
+        { label: 'Dashboard',      icon: 'banknote',      route: '/finance/dashboard',           moduleCode: 'MOD_FINANCE', warehouseHidden: true, adminOnly: true },
+        { label: 'Egresos',        icon: 'trending_down', route: '/finance/expenses',            moduleCode: 'MOD_FINANCE', warehouseHidden: true, adminOnly: true },
         { label: 'Caja chica',     icon: 'wallet',        route: '/finance/petty-cash',          moduleCode: 'MOD_FINANCE', warehouseHidden: true },
         { label: 'Cat. egresos',   icon: 'tag',           route: '/finance/expense-categories',  moduleCode: 'MOD_FINANCE', adminOnly: true },
         { label: 'Presupuestos',   icon: 'target',        route: '/finance/expense-budgets',     moduleCode: 'MOD_FINANCE', adminOnly: true },

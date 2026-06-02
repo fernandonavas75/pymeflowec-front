@@ -36,7 +36,7 @@ export class InvoicesListComponent implements OnInit {
 
   readonly PAYMENT_METHOD_LABELS = PAYMENT_METHOD_LABELS;
 
-  hasPaymentsModule   = computed(() => this.modulesSvc.approvedCodes().has('MOD_PAYMENTS'));
+  hasPaymentsModule   = computed(() => this.modulesSvc.approvedCodes().has('MOD_INVOICING'));
   hasInventoryModule  = computed(() => this.modulesSvc.approvedCodes().has('MOD_INVENTORY'));
 
   private allInvoices = signal<Invoice[]>([]);
