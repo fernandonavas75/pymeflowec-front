@@ -210,21 +210,24 @@ pymeflowec-front/
 │   │   │   │   ├── auth.model.ts
 │   │   │   │   ├── company.model.ts
 │   │   │   │   ├── customer.model.ts
-│   │   │   │   ├── invoice.model.ts           # Incluye InvoicePayStatusAgg, amount_paid/pending
-│   │   │   │   ├── invoice-payment.model.ts   # PaymentMethod, PAYMENT_METHOD_LABELS
+│   │   │   │   ├── invoice.model.ts              # Incluye InvoicePayStatusAgg, amount_paid/pending
+│   │   │   │   ├── invoice-payment.model.ts      # PaymentMethod, PAYMENT_METHOD_LABELS
+│   │   │   │   ├── invoice-settings.model.ts     # InvoiceSettings, plantillas PDF
 │   │   │   │   ├── product.model.ts
+│   │   │   │   ├── product-category.model.ts     # ProductCategory, DTOs
 │   │   │   │   ├── supplier.model.ts
+│   │   │   │   ├── inventory-movement.model.ts   # InventoryMovement, MovementType
 │   │   │   │   ├── user.model.ts
 │   │   │   │   ├── tax-rate.model.ts
-│   │   │   │   ├── pagination.model.ts        # ApiResponse<T>, ApiListResponse<T>
+│   │   │   │   ├── pagination.model.ts           # ApiResponse<T>, ApiListResponse<T>
 │   │   │   │   ├── audit-log.model.ts
 │   │   │   │   ├── module-request.model.ts
-│   │   │   │   ├── petty-cash.model.ts        # PettyCash, PettyCashMovement, DTOs
-│   │   │   │   ├── expense.model.ts           # Expense, VoucherType, DTOs
-│   │   │   │   ├── expense-category.model.ts  # ExpenseCategory, CategoryType
-│   │   │   │   ├── expense-payment.model.ts   # ExpensePayment, re-export PaymentMethod
-│   │   │   │   ├── expense-budget.model.ts    # ExpenseBudget, BudgetPeriodType, MONTHS
-│   │   │   │   └── expense-recurring.model.ts # ExpenseRecurring, DTOs
+│   │   │   │   ├── petty-cash.model.ts           # PettyCash, PettyCashMovement, DTOs
+│   │   │   │   ├── expense.model.ts              # Expense, VoucherType, DTOs
+│   │   │   │   ├── expense-category.model.ts     # ExpenseCategory, CategoryType
+│   │   │   │   ├── expense-payment.model.ts      # ExpensePayment, re-export PaymentMethod
+│   │   │   │   ├── expense-budget.model.ts       # ExpenseBudget, BudgetPeriodType, MONTHS
+│   │   │   │   └── expense-recurring.model.ts    # ExpenseRecurring, DTOs
 │   │   │   │
 │   │   │   └── services/
 │   │   │       ├── api.service.ts             # Wrapper genérico de HttpClient
@@ -252,7 +255,10 @@ pymeflowec-front/
 │   │   │       ├── expense-categories.service.ts
 │   │   │       ├── expense-payments.service.ts
 │   │   │       ├── expense-budgets.service.ts
-│   │   │       └── expense-recurring.service.ts
+│   │   │       ├── expense-recurring.service.ts
+│   │   │       ├── product-categories.service.ts
+│   │   │       ├── inventory-movements.service.ts
+│   │   │       └── invoice-settings.service.ts
 │   │   │
 │   │   ├── features/
 │   │   │   ├── auth/
@@ -268,6 +274,7 @@ pymeflowec-front/
 │   │   │   ├── products/
 │   │   │   │   ├── products-list/
 │   │   │   │   ├── product-form/
+│   │   │   │   ├── product-categories/        # CRUD de categorías de producto
 │   │   │   │   ├── stock-adjust-dialog/
 │   │   │   │   └── csv-import-dialog/
 │   │   │   ├── suppliers/
@@ -291,6 +298,8 @@ pymeflowec-front/
 │   │   │   │   ├── expense-recurring/
 │   │   │   │   └── finance-dashboard/        # Dashboard 7 tabs + SVG charts
 │   │   │   ├── reports/                      # Reportes: analytics / actividad / finanzas
+│   │   │   ├── settings/
+│   │   │   │   └── invoice-settings/          # Configuración de factura + plantillas PDF
 │   │   │   ├── module-requests/
 │   │   │   │   └── module-requests-list/
 │   │   │   ├── companies/
@@ -375,10 +384,12 @@ export const appConfig: ApplicationConfig = {
 | `/dashboard` | — | Cualquier usuario autenticado |
 | `/customers` · `/customers/new` · `/customers/:id/edit` | `permissionGuard` en new/edit | `adminOnly` |
 | `/products` · `/products/new` · `/products/:id/edit` | `permissionGuard` en new/edit | `adminOnly` |
+| `/products/categories` | `permissionGuard` | `adminOnly` |
 | `/suppliers` · `/suppliers/new` · `/suppliers/:id/edit` | `permissionGuard` en new/edit | `adminOnly` |
 | `/invoices` · `/invoices/new` · `/invoices/:id` | — | Cualquier usuario |
 | `/tax-rates` · `/tax-rates/new` · `/tax-rates/:id/edit` | `permissionGuard` | `adminOnly` |
 | `/users` · `/users/new` · `/users/:id/edit` | `permissionGuard` | `adminOnly` |
+| `/settings/invoice` | `permissionGuard` | `adminOnly` |
 | `/module-requests` | `permissionGuard` | `adminOnly` |
 | `/finance/petty-cash` | `permissionGuard` | `roles: [STORE_ADMIN, STORE_SELLER]` |
 | `/finance/expenses` | `permissionGuard` | `adminOnly` |
@@ -574,7 +585,7 @@ Request normal → tokenInterceptor → Backend
 | Rol | Scope | Permisos |
 |---|---|---|
 | `PLATFORM_ADMIN` | PLATFORM | Acceso total; gestiona empresas, módulos, usuarios platform |
-| `PLATFORM_STAFF` | PLATFORM | Solo lectura en modo soporte |
+| `PLATFORM_SUPPORT` | PLATFORM | Solo lectura en modo soporte |
 | `STORE_ADMIN` | STORE | CRUD completo, abrir/cerrar caja, anular cobros/egresos |
 | `STORE_SELLER` | STORE | Crear facturas, registrar cobros, movimientos de caja |
 | `STORE_WAREHOUSE` | STORE | Ajustar stock únicamente |
@@ -702,7 +713,7 @@ CRUD estándar. Las tasas de impuesto soportan `valid_from` / `valid_to` para re
 | `CompaniesListComponent` | Lista paginada de empresas con filtro por estado |
 | `CompanyDetailComponent` | Detalle de empresa: módulos activos, usuarios, cambio de estado |
 | `AuditLogsComponent` | Visor de logs con filtros por empresa, acción y fecha |
-| `SupportUsersListComponent` | CRUD de usuarios `PLATFORM_STAFF` (solo `PLATFORM_ADMIN`) |
+| `SupportUsersListComponent` | CRUD de usuarios `PLATFORM_SUPPORT` (solo `PLATFORM_ADMIN`) |
 | `ModuleRequestsListComponent` | Cola de solicitudes de módulos: aprobar / rechazar / revocar |
 
 ---
