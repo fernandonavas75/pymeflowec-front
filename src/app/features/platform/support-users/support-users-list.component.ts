@@ -163,7 +163,7 @@ export class SupportUsersListComponent implements OnInit {
   roleLabel(name: string): string {
     const map: Record<string, string> = {
       PLATFORM_ADMIN: 'Admin plataforma',
-      PLATFORM_STAFF: 'Staff soporte',
+      PLATFORM_SUPPORT: 'Staff soporte',
     };
     return map[name] ?? name;
   }

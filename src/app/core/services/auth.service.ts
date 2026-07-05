@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Observable, map, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import { ThemeService } from './theme.service';
-import { AuthUser, LoginRequest, LoginResponse, RegisterRequest } from '../models/auth.model';
+import { AuthUser, LoginRequest, LoginResponse, RegisterRequest, UpdateProfileDto } from '../models/auth.model';
 
 const TOKEN_KEY = 'pf_token';
 const REFRESH_KEY = 'pf_refresh';
@@ -21,7 +21,7 @@ export class AuthService {
   isAuthenticated = computed(() => !!this.currentUser());
   role = computed(() => this.currentUser()?.role?.name);
 
-  /** Usuario sin empresa = usuario de plataforma (PLATFORM_ADMIN / PLATFORM_STAFF) */
+  /** Usuario sin empresa = usuario de plataforma (PLATFORM_ADMIN / PLATFORM_SUPPORT) */
   isSystemUser = computed(() => !this.currentUser()?.company);
 
   /** Tiene scope PLATFORM */
@@ -29,6 +29,9 @@ export class AuthService {
 
   /** Es PLATFORM_ADMIN */
   isPlatformAdmin = computed(() => this.currentUser()?.role?.name === 'PLATFORM_ADMIN');
+
+  /** Es PLATFORM_SUPPORT (solo lectura en modo cliente; el backend rechaza sus escrituras) */
+  isPlatformSupport = computed(() => this.currentUser()?.role?.name === 'PLATFORM_SUPPORT');
 
   /** Es STORE_ADMIN */
   isStoreAdmin = computed(() => this.currentUser()?.role?.name === 'STORE_ADMIN');
@@ -91,6 +94,22 @@ export class AuthService {
         localStorage.setItem(USER_KEY, JSON.stringify(user));
       })
     );
+  }
+
+  /** Actualiza el propio perfil (PATCH /auth/me) y refresca el usuario en sesión */
+  updateProfile(dto: UpdateProfileDto): Observable<AuthUser> {
+    return this.api.patch<{ success: boolean; data: AuthUser }>('/auth/me', dto).pipe(
+      map(res => res.data),
+      tap(user => {
+        this.currentUser.set(user);
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+      })
+    );
+  }
+
+  /** Cambia la contraseña del usuario autenticado */
+  changePassword(current_password: string, new_password: string): Observable<{ success: boolean; message: string }> {
+    return this.api.patch('/auth/change-password', { current_password, new_password });
   }
 
   register(data: RegisterRequest): Observable<LoginResponse> {

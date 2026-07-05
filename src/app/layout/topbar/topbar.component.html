@@ -53,6 +53,11 @@
           </button>
           <div class="user-menu-divider"></div>
         }
+        <button class="user-menu-item" (click)="goToProfile()">
+          <app-icon name="user" [size]="14" />
+          <span>Mi perfil</span>
+        </button>
+        <div class="user-menu-divider"></div>
         <button class="user-menu-item danger" (click)="logout()">
           <app-icon name="logout" [size]="14" />
           <span>Cerrar sesión</span>

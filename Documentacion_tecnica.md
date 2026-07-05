@@ -207,14 +207,15 @@ pymeflowec-front/
         │   │   ├── error.interceptor.ts       ← Notificaciones de error globales
         │   │   └── client-view.interceptor.ts ← Inyección de company_id (impersonación)
         │   │
-        │   ├── models/                  ← 26 interfaces TypeScript
+        │   ├── models/                  ← 22 interfaces TypeScript
         │   │   ├── auth.model.ts
         │   │   ├── customer.model.ts
         │   │   ├── product.model.ts
+        │   │   ├── product-category.model.ts     ← ProductCategory, DTOs
         │   │   ├── supplier.model.ts
         │   │   ├── invoice.model.ts
         │   │   ├── invoice-payment.model.ts
-        │   │   ├── invoice-settings.model.ts
+        │   │   ├── invoice-settings.model.ts     ← InvoiceSettings, plantillas PDF
         │   │   ├── tax-rate.model.ts
         │   │   ├── inventory-movement.model.ts
         │   │   ├── petty-cash.model.ts
@@ -229,7 +230,7 @@ pymeflowec-front/
         │   │   ├── module-request.model.ts
         │   │   └── pagination.model.ts
         │   │
-        │   └── services/                ← 28 servicios inyectables
+        │   └── services/                ← 30 servicios inyectables
         │       ├── api.service.ts             ← Wrapper HTTP centralizado
         │       ├── auth.service.ts            ← Autenticación + signals de sesión
         │       ├── theme.service.ts           ← Modo oscuro/claro
@@ -237,11 +238,12 @@ pymeflowec-front/
         │       ├── company-modules.service.ts ← Catálogo de módulos activos
         │       ├── customers.service.ts
         │       ├── products.service.ts
+        │       ├── product-categories.service.ts ← CRUD categorías de producto
         │       ├── suppliers.service.ts
         │       ├── invoices.service.ts
         │       ├── invoice-payments.service.ts
         │       ├── invoice-pdf.service.ts     ← Generación PDF con pdfmake
-        │       ├── invoice-settings.service.ts
+        │       ├── invoice-settings.service.ts ← Configuración y plantillas de factura
         │       ├── tax-rates.service.ts
         │       ├── users.service.ts
         │       ├── roles.service.ts
@@ -276,7 +278,8 @@ pymeflowec-front/
             ├── landing/         ← Página pública de presentación
             ├── dashboard/       ← KPIs principales de la empresa
             ├── clients/         ← Clientes: lista + formulario
-            ├── products/        ← Productos: lista, formulario, ajuste de stock, CSV
+            ├── products/        ← Productos: lista, formulario, categorías, ajuste de stock, CSV
+            │   └── product-categories/ ← CRUD de categorías de producto
             ├── suppliers/       ← Proveedores: lista + formulario
             ├── invoices/        ← Facturas: lista, crear, detalle
             ├── tax-rates/       ← Tasas de impuesto
@@ -289,7 +292,8 @@ pymeflowec-front/
             │   ├── expense-recurring/   ← Egresos recurrentes
             │   └── finance-dashboard/   ← Dashboard financiero (7 tabs)
             ├── reports/         ← Reportes: actividad, analítica, financiero
-            ├── settings/        ← Configuración de facturación
+            ├── settings/
+            │   └── invoice-settings/ ← Configuración de factura + plantillas PDF (classic/modern/minimal)
             ├── module-requests/ ← Solicitudes de módulos
             ├── companies/       ← Gestión de empresas (plataforma)
             └── platform/        ← Audit logs, usuarios de soporte
@@ -507,7 +511,8 @@ El archivo define todas las rutas de la aplicación. Las rutas privadas usan `Ma
     │   └── /:id/edit            (permissionGuard: adminOnly)
     ├── /products
     │   ├── /new                 (adminOnly)
-    │   └── /:id/edit            (adminOnly)
+    │   ├── /:id/edit            (adminOnly)
+    │   └── /categories          (adminOnly)
     ├── /suppliers
     │   └── /new · /:id/edit     (adminOnly)
     ├── /invoices
@@ -1124,7 +1129,9 @@ Badge de estado con mapeo de colores semánticos. Acepta un `status` string y lo
 
 **`ProductsListComponent`:** Tabla con filtros activo/inactivo, búsqueda por nombre/SKU, indicador visual de stock bajo (semáforo verde/ámbar/rojo según `stock/min_stock`). Acciones: activar, desactivar, ajustar stock (dialog), eliminar.
 
-**`ProductFormComponent`:** Incluye selector de proveedor y tasa de impuesto. El campo SKU se autogenera si se deja vacío.
+**`ProductFormComponent`:** Incluye selector de proveedor, tasa de impuesto y categoría de producto. El campo SKU se autogenera si se deja vacío.
+
+**`ProductCategoriesComponent`** (`/products/categories`): CRUD completo de categorías de producto. Tabs activas/inactivas, búsqueda por nombre, modal crear/editar, toggle activo/inactivo con confirmación, eliminar. Solo STORE_ADMIN.
 
 **`CsvImportDialogComponent`:** Importación masiva de productos desde CSV. Valida columnas requeridas, muestra errores por fila, y llama a `POST /products/bulk` con hasta 300 registros.
 
@@ -1191,7 +1198,11 @@ Módulo de analytics financiero con 7 tabs internas. Carga datos lazy al activar
 
 Los gráficos se implementan con **SVG inline** sin librerías externas (no ApexCharts) para evitar el freeze detectado con getters reactivos en componentes de gráfico.
 
-### 15.8 Reportes (`/reports`)
+### 15.8 Configuración de Factura (`/settings/invoice`)
+
+**`InvoiceSettingsComponent`:** Permite personalizar el PDF de facturas por empresa. Configura el nombre comercial, RUC, dirección, teléfono, email, nota de pie de página, color de acento y plantilla visual (`classic` / `modern` / `minimal`). Los cambios se persisten en el backend (`GET/PUT /api/invoice-settings`) y se reflejan de inmediato en los PDFs generados.
+
+### 15.9 Reportes (`/reports`)
 
 Componente con 3 vistas via query param `?view=`:
 
@@ -1262,7 +1273,7 @@ Redirect a /login
 | Rol | Scope | Descripción |
 |-----|-------|-------------|
 | `PLATFORM_ADMIN` | PLATFORM | Administrador de la plataforma SaaS. `company = null` |
-| `PLATFORM_STAFF` | PLATFORM | Soporte técnico (solo lectura). `company = null` |
+| `PLATFORM_SUPPORT` | PLATFORM | Soporte técnico (solo lectura). `company = null` |
 | `STORE_ADMIN` | STORE | Administrador de empresa. Acceso CRUD completo |
 | `STORE_SELLER` | STORE | Vendedor: crear facturas, registrar cobros |
 | `STORE_WAREHOUSE` | STORE | Bodeguero: solo ajuste de stock |
@@ -1696,5 +1707,5 @@ Si el build supera estos límites, Angular CLI emite advertencias o errores, for
 
 ---
 
-*Documentación generada el 13/05/2026 para defensa de tesis.*  
+*Documentación actualizada el 03/06/2026.*  
 *Sistema: PymeFlowEc Frontend v1.0.0 — Framework: Angular 17.3.0 — Autor: Fernando Navas*

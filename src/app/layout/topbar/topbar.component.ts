@@ -36,6 +36,11 @@ export class TopbarComponent {
   toggleMenu(): void { this.menuOpen.update(v => !v); }
   closeMenu(): void  { this.menuOpen.set(false); }
 
+  goToProfile(): void {
+    this.closeMenu();
+    this.router.navigate(['/profile']);
+  }
+
   logout(): void {
     this.authService.logout();
   }

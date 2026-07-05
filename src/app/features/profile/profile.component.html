@@ -1,0 +1,147 @@
+<div class="page">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="page-head">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="ds-avatar" style="width:44px;height:44px;font-size:16px">{{ userInitials }}</div>
+      <div>
+        <div class="page-title">Mi perfil</div>
+        <div class="page-sub-en">Administra tu información personal y seguridad</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:16px;max-width:560px">
+
+    <!-- ── Datos personales ────────────────────────────────────── -->
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <app-icon name="user" [size]="16" style="color:var(--accent)"/>
+          <span style="font-weight:600">Datos personales</span>
+        </div>
+
+        <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+
+          <div class="mfield">
+            <label>Nombre completo <span style="color:var(--danger)">*</span></label>
+            <input class="m-input" placeholder="Juan Pérez" formControlName="full_name"/>
+            @if (profileForm.get('full_name')?.touched && profileForm.get('full_name')?.invalid) {
+              <div class="hint" style="color:var(--danger)">Mínimo 3 caracteres</div>
+            }
+          </div>
+
+          <div class="mfield">
+            <label>Email <span style="color:var(--danger)">*</span></label>
+            <input class="m-input" type="email" placeholder="usuario@empresa.com" formControlName="email"/>
+            @if (profileForm.get('email')?.touched && profileForm.get('email')?.invalid) {
+              <div class="hint" style="color:var(--danger)">Ingresa un email válido</div>
+            }
+          </div>
+
+          <div class="mfield">
+            <label>Rol</label>
+            @if (canEditRole) {
+              <select class="m-input" formControlName="role_id">
+                @for (role of roles(); track role.id) {
+                  <option [value]="role.id">{{ roleLabelFor(role.name) }}</option>
+                }
+              </select>
+              <div class="hint" style="color:var(--warn)">
+                Si cambias tu rol a uno distinto de Administrador perderás los permisos de administración.
+              </div>
+            } @else {
+              <input class="m-input" [value]="roleLabel" disabled/>
+              <div class="hint">Tu rol lo administra el administrador de la empresa</div>
+            }
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:8px">
+            <button class="btn primary" type="submit" [disabled]="savingProfile()">
+              @if (savingProfile()) { <span class="btn-spinner"></span> }
+              @else { <app-icon name="check" [size]="14"/> }
+              Guardar cambios
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Cambiar contraseña ──────────────────────────────────── -->
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <app-icon name="lock" [size]="16" style="color:var(--accent)"/>
+          <span style="font-weight:600">Cambiar contraseña</span>
+        </div>
+
+        <form [formGroup]="passwordForm" (ngSubmit)="savePassword()">
+
+          <div class="mfield">
+            <label>Contraseña actual <span style="color:var(--danger)">*</span></label>
+            <div style="position:relative">
+              <input class="m-input" [type]="showCurrent() ? 'text' : 'password'"
+                     placeholder="Tu contraseña actual" formControlName="current_password"
+                     style="padding-right:40px"/>
+              <button type="button" (click)="showCurrent.set(!showCurrent())"
+                      style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                             background:none;border:none;cursor:pointer;
+                             color:var(--text-muted-ds);display:flex;align-items:center;padding:0">
+                <app-icon [name]="showCurrent() ? 'eye_off' : 'eye'" [size]="15"/>
+              </button>
+            </div>
+            @if (passwordForm.get('current_password')?.touched && passwordForm.get('current_password')?.invalid) {
+              <div class="hint" style="color:var(--danger)">Ingresa tu contraseña actual</div>
+            }
+          </div>
+
+          <div class="mfield">
+            <label>Nueva contraseña <span style="color:var(--danger)">*</span></label>
+            <div style="position:relative">
+              <input class="m-input" [type]="showNew() ? 'text' : 'password'"
+                     placeholder="Mínimo 8 caracteres" formControlName="new_password"
+                     style="padding-right:40px"/>
+              <button type="button" (click)="showNew.set(!showNew())"
+                      style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+                             background:none;border:none;cursor:pointer;
+                             color:var(--text-muted-ds);display:flex;align-items:center;padding:0">
+                <app-icon [name]="showNew() ? 'eye_off' : 'eye'" [size]="15"/>
+              </button>
+            </div>
+            @if (passwordForm.get('new_password')?.touched && passwordForm.get('new_password')?.invalid) {
+              <div class="hint" style="color:var(--danger)">Mínimo 8 caracteres</div>
+            }
+          </div>
+
+          <div class="mfield">
+            <label>Confirmar nueva contraseña <span style="color:var(--danger)">*</span></label>
+            <input class="m-input" type="password" placeholder="Repite la nueva contraseña"
+                   formControlName="confirm_password"/>
+            @if (passwordForm.get('confirm_password')?.touched && passwordForm.get('confirm_password')?.invalid) {
+              <div class="hint" style="color:var(--danger)">Confirma la nueva contraseña</div>
+            }
+          </div>
+
+          @if (passwordError()) {
+            <div class="hint" style="color:var(--danger);margin-bottom:8px;display:flex;align-items:center;gap:6px">
+              <app-icon name="alert_circle" [size]="14"/>
+              {{ passwordError() }}
+            </div>
+          }
+
+          <div style="display:flex;justify-content:flex-end;margin-top:8px">
+            <button class="btn primary" type="submit" [disabled]="savingPassword()">
+              @if (savingPassword()) { <span class="btn-spinner"></span> }
+              @else { <app-icon name="lock" [size]="14"/> }
+              Actualizar contraseña
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+</div>

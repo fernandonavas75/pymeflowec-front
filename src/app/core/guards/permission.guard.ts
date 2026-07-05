@@ -7,12 +7,18 @@ import { AuthService } from '../services/auth.service';
  *
  * Datos de ruta soportados:
  *  - platform: true      → accesible para cualquier usuario de plataforma
- *                          (PLATFORM_ADMIN y PLATFORM_STAFF; ningún usuario de tienda)
+ *                          (PLATFORM_ADMIN y PLATFORM_SUPPORT; ningún usuario de tienda)
  *  - platformAdmin: true → exclusivo para PLATFORM_ADMIN
  *  - roles: string[]     → requiere uno de los roles indicados
  *  - adminOnly: true     → alias para roles: ['STORE_ADMIN']
+ *  - writeOnly: true     → ruta de escritura (formularios new/edit, settings);
+ *                          bloqueada para PLATFORM_SUPPORT en modo cliente
  *
- * Los usuarios de plataforma (isSystemUser) bypasean todos los guards de tienda.
+ * Usuarios de plataforma en guards de tienda:
+ *  - PLATFORM_ADMIN bypasea cualquier guard (en modo cliente opera como STORE_ADMIN).
+ *  - PLATFORM_SUPPORT solo bypasea rutas de lectura — el backend rechaza sus
+ *    escrituras con 403 (platformStoreAccess: soporte = solo GET), así que las
+ *    rutas marcadas writeOnly lo redirigen a /dashboard.
  */
 export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
   const auth   = inject(AuthService);
@@ -39,8 +45,15 @@ export const permissionGuard: CanActivateFn = (route: ActivatedRouteSnapshot) =>
     return false;
   }
 
-  // ── Usuarios de plataforma bypasean todos los guards de tienda ─────
-  if (auth.isSystemUser()) return true;
+  // ── Usuarios de plataforma en guards de tienda ─────────────────────
+  if (auth.isSystemUser()) {
+    if (auth.isPlatformAdmin()) return true;
+    // PLATFORM_SUPPORT: solo lectura — sin acceso a rutas de escritura
+    const writeOnly: boolean = route.data['writeOnly'] ?? false;
+    if (!writeOnly) return true;
+    router.navigate(['/dashboard']);
+    return false;
+  }
 
   // ── Sin roles requeridos → cualquier usuario autenticado ──────────
   if (requiredRoles.length === 0) return true;

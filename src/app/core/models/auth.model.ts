@@ -23,7 +23,7 @@ export interface AuthUser {
   status: 'ACTIVE' | 'INACTIVE' | 'LOCKED';
   role: {
     id: number;
-    name: 'PLATFORM_ADMIN' | 'PLATFORM_STAFF' | 'STORE_ADMIN' | 'STORE_SELLER' | 'STORE_WAREHOUSE' | string;
+    name: 'PLATFORM_ADMIN' | 'PLATFORM_SUPPORT' | 'STORE_ADMIN' | 'STORE_SELLER' | 'STORE_WAREHOUSE' | string;
     scope: 'PLATFORM' | 'STORE';
     description?: string | null;
   };
@@ -36,6 +36,13 @@ export interface AuthUser {
     email?: string | null;
     status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING';
   } | null;
+}
+
+/** Body de PATCH /auth/me — role_id solo lo acepta el backend si el usuario es STORE_ADMIN */
+export interface UpdateProfileDto {
+  full_name?: string;
+  email?: string;
+  role_id?: number;
 }
 
 export interface LoginResponse {

@@ -36,6 +36,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
 
+      // Mi perfil — cualquier usuario autenticado
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
+      },
+
       // Clientes
       {
         path: 'customers',
@@ -44,10 +50,14 @@ export const routes: Routes = [
       {
         path: 'customers/new',
         loadComponent: () => import('./features/clients/client-form/client-form.component').then(m => m.ClientFormComponent),
+        canActivate: [permissionGuard],
+        data: { writeOnly: true },
       },
       {
         path: 'customers/:id/edit',
         loadComponent: () => import('./features/clients/client-form/client-form.component').then(m => m.ClientFormComponent),
+        canActivate: [permissionGuard],
+        data: { writeOnly: true },
       },
 
       // Productos
@@ -59,13 +69,13 @@ export const routes: Routes = [
         path: 'products/new',
         loadComponent: () => import('./features/products/product-form/product-form.component').then(m => m.ProductFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
       {
         path: 'products/:id/edit',
         loadComponent: () => import('./features/products/product-form/product-form.component').then(m => m.ProductFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
       {
         path: 'products/categories',
@@ -83,13 +93,13 @@ export const routes: Routes = [
         path: 'suppliers/new',
         loadComponent: () => import('./features/suppliers/supplier-form/supplier-form.component').then(m => m.SupplierFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
       {
         path: 'suppliers/:id/edit',
         loadComponent: () => import('./features/suppliers/supplier-form/supplier-form.component').then(m => m.SupplierFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
 
       // Facturas
@@ -100,6 +110,8 @@ export const routes: Routes = [
       {
         path: 'invoices/new',
         loadComponent: () => import('./features/invoices/invoice-create/invoice-create.component').then(m => m.InvoiceCreateComponent),
+        canActivate: [permissionGuard],
+        data: { writeOnly: true },
       },
       {
         path: 'invoices/:id',
@@ -117,13 +129,13 @@ export const routes: Routes = [
         path: 'tax-rates/new',
         loadComponent: () => import('./features/tax-rates/tax-rate-form/tax-rate-form.component').then(m => m.TaxRateFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
       {
         path: 'tax-rates/:id/edit',
         loadComponent: () => import('./features/tax-rates/tax-rate-form/tax-rate-form.component').then(m => m.TaxRateFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
 
       // Usuarios
@@ -137,13 +149,13 @@ export const routes: Routes = [
         path: 'users/new',
         loadComponent: () => import('./features/users/user-form/user-form.component').then(m => m.UserFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
       {
         path: 'users/:id/edit',
         loadComponent: () => import('./features/users/user-form/user-form.component').then(m => m.UserFormComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
 
       // Configuración de factura
@@ -151,7 +163,7 @@ export const routes: Routes = [
         path: 'settings/invoice',
         loadComponent: () => import('./features/settings/invoice-settings/invoice-settings.component').then(m => m.InvoiceSettingsComponent),
         canActivate: [permissionGuard],
-        data: { adminOnly: true },
+        data: { adminOnly: true, writeOnly: true },
       },
 
       // Solicitudes de módulos

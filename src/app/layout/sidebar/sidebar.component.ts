@@ -18,7 +18,7 @@ interface NavItem {
   adminOnly?: boolean;
   /** Solo visible para usuarios de plataforma (company_id = null) */
   platformOnly?: boolean;
-  /** Solo visible para PLATFORM_ADMIN (no para PLATFORM_STAFF) */
+  /** Solo visible para PLATFORM_ADMIN (no para PLATFORM_SUPPORT) */
   platformAdminOnly?: boolean;
   /**
    * Código del módulo en la BD. Para STORE_ADMIN gatea la visibilidad del item
@@ -32,6 +32,11 @@ interface NavItem {
   warehouseHidden?: boolean;
   /** Usa matching exacto de ruta (evita que rutas padre queden activas en sub-rutas). */
   exactMatch?: boolean;
+  /**
+   * Ruta de escritura pura (bloqueada por permissionGuard para PLATFORM_SUPPORT
+   * en modo cliente). Se oculta del nav para ese caso.
+   */
+  writeOnly?: boolean;
 }
 
 interface NavGroup {
@@ -117,7 +122,7 @@ export class SidebarComponent implements OnInit {
           adminOnly: true,
           moduleCode: 'MOD_PARAMS',
         },
-        { label: 'Factura',   icon: 'palette',         route: '/settings/invoice', adminOnly: true },
+        { label: 'Factura',   icon: 'palette',         route: '/settings/invoice', adminOnly: true, writeOnly: true },
         { label: 'Usuarios',  icon: 'manage_accounts', route: '/users',            adminOnly: true },
         { label: 'Módulos',   icon: 'extension',       route: '/module-requests',  adminOnly: true },
         { label: 'Actividad', icon: 'manage_search',   route: '/reports', queryParams: { view: 'activity' }, adminOnly: true, moduleCode: 'MOD_INVOICING' },
@@ -154,6 +159,8 @@ export class SidebarComponent implements OnInit {
     const isSystem        = isClientView ? false : this.authService.isSystemUser();
     const isAdmin         = isClientView ? true  : this.authService.isStoreAdmin();
     const isPlatformAdmin = this.authService.isPlatformAdmin();
+    // PLATFORM_SUPPORT en modo cliente: solo lectura → sin items de escritura pura
+    const isSupportClientView = isClientView && this.authService.isPlatformSupport();
     const isWarehouse     = this.authService.isStoreWarehouse();
     const approved   = this.modulesSvc.approvedCodes();
     const pending    = this.modulesSvc.pendingCodes();
@@ -171,6 +178,9 @@ export class SidebarComponent implements OnInit {
 
         // ── 0. Items ocultos para bodeguero ────────────────────────
         if (item.warehouseHidden && isWarehouse) continue;
+
+        // ── 0b. Items de escritura ocultos para soporte en modo cliente ──
+        if (item.writeOnly && isSupportClientView) continue;
 
         // ── 1. Items de plataforma ──────────────────────────────────
         if (item.platformOnly) {
