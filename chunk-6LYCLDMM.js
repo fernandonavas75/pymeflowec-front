@@ -1,1 +1,0 @@
-import{b as a}from"./chunk-I6S5ZAAO.js";import{T as i,Z as o,o as e}from"./chunk-6UJS6K6X.js";var l=(()=>{class t{constructor(){this.api=o(a)}listStoreRoles(){return this.api.get("/roles").pipe(e(r=>r.data))}static{this.\u0275fac=function(c){return new(c||t)}}static{this.\u0275prov=i({token:t,factory:t.\u0275fac,providedIn:"root"})}}return t})();export{l as a};
