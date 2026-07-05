@@ -19,6 +19,7 @@ import { ExpenseCategory } from '../../../core/models/expense-category.model';
 import { ProductsService } from '../../../core/services/products.service';
 import { PettyCashService } from '../../../core/services/petty-cash.service';
 import { InventoryMovementsService } from '../../../core/services/inventory-movements.service';
+import { TaxRatesService } from '../../../core/services/tax-rates.service';
 import { Product } from '../../../core/models/product.model';
 import { InventoryMovement } from '../../../core/models/inventory-movement.model';
 import { PettyCash, PettyCashMovement, MOVEMENT_TYPE_LABELS } from '../../../core/models/petty-cash.model';
@@ -210,6 +211,7 @@ export class FinanceDashboardComponent {
   private inventoryMovementsSvc  = inject(InventoryMovementsService);
   private snackBar               = inject(MatSnackBar);
   authService                    = inject(AuthService);
+  taxRatesSvc                    = inject(TaxRatesService);
 
   readonly tabs                              = TABS;
   readonly PAYMENT_METHOD_LABELS             = PAYMENT_METHOD_LABELS;
@@ -257,7 +259,10 @@ export class FinanceDashboardComponent {
   });
 
   ingresosTotalFacturado = computed(() => this.ingresosFiltered().reduce((s, i) => s + +i.total, 0));
+  // Base devengado: cobrado acumulado de las facturas emitidas en el período (pie de tabla).
   ingresosTotalCobrado   = computed(() => this.ingresosFiltered().reduce((s, i) => s + +(i.amount_paid ?? 0), 0));
+  // Base caja: cobros efectivos con fecha de pago dentro del período — cuadra con el desglose por método.
+  ingresosCobradoPeriodo = computed(() => this.ingresosFilteredPayments().reduce((s, p) => s + +p.amount, 0));
   ingresosTotalPendiente = computed(() =>
     this.ingresosFiltered()
       .filter(i => i.payment_status === 'PENDIENTE' || i.payment_status === 'PARCIAL')
@@ -499,15 +504,21 @@ export class FinanceDashboardComponent {
     return n > 0 ? this.cxcTotalPending() / n : 0;
   });
 
-  // Donut chart arc lengths
+  // Donut chart — distribución de deuda por MONTO pendiente (no por cantidad de facturas)
+  cxcPendingAmt = computed(() =>
+    this.allCxcInvoices().filter(i => i.payment_status === 'PENDIENTE').reduce((s, i) => s + +(i.amount_pending ?? 0), 0)
+  );
+  cxcParcialAmt = computed(() =>
+    this.allCxcInvoices().filter(i => i.payment_status === 'PARCIAL').reduce((s, i) => s + +(i.amount_pending ?? 0), 0)
+  );
   cxcPendingLen = computed(() => {
-    const total = this.cxcPendingCount() + this.cxcParcialCount();
-    return total > 0 ? (this.cxcPendingCount() / total) * DONUT_CIRC : 0;
+    const total = this.cxcPendingAmt() + this.cxcParcialAmt();
+    return total > 0 ? (this.cxcPendingAmt() / total) * DONUT_CIRC : 0;
   });
   cxcParcialLen     = computed(() => DONUT_CIRC - this.cxcPendingLen());
   cxcPendingPct     = computed(() => {
-    const total = this.cxcPendingCount() + this.cxcParcialCount();
-    return total > 0 ? Math.round((this.cxcPendingCount() / total) * 100) : 0;
+    const total = this.cxcPendingAmt() + this.cxcParcialAmt();
+    return total > 0 ? Math.round((this.cxcPendingAmt() / total) * 100) : 0;
   });
   cxcParcialPct     = computed(() => 100 - this.cxcPendingPct());
   cxcHasData        = computed(() => (this.cxcPendingCount() + this.cxcParcialCount()) > 0);
@@ -569,14 +580,21 @@ export class FinanceDashboardComponent {
     return n > 0 ? this.cxpTotalPending() / n : 0;
   });
 
+  // Donut — distribución de deuda por MONTO pendiente (no por cantidad de egresos)
+  cxpPendingAmt = computed(() =>
+    this.allCxpExpenses().filter(e => e.payment_status === 'PENDIENTE').reduce((s, e) => s + +(e.amount_pending ?? e.amount), 0)
+  );
+  cxpParcialAmt = computed(() =>
+    this.allCxpExpenses().filter(e => e.payment_status === 'PARCIAL').reduce((s, e) => s + +(e.amount_pending ?? e.amount), 0)
+  );
   cxpPendingLen = computed(() => {
-    const total = this.cxpPendingCount() + this.cxpParcialCount();
-    return total > 0 ? (this.cxpPendingCount() / total) * DONUT_CIRC : 0;
+    const total = this.cxpPendingAmt() + this.cxpParcialAmt();
+    return total > 0 ? (this.cxpPendingAmt() / total) * DONUT_CIRC : 0;
   });
   cxpParcialLen  = computed(() => DONUT_CIRC - this.cxpPendingLen());
   cxpPendingPct  = computed(() => {
-    const total = this.cxpPendingCount() + this.cxpParcialCount();
-    return total > 0 ? Math.round((this.cxpPendingCount() / total) * 100) : 0;
+    const total = this.cxpPendingAmt() + this.cxpParcialAmt();
+    return total > 0 ? Math.round((this.cxpPendingAmt() / total) * 100) : 0;
   });
   cxpParcialPct  = computed(() => 100 - this.cxpPendingPct());
   cxpHasData     = computed(() => (this.cxpPendingCount() + this.cxpParcialCount()) > 0);
@@ -668,7 +686,7 @@ export class FinanceDashboardComponent {
 
   private comprasActive   = computed(() => this.comprasFiltered().filter(e => e.payment_status !== 'ANULADO'));
   comprasTotal            = computed(() => this.comprasActive().reduce((s, e) => s + +e.amount, 0));
-  comprasTotalSubtotal    = computed(() => this.comprasTotal() / 1.15);
+  comprasTotalSubtotal    = computed(() => this.comprasTotal() / this.taxRatesSvc.ivaFactor());
   comprasTotalIva         = computed(() => this.comprasTotal() - this.comprasTotalSubtotal());
   comprasNumCompras       = computed(() => this.comprasActive().length);
   comprasUniqueProviders  = computed(() =>
@@ -683,8 +701,8 @@ export class FinanceDashboardComponent {
     this.inMovementsFiltered().reduce((s, m) => s + this.inMovementValue(m), 0)
   );
 
-  comprasSubtotal(amount: number): number { return +amount / 1.15; }
-  comprasIva(amount: number): number { return +amount - +amount / 1.15; }
+  comprasSubtotal(amount: number): number { return +amount / this.taxRatesSvc.ivaFactor(); }
+  comprasIva(amount: number): number { return +amount - this.comprasSubtotal(amount); }
 
   clearComprasFilters(): void {
     this.comprasSearchCtrl.setValue('');
@@ -830,7 +848,8 @@ export class FinanceDashboardComponent {
 
   reportesTotalVentas    = computed(() => this.reportesPeriodInvoices().reduce((s, i) => s + +i.total, 0));
   reportesTotalGastos    = computed(() => this.reportesPeriodExpenses().reduce((s, e) => s + +e.amount, 0));
-  reportesGanancia       = computed(() => this.reportesTotalVentas() - this.reportesTotalGastos());
+  // Ganancia sobre ventas SIN IVA: el IVA cobrado es un pasivo con el SRI, no ingreso.
+  reportesGanancia       = computed(() => this.reportesSubtotalVentas() - this.reportesTotalGastos());
   reportesNumFacturas    = computed(() => this.reportesPeriodInvoices().length);
   reportesNumGastos      = computed(() => this.reportesPeriodExpenses().length);
   reportesSubtotalVentas = computed(() => this.reportesPeriodInvoices().reduce((s, i) => s + +(i.subtotal ?? 0), 0));
@@ -838,7 +857,7 @@ export class FinanceDashboardComponent {
   reportesIvaPagado      = computed(() =>
     this.reportesPeriodExpenses()
       .filter(e => e.voucher_type === 'FACTURA')
-      .reduce((s, e) => s + (+e.amount - +e.amount / 1.15), 0)
+      .reduce((s, e) => s + (+e.amount - +e.amount / this.taxRatesSvc.ivaFactor()), 0)
   );
   reportesIvaBalance = computed(() => this.reportesIvaCobrado() - this.reportesIvaPagado());
 
@@ -926,7 +945,7 @@ export class FinanceDashboardComponent {
   });
 
   reportesGananciaPct = computed(() => {
-    const v = this.reportesTotalVentas(), g = this.reportesGanancia();
+    const v = this.reportesSubtotalVentas(), g = this.reportesGanancia();
     if (v <= 0) return 0;
     return Math.round((g / v) * 100);
   });
@@ -1181,6 +1200,7 @@ export class FinanceDashboardComponent {
   });
 
   constructor() {
+    this.taxRatesSvc.loadIvaRate();
     const opts = { allowSignalWrites: true };
     effect(() => {
       if (this.activeTab() === 'ingresos' && !this.ingresosLoaded) {

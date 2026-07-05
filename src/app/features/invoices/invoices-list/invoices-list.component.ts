@@ -145,7 +145,9 @@ export class InvoicesListComponent implements OnInit {
   totalIssued = computed(() =>
     this.allInvoices().filter(i => i.status === 'ISSUED').reduce((s, i) => s + +i.total, 0)
   );
-  taxIssued = computed(() => this.totalIssued() * 0.15);
+  taxIssued = computed(() =>
+    this.allInvoices().filter(i => i.status === 'ISSUED').reduce((s, i) => s + +(i.tax_amount ?? 0), 0)
+  );
 
   uniqueVendors = computed(() => {
     const set = new Set<string>();

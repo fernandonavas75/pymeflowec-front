@@ -1,13 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, tap, throwError } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { ApiService } from './api.service';
 import { ModuleCatalogItem } from '../models/module-request.model';
 
 @Injectable({ providedIn: 'root' })
 export class CompanyModulesService {
-  private http = inject(HttpClient);
-  private base  = `${environment.apiUrl}/platform/modules`;
+  private api = inject(ApiService);
 
   /** Caché reactivo del catálogo */
   catalog = signal<ModuleCatalogItem[]>([]);
@@ -40,10 +38,17 @@ export class CompanyModulesService {
     this.catalogReady.set(false);
   }
 
-  /** Carga el catálogo completo con estado de la empresa */
-  loadCatalog(): Observable<ModuleCatalogItem[]> {
-    return this.http
-      .get<{ success: boolean; data: ModuleCatalogItem[] }>(`${this.base}/company-catalog`)
+  /**
+   * Carga el catálogo completo con estado de la empresa.
+   * Sin argumentos usa la empresa del JWT; con `companyId` (admin de
+   * plataforma) carga el catálogo de esa empresa específica.
+   */
+  loadCatalog(companyId?: number): Observable<ModuleCatalogItem[]> {
+    return this.api
+      .get<{ success: boolean; data: ModuleCatalogItem[] }>(
+        '/platform/modules/company-catalog',
+        companyId !== undefined ? { company_id: companyId } : undefined,
+      )
       .pipe(
         map(r => r?.data ?? []),
         tap(items => {
@@ -72,29 +77,6 @@ export class CompanyModulesService {
    * de una empresa específica pasando su ID como query param.
    */
   loadCatalogForCompany(companyId: number): Observable<ModuleCatalogItem[]> {
-    return this.http
-      .get<{ success: boolean; data: ModuleCatalogItem[] }>(`${this.base}/company-catalog`, {
-        params: { company_id: companyId.toString() },
-      })
-      .pipe(
-        map(r => r?.data ?? []),
-        tap(items => {
-          const now = new Date();
-          this.catalog.set(items);
-          this.approvedCodes.set(new Set(
-            items
-              .filter(m => m.status === 'APPROVED' && (!m.expires_at || new Date(m.expires_at) > now))
-              .map(m => m.code)
-          ));
-          this.pendingCodes.set(new Set(items.filter(m => m.status === 'PENDING').map(m => m.code)));
-          this.loadFailed.set(false);
-          this.catalogReady.set(true);
-        }),
-        catchError(err => {
-          this.loadFailed.set(true);
-          this.catalogReady.set(true);
-          return throwError(() => err);
-        }),
-      );
+    return this.loadCatalog(companyId);
   }
 }

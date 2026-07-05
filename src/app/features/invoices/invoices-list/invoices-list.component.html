@@ -59,7 +59,7 @@
   <div class="filters">
     <div class="filter-search">
       <app-icon name="search" [size]="13"/>
-      <input placeholder="Buscar por número, cliente o documento…" [formControl]="searchCtrl"/>
+      <input placeholder="Buscar por número, cliente o documento…" aria-label="Buscar por número, cliente o documento" [formControl]="searchCtrl"/>
     </div>
 
     <!-- Fecha -->
@@ -349,7 +349,7 @@
               <span>Subtotal</span><span class="mono">${{ selectedInvoice()!.subtotal | number:'1.2-2' }}</span>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted-ds);margin-bottom:10px">
-              <span>IVA 15%</span><span class="mono">${{ selectedInvoice()!.tax_amount | number:'1.2-2' }}</span>
+              <span>IVA</span><span class="mono">${{ selectedInvoice()!.tax_amount | number:'1.2-2' }}</span>
             </div>
             <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:10px;border-top:1px solid var(--border-ds)">
               <span style="font-weight:700;font-size:14px">Total</span>

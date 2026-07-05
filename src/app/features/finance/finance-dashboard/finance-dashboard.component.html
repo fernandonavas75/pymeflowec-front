@@ -144,12 +144,12 @@
       <div class="filters" style="margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar por N° factura o cliente…" [formControl]="ingresosSearchCtrl"/>
+          <input placeholder="Buscar por N° factura o cliente…" aria-label="Buscar por número de factura o cliente" [formControl]="ingresosSearchCtrl"/>
         </div>
         <input class="m-input" type="date" [formControl]="ingresosDateFromCtrl"
-          style="padding:5px 8px;font-size:0.8rem" title="Desde">
+          style="padding:5px 8px;font-size:0.8rem" title="Desde" aria-label="Fecha desde">
         <input class="m-input" type="date" [formControl]="ingresosDateToCtrl"
-          style="padding:5px 8px;font-size:0.8rem" title="Hasta">
+          style="padding:5px 8px;font-size:0.8rem" title="Hasta" aria-label="Fecha hasta">
         <button class="btn ghost" type="button" (click)="clearIngresosFilters()">
           <app-icon name="x" [size]="13"/>Limpiar
         </button>
@@ -386,7 +386,7 @@
       <div class="filters" style="margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar por N° factura o cliente…" [formControl]="cxcSearchCtrl"/>
+          <input placeholder="Buscar por N° factura o cliente…" aria-label="Buscar por número de factura o cliente" [formControl]="cxcSearchCtrl"/>
         </div>
         <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
           {{ cxcFiltered().length }} resultado{{ cxcFiltered().length !== 1 ? 's' : '' }}
@@ -420,7 +420,7 @@
           </thead>
           <tbody>
             @for (inv of cxcFiltered(); track inv.id) {
-              <tr (click)="selectCxcInvoice(inv)" style="cursor:pointer">
+              <tr (click)="selectCxcInvoice(inv)" (keydown.enter)="selectCxcInvoice(inv)" tabindex="0" style="cursor:pointer">
                 <td>
                   <span style="font-weight:500;color:var(--text)">{{ inv.customer?.full_name ?? '—' }}</span>
                 </td>
@@ -446,7 +446,7 @@
                   {{ dueDate(inv.issue_date) }}
                   <span style="font-size:0.65rem;color:var(--text-subtle)"> est.</span>
                 </td>
-                <td (click)="$event.stopPropagation()">
+                <td (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                   <button class="cxc-row-btn" type="button" (click)="selectCxcInvoice(inv)">
                     Registrar cobro
                   </button>
@@ -606,7 +606,7 @@
       <div class="filters" style="margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar por descripción, proveedor o categoría…" [formControl]="cxpSearchCtrl"/>
+          <input placeholder="Buscar por descripción, proveedor o categoría…" aria-label="Buscar por descripción, proveedor o categoría" [formControl]="cxpSearchCtrl"/>
         </div>
         <span style="margin-left:auto;font-size:0.78rem;color:var(--text-muted)">
           {{ cxpFiltered().length }} resultado{{ cxpFiltered().length !== 1 ? 's' : '' }}
@@ -641,7 +641,7 @@
           </thead>
           <tbody>
             @for (exp of cxpFiltered(); track exp.id) {
-              <tr (click)="selectCxpExpense(exp)" style="cursor:pointer">
+              <tr (click)="selectCxpExpense(exp)" (keydown.enter)="selectCxpExpense(exp)" tabindex="0" style="cursor:pointer">
                 <td>
                   <span style="font-weight:500;color:var(--text)">
                     {{ exp.supplier?.name ?? exp.supplier_name_free ?? '—' }}
@@ -678,7 +678,7 @@
                     <span style="font-size:0.65rem;color:var(--text-subtle)"> est.</span>
                   }
                 </td>
-                <td (click)="$event.stopPropagation()">
+                <td (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
                   <button class="cxc-row-btn" type="button" (click)="selectCxpExpense(exp)">
                     Registrar pago
                   </button>
@@ -829,7 +829,7 @@
       <div class="filters" style="margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar por N° factura o cliente…" [formControl]="ventasSearchCtrl"/>
+          <input placeholder="Buscar por N° factura o cliente…" aria-label="Buscar por número de factura o cliente" [formControl]="ventasSearchCtrl"/>
         </div>
         <button class="btn secondary" type="button" (click)="reloadVentas()">
           <app-icon name="refresh_cw" [size]="13"/>Actualizar
@@ -924,7 +924,7 @@
         </div>
 
         <div class="cxc-kpi">
-          <div class="cxc-kpi-label">IVA 15% estimado</div>
+          <div class="cxc-kpi-label">IVA {{ taxRatesSvc.ivaPct() }}% estimado</div>
           <div class="cxc-kpi-value" style="color:var(--accent)">${{ comprasTotalIva() | number:'1.2-2' }}</div>
           <div class="cxc-kpi-sub">crédito tributario est.</div>
         </div>
@@ -941,10 +941,10 @@
       <div class="filters" style="margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar por proveedor, producto, descripción o N° factura…" [formControl]="comprasSearchCtrl"/>
+          <input placeholder="Buscar por proveedor, producto, descripción o N° factura…" aria-label="Buscar por proveedor, producto, descripción o número de factura" [formControl]="comprasSearchCtrl"/>
         </div>
-        <input class="m-input" type="date" [formControl]="comprasDateFromCtrl" title="Desde" style="max-width:140px"/>
-        <input class="m-input" type="date" [formControl]="comprasDateToCtrl"   title="Hasta" style="max-width:140px"/>
+        <input class="m-input" type="date" [formControl]="comprasDateFromCtrl" title="Desde" aria-label="Fecha desde" style="max-width:140px"/>
+        <input class="m-input" type="date" [formControl]="comprasDateToCtrl"   title="Hasta" aria-label="Fecha hasta" style="max-width:140px"/>
         @if (comprasSearchCtrl.value || comprasDateFromCtrl.value || comprasDateToCtrl.value) {
           <button class="btn ghost" type="button" (click)="clearComprasFilters()">
             <app-icon name="x" [size]="13"/>Limpiar
@@ -972,14 +972,14 @@
         <table class="ds-table" style="margin-top:8px">
           <thead>
             <tr>
-              <th>Proveedor</th>
-              <th>N° Factura</th>
-              <th>Fecha</th>
-              <th>Descripción</th>
-              <th style="text-align:right">Subtotal</th>
-              <th style="text-align:right">IVA 15%</th>
-              <th style="text-align:right">Total</th>
-              <th>Estado</th>
+              <th scope="col">Proveedor</th>
+              <th scope="col">N° Factura</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Descripción</th>
+              <th scope="col" style="text-align:right">Subtotal</th>
+              <th scope="col" style="text-align:right">IVA {{ taxRatesSvc.ivaPct() }}%</th>
+              <th scope="col" style="text-align:right">Total</th>
+              <th scope="col">Estado</th>
             </tr>
           </thead>
           <tbody>
@@ -1270,16 +1270,17 @@
       <div class="filters" style="margin-top:8px;margin-bottom:0">
         <div class="filter-search">
           <app-icon name="search" [size]="13"/>
-          <input placeholder="Buscar descripción, proveedor, categoría…" [formControl]="egresosSearchCtrl"/>
+          <input placeholder="Buscar descripción, proveedor, categoría…" aria-label="Buscar por descripción, proveedor o categoría" [formControl]="egresosSearchCtrl"/>
         </div>
-        <select class="m-input" [formControl]="egresosCategoryCtrl" style="max-width:180px">
+        <label class="sr-only" for="egresos-category-filter">Filtrar por categoría</label>
+        <select id="egresos-category-filter" class="m-input" [formControl]="egresosCategoryCtrl" style="max-width:180px">
           <option value="">Todas las categorías</option>
           @for (cat of egresosCategories(); track cat.id) {
             <option [value]="cat.id">{{ cat.name }}</option>
           }
         </select>
-        <input class="m-input" type="date" [formControl]="egresosDateFromCtrl" title="Desde" style="max-width:140px"/>
-        <input class="m-input" type="date" [formControl]="egresosDateToCtrl"   title="Hasta" style="max-width:140px"/>
+        <input class="m-input" type="date" [formControl]="egresosDateFromCtrl" title="Desde" aria-label="Fecha desde" style="max-width:140px"/>
+        <input class="m-input" type="date" [formControl]="egresosDateToCtrl"   title="Hasta" aria-label="Fecha hasta" style="max-width:140px"/>
         @if (egresosSearchCtrl.value || egresosCategoryCtrl.value || egresosDateFromCtrl.value || egresosDateToCtrl.value) {
           <button class="btn ghost" type="button" (click)="clearEgresosFilters()">
             <app-icon name="x" [size]="13"/>Limpiar
@@ -1311,7 +1312,7 @@
           </thead>
           <tbody>
             @for (exp of egresosFiltered(); track exp.id) {
-              <tr (click)="selectEgreso(exp)" style="cursor:pointer"
+              <tr (click)="selectEgreso(exp)" (keydown.enter)="selectEgreso(exp)" tabindex="0" style="cursor:pointer"
                 [style.opacity]="exp.payment_status === 'ANULADO' ? '0.5' : '1'">
                 <td style="color:var(--text-muted);font-size:0.8rem;white-space:nowrap">
                   {{ exp.expense_date ? formatDate(exp.expense_date) : '—' }}
@@ -1575,7 +1576,7 @@
       <div style="background:var(--surface);border:1px solid var(--border-ds);border-radius:var(--radius-ds);padding:18px 20px;margin-bottom:16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
           <span style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted)">
-            Resumen de Impuestos (IVA 15%)
+            Resumen de Impuestos (IVA {{ taxRatesSvc.ivaPct() }}%)
           </span>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
@@ -2218,7 +2219,7 @@
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
             <div style="position:relative;flex:1;max-width:340px">
               <app-icon name="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-muted);pointer-events:none"/>
-              <input [formControl]="reportesProductProfitSearchCtrl" placeholder="Buscar producto…"
+              <input [formControl]="reportesProductProfitSearchCtrl" placeholder="Buscar producto…" aria-label="Buscar producto"
                 style="width:100%;padding:7px 12px 7px 32px;border:1px solid var(--border-ds);border-radius:var(--radius-sm-ds);background:var(--surface);color:var(--text);font-size:0.82rem;box-sizing:border-box">
             </div>
             <button (click)="exportCsvProductProfits()" class="cxc-row-btn" style="border-color:var(--border-ds);color:var(--text-muted);display:flex;align-items:center;gap:5px">
@@ -2245,7 +2246,7 @@
               </thead>
               <tbody>
                 @for (row of filteredProductProfits(); track $index) {
-                  <tr style="cursor:pointer" (click)="selectedProductProfit.set(row)">
+                  <tr style="cursor:pointer" (click)="selectedProductProfit.set(row)" (keydown.enter)="selectedProductProfit.set(row)" tabindex="0">
                     <td><span style="font-weight:500;color:var(--text)">{{ row.productName }}</span></td>
                     <td style="text-align:right;color:var(--text-muted)">${{ row.purchasePrice | number:'1.2-2' }}</td>
                     <td style="text-align:right">${{ row.salePrice | number:'1.2-2' }}</td>
@@ -2318,8 +2319,8 @@
 
         <!-- ── Drawer detalle de producto ──────────────────────────── -->
         @if (selectedProductProfit()) {
-          <div class="drawer-backdrop" (click)="selectedProductProfit.set(null)"></div>
-          <div class="drawer">
+          <div class="drawer-backdrop" aria-hidden="true" (click)="selectedProductProfit.set(null)" (keydown.escape)="selectedProductProfit.set(null)"></div>
+          <div class="drawer" (keydown.escape)="selectedProductProfit.set(null)">
             <div class="drawer-head">
               <div>
                 <div style="font-size:1rem;font-weight:700;color:var(--text)">{{ selectedProductProfit()!.productName }}</div>
@@ -2473,9 +2474,9 @@
      DRAWER: Egresos y Gastos — detalle + registrar pago
 ════════════════════════════════════════════════════════════════════ -->
 @if (egresosSelected()) {
-  <div class="drawer-backdrop" (click)="closeEgresosDrawer()"></div>
+  <div class="drawer-backdrop" aria-hidden="true" (click)="closeEgresosDrawer()" (keydown.escape)="closeEgresosDrawer()"></div>
 
-  <div class="drawer">
+  <div class="drawer" (keydown.escape)="closeEgresosDrawer()">
     <div class="drawer-head">
       <div>
         <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle)">
@@ -2623,44 +2624,44 @@
                 </div>
 
                 <div class="mfield">
-                  <label>Monto a pagar</label>
+                  <label for="egresos-pay-amount">Monto a pagar</label>
                   <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px">
                     Pendiente: ${{ egresosPendingAmount() | number:'1.2-2' }}
                   </div>
-                  <input class="m-input" type="number" step="0.01" min="0.01"
+                  <input id="egresos-pay-amount" class="m-input" type="number" step="0.01" min="0.01"
                     [max]="egresosPendingAmount()"
                     formControlName="amount" placeholder="0.00"/>
                 </div>
 
                 @if (egresosPayMethodSig() === 'TRANSFERENCIA') {
                   <div class="mfield">
-                    <label>N° de transferencia</label>
-                    <input class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
+                    <label for="egresos-pay-transfer">N° de transferencia</label>
+                    <input id="egresos-pay-transfer" class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
                   </div>
                 }
 
                 @if (egresosPayMethodSig() === 'TARJETA_DEBITO' || egresosPayMethodSig() === 'TARJETA_CREDITO') {
                   <div class="mfield">
-                    <label>Últimos 4 dígitos / contrapartida</label>
-                    <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
+                    <label for="egresos-pay-card">Últimos 4 dígitos / contrapartida</label>
+                    <input id="egresos-pay-card" class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
                   </div>
                 }
 
                 @if (egresosPayMethodSig() === 'CHEQUE') {
                   <div class="mfield">
-                    <label>N° de cheque</label>
-                    <input class="m-input" type="text" formControlName="cheque_number" placeholder="CHQ-…"/>
+                    <label for="egresos-pay-cheque">N° de cheque</label>
+                    <input id="egresos-pay-cheque" class="m-input" type="text" formControlName="cheque_number" placeholder="CHQ-…"/>
                   </div>
                 }
 
                 <div class="mfield">
-                  <label>Fecha del pago</label>
-                  <input class="m-input" type="date" formControlName="payment_date"/>
+                  <label for="egresos-pay-date">Fecha del pago</label>
+                  <input id="egresos-pay-date" class="m-input" type="date" formControlName="payment_date"/>
                 </div>
 
                 <div class="mfield">
-                  <label>Notas</label>
-                  <input class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
+                  <label for="egresos-pay-notes">Notas</label>
+                  <input id="egresos-pay-notes" class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
                 </div>
 
                 <div style="display:flex;gap:8px;margin-top:4px">
@@ -2688,9 +2689,9 @@
 }
 
 @if (cxpSelected()) {
-  <div class="drawer-backdrop" (click)="closeCxpDrawer()"></div>
+  <div class="drawer-backdrop" aria-hidden="true" (click)="closeCxpDrawer()" (keydown.escape)="closeCxpDrawer()"></div>
 
-  <div class="drawer">
+  <div class="drawer" (keydown.escape)="closeCxpDrawer()">
     <div class="drawer-head">
       <div>
         <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-subtle)">
@@ -2829,37 +2830,37 @@
             </div>
 
             <div class="mfield">
-              <label>Monto a pagar</label>
+              <label for="cxp-pay-amount">Monto a pagar</label>
               <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px">
                 Pendiente: ${{ cxpPendingAmount() | number:'1.2-2' }}
               </div>
-              <input class="m-input" type="number" step="0.01" min="0.01"
+              <input id="cxp-pay-amount" class="m-input" type="number" step="0.01" min="0.01"
                 [max]="cxpPendingAmount()"
                 formControlName="amount" placeholder="0.00"/>
             </div>
 
             @if (cxpPayMethodSig() === 'TRANSFERENCIA') {
               <div class="mfield">
-                <label>N° de transferencia</label>
-                <input class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
+                <label for="cxp-pay-transfer">N° de transferencia</label>
+                <input id="cxp-pay-transfer" class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
               </div>
             }
 
             @if (cxpPayMethodSig() === 'TARJETA_DEBITO' || cxpPayMethodSig() === 'TARJETA_CREDITO') {
               <div class="mfield">
-                <label>Últimos 4 dígitos / contrapartida</label>
-                <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
+                <label for="cxp-pay-card">Últimos 4 dígitos / contrapartida</label>
+                <input id="cxp-pay-card" class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
               </div>
             }
 
             <div class="mfield">
-              <label>Fecha del pago</label>
-              <input class="m-input" type="date" formControlName="payment_date"/>
+              <label for="cxp-pay-date">Fecha del pago</label>
+              <input id="cxp-pay-date" class="m-input" type="date" formControlName="payment_date"/>
             </div>
 
             <div class="mfield">
-              <label>Notas</label>
-              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
+              <label for="cxp-pay-notes">Notas</label>
+              <input id="cxp-pay-notes" class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
             </div>
 
             <div style="display:flex;gap:8px;margin-top:4px">
@@ -2884,9 +2885,9 @@
 }
 
 @if (cxcSelected()) {
-  <div class="drawer-backdrop" (click)="closeCxcDrawer()"></div>
+  <div class="drawer-backdrop" aria-hidden="true" (click)="closeCxcDrawer()" (keydown.escape)="closeCxcDrawer()"></div>
 
-  <div class="drawer">
+  <div class="drawer" (keydown.escape)="closeCxcDrawer()">
     <!-- Head -->
     <div class="drawer-head">
       <div>
@@ -3023,11 +3024,11 @@
 
             <!-- Monto -->
             <div class="mfield">
-              <label>Monto a cobrar</label>
+              <label for="cxc-pay-amount">Monto a cobrar</label>
               <div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:4px">
                 Pendiente: ${{ cxcPendingAmount() | number:'1.2-2' }}
               </div>
-              <input class="m-input" type="number" step="0.01" min="0.01"
+              <input id="cxc-pay-amount" class="m-input" type="number" step="0.01" min="0.01"
                 [max]="cxcPendingAmount()"
                 formControlName="amount" placeholder="0.00"/>
             </div>
@@ -3035,29 +3036,29 @@
             <!-- Referencia (TRANSFERENCIA) -->
             @if (cxcPayMethodSig() === 'TRANSFERENCIA') {
               <div class="mfield">
-                <label>N° de transferencia</label>
-                <input class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
+                <label for="cxc-pay-transfer">N° de transferencia</label>
+                <input id="cxc-pay-transfer" class="m-input" type="text" formControlName="transfer_reference" placeholder="REF-…"/>
               </div>
             }
 
             <!-- Contrapartida (TARJETA) -->
             @if (cxcPayMethodSig() === 'TARJETA_DEBITO' || cxcPayMethodSig() === 'TARJETA_CREDITO') {
               <div class="mfield">
-                <label>Últimos 4 dígitos / contrapartida</label>
-                <input class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
+                <label for="cxc-pay-card">Últimos 4 dígitos / contrapartida</label>
+                <input id="cxc-pay-card" class="m-input" type="text" formControlName="card_contrapartida" placeholder="XXXX"/>
               </div>
             }
 
             <!-- Fecha -->
             <div class="mfield">
-              <label>Fecha del cobro</label>
-              <input class="m-input" type="date" formControlName="payment_date"/>
+              <label for="cxc-pay-date">Fecha del cobro</label>
+              <input id="cxc-pay-date" class="m-input" type="date" formControlName="payment_date"/>
             </div>
 
             <!-- Notas -->
             <div class="mfield">
-              <label>Notas</label>
-              <input class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
+              <label for="cxc-pay-notes">Notas</label>
+              <input id="cxc-pay-notes" class="m-input" type="text" formControlName="notes" placeholder="Opcional…"/>
             </div>
 
             <!-- Acciones -->

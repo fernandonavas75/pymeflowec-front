@@ -1,7 +1,7 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, forkJoin, of, finalize, catchError, map } from 'rxjs';
 import { FormsModule } from '@angular/forms';
@@ -48,7 +48,7 @@ interface UserSummary {
   templateUrl: './reports.component.html',
   styleUrls: ['./reports.component.scss'],
 })
-export class ReportsComponent implements OnInit, OnDestroy {
+export class ReportsComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private productsService  = inject(ProductsService);
   private auditLogsSvc     = inject(AuditLogsService);
@@ -59,19 +59,19 @@ export class ReportsComponent implements OnInit, OnDestroy {
   authService              = inject(AuthService);
   adminViewSvc             = inject(AdminViewService);
   private modulesSvc       = inject(CompanyModulesService);
+  private destroyRef       = inject(DestroyRef);
 
   view = toSignal(
     this.route.queryParamMap.pipe(map(p => p.get('view') ?? 'analytics')),
     { initialValue: 'analytics' },
   );
 
-  data: DashboardData | null = null;
-  loading    = true;
-  lastUpdated = new Date();
+  data      = signal<DashboardData | null>(null);
+  loading   = signal(true);
   private sub?: Subscription;
 
-  sparkPath  = '';
-  sparkArea  = '';
+  sparkPath = signal('');
+  sparkArea = signal('');
 
   lowStockList  = signal<Product[]>([]);
   todayInvoices = signal<Invoice[]>([]);
@@ -237,31 +237,29 @@ export class ReportsComponent implements OnInit, OnDestroy {
   hasPendingModules   = computed(() => this.authService.isStoreUser() && this.modulesSvc.pendingCodes().size > 0);
   pendingModulesCount = computed(() => this.modulesSvc.pendingCodes().size);
 
-  get firstName(): string { return this.authService.currentUser()?.full_name?.split(' ')?.[0] ?? ''; }
-
-  get todayDate(): string {
+  readonly todayDate = (() => {
     const d = new Date();
     const wd = d.toLocaleDateString('es-EC', { weekday: 'long' });
     const mo = d.toLocaleDateString('es-EC', { month: 'long' });
     return `Reportes · Hoy ${wd} ${d.getDate()} de ${mo}, ${d.getFullYear()}`;
-  }
+  })();
 
   ngOnInit(): void {
     const isCV = this.adminViewSvc.isClientViewMode();
-    if (!isCV && !this.authService.isStoreUser()) { this.loading = false; return; }
+    if (!isCV && !this.authService.isStoreUser()) { this.loading.set(false); return; }
 
     if (this.view() === 'activity') {
-      this.loading = false;
+      this.loading.set(false);
       this.loadActivity();
       return;
     }
 
     if (this.view() === 'finance') {
-      this.loading = false;
+      this.loading.set(false);
       if (isCV) {
         this.loadFinance();
       } else {
-        this.modulesSvc.loadCatalog().subscribe({
+        this.modulesSvc.loadCatalog().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next:  () => this.loadFinance(),
           error: () => this.loadFinance(),
         });
@@ -272,7 +270,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
     if (isCV) {
       this.afterCatalogReady();
     } else {
-      this.modulesSvc.loadCatalog().subscribe({
+      this.modulesSvc.loadCatalog().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next:  () => this.afterCatalogReady(),
         error: () => this.afterCatalogReady(),
       });
@@ -280,7 +278,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
   }
 
   private afterCatalogReady(): void {
-    this.hasAnalytics() ? this.load() : (this.loading = false);
+    this.hasAnalytics() ? this.load() : this.loading.set(false);
   }
 
   loadFinance(): void {
@@ -294,8 +292,10 @@ export class ReportsComponent implements OnInit, OnDestroy {
       expenses:  this.expensesSvc.list({ limit: 300 }).pipe(
         catchError(() => of({ data: [], total: 0 })),
       ),
-    }).pipe(finalize(() => this.financeLoading.set(false)))
-    .subscribe({
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.financeLoading.set(false)),
+    ).subscribe({
       next: ({ invoices, pettyCash, expenses }) => {
         const pending = invoices.data.filter(
           inv => inv.payment_status === 'PENDIENTE' || inv.payment_status === 'PARCIAL',
@@ -338,8 +338,10 @@ export class ReportsComponent implements OnInit, OnDestroy {
       expenses: this.expensesSvc.list({ from, to, limit: 1000 }).pipe(
         catchError(() => of({ data: [], total: 0 })),
       ),
-    }).pipe(finalize(() => this.vsLoading.set(false)))
-    .subscribe({
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.vsLoading.set(false)),
+    ).subscribe({
       next: ({ invoices, expenses }) => {
         this.vsAllInvoices.set(invoices.data);
         this.vsAllExpenses.set(expenses.data.filter((e: any) => e.payment_status !== 'ANULADO'));
@@ -364,8 +366,9 @@ export class ReportsComponent implements OnInit, OnDestroy {
   }
 
   load(): void {
-    this.loading = !this.data;
+    this.loading.set(!this.data());
     const today = new Date().toISOString().split('T')[0];
+    this.sub?.unsubscribe();
     this.sub = forkJoin({
       dashboard: this.dashboardService.getDashboardData(),
       products:  this.productsService.list({ page: 1, limit: 500 }).pipe(
@@ -374,10 +377,12 @@ export class ReportsComponent implements OnInit, OnDestroy {
       todayInv: this.invoicesSvc.list({ status: 'ISSUED', from: today, to: today, limit: 200 }).pipe(
         catchError(() => of({ data: [] as Invoice[], total: 0, page: 1, limit: 200, totalPages: 0 }))
       ),
-    }).pipe(finalize(() => { this.loading = false; })).subscribe({
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.loading.set(false)),
+    ).subscribe({
       next: ({ dashboard, products, todayInv }) => {
-        this.data = dashboard;
-        this.lastUpdated = new Date();
+        this.data.set(dashboard);
         this.todayInvoices.set(todayInv.data);
         this.lowStockList.set(
           products.data
@@ -390,8 +395,7 @@ export class ReportsComponent implements OnInit, OnDestroy {
     });
   }
 
-  refresh(): void { this.sub?.unsubscribe(); this.data = null; this.load(); }
-  ngOnDestroy(): void { this.sub?.unsubscribe(); this.financeSub?.unsubscribe(); this.vsSub?.unsubscribe(); }
+  refresh(): void { this.data.set(null); this.load(); }
 
   // ── Activity tab ─────────────────────────────────────────────────
 
@@ -408,8 +412,10 @@ export class ReportsComponent implements OnInit, OnDestroy {
       page:      this.activityPage(),
       limit:     this.activityPageSize,
       date_from: this.activityDateFrom(),
-    }).pipe(finalize(() => this.activityLoading.set(false)))
-    .subscribe({
+    }).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.activityLoading.set(false)),
+    ).subscribe({
       next: res => {
         this.activityLogs.set(res.data);
         this.activityTotal.set(res.total);
@@ -530,8 +536,8 @@ export class ReportsComponent implements OnInit, OnDestroy {
 
   private onDataLoaded(data: DashboardData): void {
     const values = data.revenueByDay.map(d => d.amount);
-    this.sparkPath = this.buildSparkPath(values, 200, 32);
-    this.sparkArea = this.buildSparkArea(values, 200, 32);
+    this.sparkPath.set(this.buildSparkPath(values, 200, 32));
+    this.sparkArea.set(this.buildSparkArea(values, 200, 32));
   }
 
   private buildSparkPath(values: number[], w: number, h: number): string {

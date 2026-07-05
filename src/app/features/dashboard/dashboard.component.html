@@ -3,7 +3,7 @@
   <!-- ── Page header ─────────────────────────────────────────────── -->
   <div class="page-head">
     <div>
-      <div class="page-title">Hola, {{ firstName }}.</div>
+      <div class="page-title">Hola, {{ firstName() }}.</div>
       <div class="page-sub-en">{{ todayDate }}</div>
     </div>
     <div class="page-actions">
@@ -17,7 +17,7 @@
   </div>
 
   <!-- ── Loading skeleton ────────────────────────────────────────── -->
-  @if (loading) {
+  @if (loading()) {
     <div class="kpi-grid">
       <div class="skel" style="height:120px"></div>
       <div class="skel" style="height:120px"></div>
@@ -28,7 +28,7 @@
   }
 
   <!-- ── Platform admin view ─────────────────────────────────────── -->
-  @if (!loading && !adminViewSvc.isClientViewMode() && authService.isSystemUser()) {
+  @if (!loading() && !adminViewSvc.isClientViewMode() && authService.isSystemUser()) {
     <div class="sec-label">
       <app-icon name="business" [size]="14"/>Panel de plataforma
     </div>
@@ -47,7 +47,7 @@
   }
 
   <!-- ── Store user view ─────────────────────────────────────────── -->
-  @if (!loading && (adminViewSvc.isClientViewMode() || authService.isStoreUser())) {
+  @if (!loading() && (adminViewSvc.isClientViewMode() || authService.isStoreUser())) {
 
     <div class="sec-label">
       <app-icon name="grid" [size]="14"/>Accesos rápidos

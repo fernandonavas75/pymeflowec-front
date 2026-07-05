@@ -87,7 +87,7 @@
                     <th>Producto</th>
                     <th class="text-center">Cant.</th>
                     <th class="text-right">P. Unitario</th>
-                    <th class="text-right">IVA 15%</th>
+                    <th class="text-right">IVA</th>
                     <th class="text-right">Total línea</th>
                   </tr>
                 </thead>
@@ -129,7 +129,7 @@
                 <span class="info-value num">${{ invoice()!.subtotal | number:'1.2-2' }}</span>
               </div>
               <div class="info-row">
-                <span class="info-label">IVA 15%</span>
+                <span class="info-label">IVA</span>
                 <span class="info-value num">${{ invoice()!.tax_amount | number:'1.2-2' }}</span>
               </div>
               <div class="info-row" style="border-top:1px solid var(--border-ds);padding-top:12px;margin-top:4px">
